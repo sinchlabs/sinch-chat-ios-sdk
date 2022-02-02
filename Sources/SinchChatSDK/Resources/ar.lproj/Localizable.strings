@@ -1,0 +1,15 @@
+"label_image" = "Images";
+"label_today" = "Today";
+"label_yesterday" = "Yesterday";
+"label_download_failed" = "Download failed - Tap to retry";
+"label_trying_download" = "Trying to download...";
+"label_connected" = "Connected";
+"label_no_internet_connection" = "No internet connection";
+
+"alert_could_not_load_history" = "Conversation history loading failed. Please try again!";
+"alert_message_not_sent" = "Message not sent. Please try again later!";
+"alert_title_error" = "Error";
+"alert_button_title_ok" = "Ok";
+
+"menu_title_options" = "Options";
+"menu_button_title_copy" = "Copy";
