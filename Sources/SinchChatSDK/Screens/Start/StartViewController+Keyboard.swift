@@ -17,7 +17,6 @@ internal extension StartViewController {
     }
     func updateConnectionStatus(_ status: ConnectivityStatus) {
         
-        debugPrint("*****************\(status)*****************")
         switch status {
         case .connected:
             self.viewModel.setInternetConnectionState(.isOn)
@@ -39,10 +38,8 @@ internal extension StartViewController {
 
         case .determining:
             break
-        case .connectedViaEthernet:
-            self.viewModel.setInternetConnectionState(.isOn)
-        case .connectedViaEthernetWithoutInternet:
-            self.viewModel.setInternetConnectionState(.isOff)
+        default:
+            break
         }
     }
     

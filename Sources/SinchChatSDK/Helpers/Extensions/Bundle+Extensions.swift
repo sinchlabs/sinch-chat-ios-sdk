@@ -1,17 +1,30 @@
 import Foundation
 
 extension Bundle {
-    
-    static func getBundle(bundleName: String) -> Bundle? {
-        var resourceBundle: Bundle?
-        for includedBundles in Bundle.allBundles {
-            if let resourceBundlePath = includedBundles.path(forResource: bundleName, ofType: "bundle") {
-                resourceBundle = Bundle(path: resourceBundlePath)
-                break
+
+    #if SWIFT_PACKAGE
+        static let staticBundle = Bundle.module
+    #else
+        static let staticBundle = SinchChatSDKResources.resourceBundle
+    #endif
+}
+
+public final class SinchChatSDKResources {
+    public static let resourceBundle: Bundle = {
+        let candidates = [
+            Bundle.main.resourceURL,
+            Bundle(for: SinchChatSDKResources.self).resourceURL
+        ]
+
+        let bundleName = "SinchChatSDKBundle"
+
+        for candidate in candidates {
+            let bundlePath = candidate?.appendingPathComponent(bundleName + ".bundle")
+            if let bundle = bundlePath.flatMap(Bundle.init(url:)) {
+                return bundle
             }
         }
-        return resourceBundle
-    }
 
-    static let staticBundle = Bundle.module
+        return Bundle(for: SinchChatSDKResources.self)
+    }()
 }
