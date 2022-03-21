@@ -12,5 +12,5 @@ Pod::Spec.new do |s|
   s.resource_bundle = { 'SinchChatSDKBundle': 'Sources/SinchChatSDK/Assets.xcassets' }
   s.dependency 'gRPC-Swift', '~> 1.6.1'
   s.dependency 'Kingfisher', '~> 7.0'
-  s.dependency 'Connectivity', '~> 5.0.0'
+  s.dependency 'Connectivity', '~> 5.1.0'
 end
