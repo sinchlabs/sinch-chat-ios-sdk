@@ -43,21 +43,20 @@ final class ComposeView: SinchView {
     private var backgroundViewBottomAnchor: NSLayoutConstraint!
     private var textViewMaxHeight: NSLayoutConstraint!
     
-    init(configuration: SinchSDKConfig.UIConfig) {
-        
-        barBackgroundColor = configuration.inputBarBackgroundColor
-        textViewBackgroundColor = configuration.inputTextViewBackgroundColor
-        textViewBorderColor = configuration.inputTextViewBorderColor
+    init(uiConfiguration: SinchSDKConfig.UIConfig, localizatioConfiguration: SinchSDKConfig.LocalizationConfig) {
+        barBackgroundColor = uiConfiguration.inputBarBackgroundColor
+        textViewBackgroundColor = uiConfiguration.inputTextViewBackgroundColor
+        textViewBorderColor = uiConfiguration.inputTextViewBorderColor
       
-        placeholderTextColor = configuration.inputPlaceholderTextColor
+        placeholderTextColor = uiConfiguration.inputPlaceholderTextColor
         placeholderFont = UIFont.preferredFont(forTextStyle: .body)
-        placeholderText  = configuration.inputPlaceholderText
+        placeholderText  = localizatioConfiguration.inputPlaceholderText
         
-        photoButton.setImage(configuration.photoImage, for: .normal)
-        emojiButton.setImage(configuration.emojiImage, for: .normal)
-        sendButton.setImage(configuration.sendImage, for: .normal)
+        photoButton.setImage(uiConfiguration.photoImage, for: .normal)
+        emojiButton.setImage(uiConfiguration.emojiImage, for: .normal)
+        sendButton.setImage(uiConfiguration.sendImage, for: .normal)
         
-        composeTextView = ComposeTextView(configuration: configuration)
+        composeTextView = ComposeTextView(configuration: uiConfiguration)
         
         super.init()
     }

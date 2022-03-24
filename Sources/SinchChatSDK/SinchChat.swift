@@ -104,8 +104,10 @@ final class DefaultSinchChat: SinchChat {
                                              pushPermissionHandler: pushPermissionHandler)
         
         self.rootCordinator = rootCordinator
+        let uiConfig = uiConfig ?? SinchSDKConfig.UIConfig.defaultValue
+        let locConfig = localizationConfig ?? SinchSDKConfig.LocalizationConfig.defaultValue
 
-        let startViewController =  rootCordinator.getRootViewController(uiConfig: uiConfig ?? SinchSDKConfig.UIConfig.defaultValue)
+        let startViewController =  rootCordinator.getRootViewController(uiConfig: uiConfig, localizationConfig: locConfig )
         if navigationController == nil {
             let navigationController = UINavigationController(rootViewController: startViewController)
             

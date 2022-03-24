@@ -15,7 +15,7 @@ enum MessageDataSourceError: Error {
     case noMoreMessages
     case unknownTypeOfMedia
     case noInternetConnection
-
+    
 }
 protocol MessageDataSource {
     
@@ -30,7 +30,7 @@ protocol MessageDataSource {
     func cancelCalls()
     func isSubscribed() -> Bool
     func isFirstPage() -> Bool
-
+    
 }
 
 final class DefaultMessageDataSource: MessageDataSource {
@@ -51,7 +51,7 @@ final class DefaultMessageDataSource: MessageDataSource {
         self.client = apiClient
         self.authDataSource = authDataSource
     }
-  
+    
     func getMessageHistory(completion: @escaping (Result<[Message], MessageDataSourceError>) -> Void) {
         if let nextPageToken = nextPageToken {
             if nextPageToken.isEmpty {
@@ -277,50 +277,131 @@ final class DefaultMessageDataSource: MessageDataSource {
                                                      sendDate: entry.deliveryTime.seconds))
                 }
             }
-        
-        let incomingUrl = entry.appMessage.mediaMessage.url
-        
-        if !incomingUrl.isEmpty {
-            if entry.appMessage.hasAgent {
-                let agent = entry.appMessage.agent
+            
+            let incomingLocationMessage = entry.appMessage.locationMessage
+            if incomingLocationMessage.hasCoordinates {
+                let messageBody = MessageLocation(label: incomingLocationMessage.label,
+                                                  title: incomingLocationMessage.title,
+                                                  latitude: Double(incomingLocationMessage.coordinates.latitude),
+                                                  longitude: Double(incomingLocationMessage.coordinates.longitude),
+                                                  sendDate: entry.deliveryTime.seconds)
                 
-                return Message(owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
-                               body: MessageImage(url: incomingUrl,
-                                                  sendDate: entry.deliveryTime.seconds, placeholderImage: nil))
-            } else {
-                return Message(owner: .incoming(nil),
-                               body: MessageImage(url: incomingUrl,
-                                                  sendDate: entry.deliveryTime.seconds, placeholderImage: nil))
+                if entry.appMessage.hasAgent {
+                    let agent = entry.appMessage.agent
+                    
+                    return Message(owner: .incoming(.init(name: agent.displayName,
+                                                          type: agent.type.rawValue)),
+                                   body:  messageBody)
+                } else {
+                    
+                    return Message(owner: .incoming(nil), body: messageBody)
+                }
+            }
+            
+            let incomingChoiceMessage = entry.appMessage.choiceMessage
+            if incomingChoiceMessage.hasTextMessage {
+                
+                let choicesArray = createChoicesArray(incomingChoiceMessage.choices)
+                let messageBody = MessageChoices(text: incomingChoiceMessage.textMessage.text,
+                                                 choices: choicesArray,
+                                                 sendDate: entry.deliveryTime.seconds)
+                
+                if entry.appMessage.hasAgent {
+                    let agent = entry.appMessage.agent
+                    
+                    return Message(owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
+                                   body:  messageBody)
+                } else {
+                    
+                    return Message(owner: .incoming(nil), body: messageBody)
+                }
+            }
+            let incomingCardMessage = entry.appMessage.cardMessage
+
+            if incomingCardMessage.hasMediaMessage {
+                
+                let choicesArray = createChoicesArray(incomingCardMessage.choices)
+                let messageBody = MessageCard(title: incomingCardMessage.title,
+                                              description: incomingCardMessage.description_p,
+                                              choices: choicesArray,
+                                              url: incomingCardMessage.mediaMessage.url,
+                                              sendDate: entry.deliveryTime.seconds)
+                
+                if entry.appMessage.hasAgent {
+                    let agent = entry.appMessage.agent
+                    
+                    return Message(owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
+                                   body:  messageBody)
+                } else {
+                    
+                    return Message(owner: .incoming(nil), body: messageBody)
+                }
+            }
+            let incomingUrl = entry.appMessage.mediaMessage.url
+            
+            if !incomingUrl.isEmpty {
+                if entry.appMessage.hasAgent {
+                    let agent = entry.appMessage.agent
+                    
+                    return Message(owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
+                                   body: MessageImage(url: incomingUrl,
+                                                      sendDate: entry.deliveryTime.seconds, placeholderImage: nil))
+                } else {
+                    return Message(owner: .incoming(nil),
+                                   body: MessageImage(url: incomingUrl,
+                                                      sendDate: entry.deliveryTime.seconds, placeholderImage: nil))
+                }
+            }
+            
+            // MARK: - Events
+            
+            if entry.appEvent.agentLeftEvent.hasAgent {
+                
+                let agentThatLeft = entry.appEvent.agentLeftEvent.agent
+                
+                return Message(owner: .system,
+                               body: MessageEvent(type: .left(Agent(name: agentThatLeft.displayName,
+                                                                    type: agentThatLeft.type.rawValue,
+                                                                    pictureUrl: agentThatLeft.pictureURL)),
+                                                  sendDate: entry.deliveryTime.seconds))
+                
+            }
+            
+            if entry.appEvent.agentJoinedEvent.hasAgent {
+                
+                let agentThatJoined = entry.appEvent.agentJoinedEvent.agent
+                
+                return Message(owner: .system,
+                               body: MessageEvent(type: .joined(Agent(name: agentThatJoined.displayName,
+                                                                      type: agentThatJoined.type.rawValue,
+                                                                      pictureUrl: agentThatJoined.pictureURL)),
+                                                  sendDate: entry.deliveryTime.seconds))
+                
             }
         }
         
-        // MARK: - Events
-        
-        if entry.appEvent.agentLeftEvent.hasAgent {
-            
-            let agentThatLeft = entry.appEvent.agentLeftEvent.agent
-            
-            return Message(owner: .system,
-                           body: MessageEvent(type: .left(Agent(name: agentThatLeft.displayName,
-                                                                type: agentThatLeft.type.rawValue,
-                                                                pictureUrl: agentThatLeft.pictureURL)),
-                                              sendDate: entry.deliveryTime.seconds))
-            
-        }
-        
-        if entry.appEvent.agentJoinedEvent.hasAgent {
-            
-            let agentThatJoined = entry.appEvent.agentJoinedEvent.agent
-            
-            return Message(owner: .system,
-                           body: MessageEvent(type: .joined(Agent(name: agentThatJoined.displayName,
-                                                                  type: agentThatJoined.type.rawValue,
-                                                                  pictureUrl: agentThatJoined.pictureURL)),
-                                              sendDate: entry.deliveryTime.seconds))
-            
-        }
+        return nil
     }
     
-    return nil
-}
+    func createChoicesArray(_ choices: [Sinch_Conversationapi_Type_Choice]) -> [ChoiceMessageType] {
+        
+        var choicesArray: [ChoiceMessageType] = []
+        
+        for choice in choices {
+            guard let message = choice.choice else {
+                break
+            }
+            switch message {
+            case .textMessage( let textMessage):
+                choicesArray.append(.textMessage((ChoiceText(text: textMessage.text))))
+            case .urlMessage(let urlMessage):
+                choicesArray.append(.urlMessage(ChoiceUrl(url: urlMessage.url, text: urlMessage.title)))
+            case .callMessage(let callMessage):
+                choicesArray.append(.callMessage(ChoiceCall(text: callMessage.title, phoneNumber: callMessage.phoneNumber)))
+            case .locationMessage(let locationMessage):
+                choicesArray.append(.locationMessage(ChoiceLocation(text: locationMessage.title, label: locationMessage.label, latitude: Double(locationMessage.coordinates.latitude), longitude: Double(locationMessage.coordinates.longitude))))
+            }
+        }
+        return choicesArray
+    }
 }

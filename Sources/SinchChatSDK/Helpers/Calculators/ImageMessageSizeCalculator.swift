@@ -1,6 +1,8 @@
 import UIKit
 
 final class ImageMessageSizeCalculator: MessageSizeCalculator {
+    public var mediaHeight = 187.0
+    public var maxWidth = 300.0
 
     override init(layout: ChatFlowLayout? = nil) {
         super.init(layout: layout)
@@ -9,10 +11,10 @@ final class ImageMessageSizeCalculator: MessageSizeCalculator {
     }
     
     override func messageContainerSize(for message: Message) -> CGSize {
-        let maxWidth = min(messageContainerMaxWidth(for: message), 301.0)
+        let maxWidth = min(messageContainerMaxWidth(for: message), maxWidth)
        
         return CGSize(width: maxWidth, height:
-                        187)
+                        mediaHeight)
     
     }
     
@@ -24,12 +26,17 @@ final class ImageMessageSizeCalculator: MessageSizeCalculator {
         let indexPath = attributes.indexPath
         let message = dataSource.messageForItem(at: indexPath, in: messagesLayout.messagesCollectionView)
         
+        let mediaFrame =  CGRect(x: 0,
+                                 y: 0,
+                                 width: attributes.messageContainerSize.width,
+                                 height: mediaHeight)
+        
         let dateLabelSize = dateLabelSize(for: message)
         let dateLabelFrame = CGRect(x: attributes.messageContainerSize.width - dateLabelSize.width - dateLabelInsets.right,
                                     y: attributes.messageContainerSize.height - dateLabelSize.height - dateLabelInsets.bottom,
                                     width: dateLabelSize.width,
                                     height: dateLabelSize.height)
-        
+        attributes.mediaFrame = mediaFrame
         attributes.dateLabelInsets = dateLabelInsets
         attributes.dateLabelTextInsets = dateLabelTextInsets
         attributes.dateLabelFont = dateLabelFont

@@ -1,8 +1,6 @@
 import UIKit
 final class MediaViewerView: SinchView {
     
-    var uiConfig: SinchSDKConfig.UIConfig
-    
     lazy var zoomingScrollView: UIScrollView = {
         let scrollView = UIScrollView(frame: self.bounds)
         scrollView.backgroundColor = uiConfig.backgroundColor
@@ -28,13 +26,7 @@ final class MediaViewerView: SinchView {
         
         return view
     }()
-    
-    init(uiConfig: SinchSDKConfig.UIConfig) {
-        self.uiConfig = uiConfig
         
-        super.init()
-    }
-    
     override func setupSubviews() {
         backgroundColor = uiConfig.backgroundColor
         zoomingScrollView.addSubview(imageView)

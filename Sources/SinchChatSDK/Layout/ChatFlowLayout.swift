@@ -11,7 +11,11 @@ final class ChatFlowLayout: UICollectionViewFlowLayout {
     lazy public var eventMessageSizeCalculator = EventMessageSizeCalculator(layout: self)
     lazy public var dateMessageSizeCalculator = DateMessageSizeCalculator(layout: self)
     lazy public var typingCellSizeCalculator = TypeIndicatorCellSizeCalculator(layout: self)
-
+    lazy public var mediaTextCellSizeCalculator = MediaTextMessageSizeCalculator(layout: self)
+    lazy public var locationCellSizeCalculator = LocationMessageSizeCalculator(layout: self)
+    lazy public var choicesCellSizeCalculator = ChoiceMessageSizeCalculator(layout: self)
+    lazy public var cardCellSizeCalculator = CardMessageSizeCalculator(layout: self)
+    
     /// The `MessageCollectionView` that owns this layout object.
     public var messagesCollectionView: MessageCollectionView {
         guard let messagesCollectionView = collectionView as? MessageCollectionView else {
@@ -74,6 +78,14 @@ final class ChatFlowLayout: UICollectionViewFlowLayout {
             return eventMessageSizeCalculator 
         } else if message.body is MessageDate {
             return dateMessageSizeCalculator
+        } else if message.body is MessageMediaText {
+            return mediaTextCellSizeCalculator
+        } else if message.body is MessageLocation {
+            return locationCellSizeCalculator
+        } else if message.body is MessageChoices {
+            return choicesCellSizeCalculator
+        } else if message.body is MessageCard {
+            return cardCellSizeCalculator
         }
 
         return ChatCellSizeCalculator()

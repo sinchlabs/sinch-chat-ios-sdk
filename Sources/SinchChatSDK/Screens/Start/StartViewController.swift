@@ -62,7 +62,7 @@ class StartViewController: SinchViewController<StartViewModel, StartView> {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        self.title = mainView.uiConfig.navigationBarText
+        self.title = mainView.localizationConfiguration.navigationBarText
         refreshControl.beginRefreshing()
         addObservers()
         addNoInternetObservers()
@@ -242,11 +242,10 @@ extension StartViewController: StartViewModelDelegate {
     
     func errorSendingMessage(error: MessageDataSourceError) {
         DispatchQueue.main.async {
-            debugPrint(error)
-            let alert = UIAlertController(title: NSLocalizedString("alert_title_error", bundle: Bundle.staticBundle, comment: ""),
-                                          message: NSLocalizedString("alert_message_not_sent", bundle: Bundle.staticBundle, comment: ""),
+            let alert = UIAlertController(title: self.mainView.localizationConfiguration.alertTitleError,
+                                          message: self.mainView.localizationConfiguration.alertMessageNotSent,
                                           preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: NSLocalizedString("alert_button_title_ok", bundle: Bundle.staticBundle, comment: ""),
+            alert.addAction(UIAlertAction(title: self.mainView.localizationConfiguration.alertButtonTitleOk,
                                           style: .default,
                                           handler: nil))
             self.present(alert, animated: true, completion: nil)
@@ -259,10 +258,10 @@ extension StartViewController: StartViewModelDelegate {
             switch error {
                 
             case .unknown(_):
-                let alert = UIAlertController(title: NSLocalizedString("alert_title_error", bundle: Bundle.staticBundle, comment: ""),
-                                              message: NSLocalizedString("alert_could_not_load_history", bundle: Bundle.staticBundle, comment: ""),
+                let alert = UIAlertController(title: self.mainView.localizationConfiguration.alertTitleError,
+                                              message: self.mainView.localizationConfiguration.alertMessageCouldNotLoadHistory,
                                               preferredStyle: .alert)
-                alert.addAction(UIAlertAction(title: NSLocalizedString("alert_button_title_ok", bundle: Bundle.staticBundle, comment: ""),
+                alert.addAction(UIAlertAction(title: self.mainView.localizationConfiguration.alertButtonTitleOk,
                                               style: .default,
                                               handler: nil))
                 self.present(alert, animated: true, completion: nil)
@@ -351,7 +350,6 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         
         let message = messages[indexPath.section]
-        debugPrint(indexPath.section)
         
         if message.body is MessageText {
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier:  TextMessageCell.cellId, for: indexPath) as! TextMessageCell
@@ -374,13 +372,33 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
             cell.configure(with: message, at: indexPath, and: mainView.collectionView)
             return cell
             
+        } else if message.body is MessageMediaText {
+            
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier:  MediaTextMessageCell.cellId, for: indexPath) as! MediaTextMessageCell
+            cell.configure(with: message, at: indexPath, and: mainView.collectionView)
+            return cell
+        } else if message.body is MessageLocation {
+            
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier:  LocationMessageCell.cellId, for: indexPath) as! LocationMessageCell
+            cell.configure(with: message, at: indexPath, and: mainView.collectionView)
+            return cell
+        } else if message.body is MessageChoices {
+            
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier:  ChoicesMessageCell.cellId, for: indexPath) as! ChoicesMessageCell
+            cell.configure(with: message, at: indexPath, and: mainView.collectionView)
+            return cell
+        } else if message.body is MessageCard {
+            
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier:  CardMessageCell.cellId, for: indexPath) as! CardMessageCell
+            cell.configure(with: message, at: indexPath, and: mainView.collectionView)
+            return cell
+        
         } else {
             return MessageCollectionViewCell()
         }
     }
     open func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         guard let chatFlowLayout = collectionViewLayout as? ChatFlowLayout else { return .zero }
-        debugPrint(chatFlowLayout.sizeForItem(at: indexPath))
         return chatFlowLayout.sizeForItem(at: indexPath)
     }
     
@@ -391,36 +409,52 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
     func collectionView(_ collectionView: UICollectionView, contextMenuConfigurationForItemAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
         
         let message = self.messages[indexPath.section]
-        if message.body is MessageText {
+        if message.body is MessageText || message.body is MessageMediaText ||
+            message.body is MessageLocation || message.body is MessageChoices
+            || message.body is MessageCard {
+            
             return configureContextMenu(index: indexPath.section)
         } else {
             return nil
         }
     }
     
-    private func populatePasteBoardIfTextMessage(_ index: Int) {
+    private func populatePasteBoard(_ index: Int) {
         let pasteBoard = UIPasteboard.general
         let message = messages[index]
         if let message = message.body as? MessageText {
             pasteBoard.string = message.text
-            
+        } else if let message = message.body as? MessageMediaText {
+                pasteBoard.string = message.text
+
+        } else if let message = message.body as? MessageLocation {
+            pasteBoard.string = message.title
+
+        } else if let message = message.body as? MessageChoices {
+            pasteBoard.string = message.text
+
+        } else if let message = message.body as? MessageCard {
+            pasteBoard.string = message.description
+
         }
     }
+    
     @available(iOS 13.0, *)
     func configureContextMenu(index: Int) -> UIContextMenuConfiguration {
         
-        let context = UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { _ in
-            let copy = UIAction(title: NSLocalizedString("menu_button_title_copy",
+        let context = UIContextMenuConfiguration(identifier: nil, previewProvider: nil) {  [weak self] _ in
+            
+            let copy = UIAction(title: NSLocalizedString(self?.mainView.localizationConfiguration.menuButtonTitleCopy ?? "",
                                                          bundle: Bundle.staticBundle, comment: ""),
                                 image: nil, identifier: nil,
                                 discoverabilityTitle: nil, state: .off) { [weak self] _ in
                 guard let self = self else {
                     return
                 }
-                self.populatePasteBoardIfTextMessage(index)
+                self.populatePasteBoard(index)
             }
             
-            return UIMenu(title: NSLocalizedString("menu_title_options", bundle: Bundle.staticBundle, comment: ""),
+            return UIMenu(title: self?.mainView.localizationConfiguration.menuTitleOptions ?? "",
                           image: nil, identifier: nil, options: UIMenu.Options.displayInline, children: [copy])
         }
         
@@ -444,9 +478,8 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
         
     func collectionView(_ collectionView: UICollectionView, performAction action: Selector, forItemAt indexPath: IndexPath, withSender sender: Any?) {
         
-        populatePasteBoardIfTextMessage(indexPath.section)
+        populatePasteBoard(indexPath.section)
     }
-    
 }
 extension StartViewController: ChatDataSource {
     
@@ -470,22 +503,23 @@ extension StartViewController: MessageCellDelegate {
     }
     func didTapImage(in cell: MessageCollectionViewCell) {
         
-        guard let cell  = cell as? ImageMessageCell,
+        guard let cell  = cell as? ImageBaseCell,
               let indexPath = mainView.collectionView.indexPath(for: cell),
-              let message = mainView.collectionView.chatDataSource?.messageForItem(at: indexPath, in: mainView.collectionView) else {
+           let message = mainView.collectionView.chatDataSource?.messageForItem(at: indexPath, in: mainView.collectionView) else {
                   debugPrint("Failed to identify message")
                   return
-              }
+        }
         
         if  let error = cell.error, error {
             
-            cell.setupImageView(message: message)
+            cell.setupImageView(message: message, localizationConfig: mainView.localizationConfiguration)
             
         } else {
-            if let body = message.body as? MessageImage {
-                
-                cordinator?.presentMediaViewerController(viewController:self, uiConfig: mainView.uiConfig, mediaMessage: body)
-            }
+  
+            cordinator?.presentMediaViewerController(viewController: self,
+                                                     uiConfig: mainView.uiConfig,
+                                                     localizationConfig: mainView.localizationConfiguration,
+                                                     mediaMessage: message)
             
         }
     }
@@ -496,5 +530,46 @@ extension StartViewController: MessageCellDelegate {
     func didTapOutsideOfContent() {
         resignFirstResponderView()
 
+    }
+    func didTapOnChoice(_ choice: ChoiceMessageType, in cell: MessageCollectionViewCell) {
+        
+        switch choice {
+        case .textMessage(let message):
+            sendMessage(text: message.text)
+
+        case .urlMessage(let message):
+            if let url = URL(string: message.url) {
+                didSelectURL(url)
+            }
+
+        case .callMessage(let message):
+            callNumber(phoneNumber: message.phoneNumber)
+        case .locationMessage(let message):
+            openAppleMaps(choice: message)
+
+        }
+    }
+    private func callNumber(phoneNumber:String) {
+
+      if let phoneCallURL = URL(string: "tel://\(phoneNumber)") {
+
+        let application:UIApplication = UIApplication.shared
+        if application.canOpenURL(phoneCallURL) {
+            application.open(phoneCallURL, options: [:], completionHandler: nil)
+        }
+      }
+    }
+    
+    func openAppleMaps(choice: ChoiceLocation) {
+        guard let title = choice.text.replacingOccurrences(of: " ", with: "+").addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) else {
+        return
+        }
+        let directionsURL = "http://maps.apple.com/?q=\(title)&ll=\(choice.latitude),\(choice.longitude)"
+        guard let url = URL(string: directionsURL) else {
+            return
+        }
+        
+        UIApplication.shared.open(url, options: [:], completionHandler: nil)
+       
     }
 }

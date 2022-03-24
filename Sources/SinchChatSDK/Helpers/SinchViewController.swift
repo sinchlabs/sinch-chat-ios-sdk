@@ -35,8 +35,9 @@ class SinchViewController<T, V: SinchView>: UIViewController {
             appearance.configureWithOpaqueBackground()
             appearance.backgroundColor = uiConfig.navigationBarColor
             appearance.titleTextAttributes = textAttributes
-            navigationController?.navigationBar.standardAppearance = appearance
-            navigationController?.navigationBar.scrollEdgeAppearance = appearance
+            
+            navigationItem.standardAppearance = appearance
+            navigationItem.scrollEdgeAppearance = appearance
             navigationController?.navigationBar.tintColor = uiConfig.navigationBarTitleColor
 
         } else {

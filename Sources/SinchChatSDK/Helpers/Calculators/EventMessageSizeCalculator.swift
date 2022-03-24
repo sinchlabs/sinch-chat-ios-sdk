@@ -33,7 +33,7 @@ class EventMessageSizeCalculator: MessageSizeCalculator {
             
         } else if let body = message.body as? MessageDate, let dateInSeconds = body.sendDate {
                                           
-            attributedText = NSAttributedString(string: Date(timeIntervalSince1970: TimeInterval(dateInSeconds)).getFormattedDate(), attributes: [.font: messageLabelFont])
+            attributedText = NSAttributedString(string: Date(timeIntervalSince1970: TimeInterval(dateInSeconds)).getFormattedDate(localizationConfiguration:  messagesLayout.messagesCollectionView.localizationConfig), attributes: [.font: messageLabelFont])
             messageLabelSize = labelSize(for: attributedText, considering: maxWidth)
             
         } else {

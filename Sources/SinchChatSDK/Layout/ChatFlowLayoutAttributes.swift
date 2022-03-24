@@ -12,11 +12,18 @@ import UIKit
     public var messageLabelFrame: CGRect = .zero
     public var messageLabelFont: UIFont = UIFont.preferredFont(forTextStyle: .body)
     public var messageLabelTextInsets: UIEdgeInsets = .zero
+    public var titleLabelFrame: CGRect = .zero
+    public var titleLabelFont: UIFont = UIFont.preferredFont(forTextStyle: .body)
+    public var titleLabelTextInsets: UIEdgeInsets = .zero
     public var dateLabelFrame: CGRect = .zero
     public var dateLabelInsets: UIEdgeInsets = .zero
     public var dateLabelTextInsets: UIEdgeInsets = .zero
     public var dateLabelFont: UIFont = UIFont.preferredFont(forTextStyle: .caption2)
-    
+    public var mapFrame: CGRect = .zero
+    public var buttonsFrame: [CGRect] = [.zero]
+    public var buttonInsets: UIEdgeInsets = .zero
+    public var mediaFrame: CGRect = .zero
+
     public var avatarPosition = AvatarPosition(horizontal: .notSet)
     
     // MARK: - Methods
@@ -32,11 +39,17 @@ import UIKit
         copy.messageLabelFrame = messageLabelFrame
         copy.messageLabelFont = messageLabelFont
         copy.messageLabelTextInsets = messageLabelTextInsets
+        copy.titleLabelFrame = titleLabelFrame
+        copy.titleLabelFont = titleLabelFont
+        copy.titleLabelTextInsets = titleLabelTextInsets
         copy.dateLabelFrame = dateLabelFrame
         copy.dateLabelTextInsets = dateLabelTextInsets
         copy.dateLabelInsets = dateLabelInsets
         copy.dateLabelFont = dateLabelFont
-        
+        copy.mapFrame = mapFrame
+        copy.buttonsFrame = buttonsFrame
+        copy.buttonInsets = buttonInsets
+        copy.mediaFrame = mediaFrame
         return copy
         // swiftlint:enable force_cast
     }
@@ -55,7 +68,14 @@ import UIKit
             && attributes.dateLabelInsets == dateLabelInsets
             && attributes.dateLabelTextInsets == dateLabelTextInsets
             && attributes.dateLabelFont == dateLabelFont
-            
+            && attributes.mapFrame == mapFrame
+            && attributes.buttonsFrame == buttonsFrame
+            && attributes.buttonInsets == buttonInsets
+            && attributes.mediaFrame == mediaFrame
+            && attributes.titleLabelFrame == titleLabelFrame
+            && attributes.titleLabelFont == titleLabelFont
+            && attributes.titleLabelTextInsets == titleLabelTextInsets
+
         } else {
             return false
         }

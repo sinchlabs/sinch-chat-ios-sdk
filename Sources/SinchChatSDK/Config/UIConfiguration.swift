@@ -7,7 +7,6 @@ public extension SinchSDKConfig {
         
         public static let defaultValue = UIConfig()
         
-        public var navigationBarText = "Sinch Chat"
         public var navigationBarColor = UIColor(named: "primaryThemeColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var navigationBarTitleColor = UIColor(named: "primaryNavigationBarTextColor", in: Bundle.staticBundle, compatibleWith: nil)!
 
@@ -33,6 +32,9 @@ public extension SinchSDKConfig {
         
         public var messageUrlLinkTextColor = UIColor(named: "primaryLinkColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var dateMessageLabelTextColor = UIColor(named: "primaryDateTextColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        public var buttonTitleColor = UIColor(named: "buttonTitleColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        public var buttonTitleFont = UIFont.boldSystemFont(ofSize: 14)
+        public var buttonBackgroundColor = UIColor(named: "buttonBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
 
         // MARK: - System messages user interface settings
         
@@ -48,7 +50,6 @@ public extension SinchSDKConfig {
         public var inputTextViewBackgroundColor: UIColor = UIColor(named: "primaryBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var inputTextViewBorderColor: UIColor =  UIColor(named: "primaryBorderColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var inputTextColor = UIColor(named: "primaryTextColor", in: Bundle.staticBundle, compatibleWith: nil)!
-        public var inputPlaceholderText: String? = "Type message here"
         public var inputPlaceholderTextColor = UIColor(named: "primaryTextColor", in: Bundle.staticBundle, compatibleWith: nil)!
         
         // MARK: - Images
@@ -57,6 +58,8 @@ public extension SinchSDKConfig {
         public var emojiImage = UIImage(named: "emojiIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var sendImage = UIImage(named: "sendIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var chatBotImage = UIImage(named: "chatBotIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var locationMessageImage = UIImage(named: "locationIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var locationMarkerImage = UIImage(named: "locationIcon", in: Bundle.staticBundle, compatibleWith: nil)
 
     }
 }

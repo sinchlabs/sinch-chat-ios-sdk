@@ -3,7 +3,7 @@ import UIKit
 protocol MediaViewerViewModel {
     
     var delegate: MediaViewerModelDelegate? { get }
-    var mediaMessage: MessageImage { get }
+    var mediaMessage: Message { get }
 }
 protocol MediaViewerModelDelegate: AnyObject {
 }
@@ -11,9 +11,9 @@ protocol MediaViewerModelDelegate: AnyObject {
 final class DefaultMediaViewerViewModel: MediaViewerViewModel {
 
     weak var delegate: MediaViewerModelDelegate?
-    var mediaMessage: MessageImage
+    var mediaMessage: Message
 
-    init(mediaMessage: MessageImage) {
+    init(mediaMessage: Message) {
         self.mediaMessage = mediaMessage
     }
 }
