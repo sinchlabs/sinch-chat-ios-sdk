@@ -5,12 +5,19 @@ final class MediaViewerController: SinchViewController<MediaViewerViewModel, Med
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        self.title = NSLocalizedString("label_image", bundle: Bundle.staticBundle, comment: "")
-        
-        if let url = URL(string: viewModel.mediaMessage.url) {
+        self.title = mainView.localizationConfiguration.navigationBarImageViewText
+                
+        if let body = viewModel.mediaMessage.body as? MessageImage, let url = URL(string: body.url) {
+            mainView.imageView.setImage(url: url)
+
+        } else if let body = viewModel.mediaMessage.body as? MessageMediaText, let url = URL(string: body.url) {
+            mainView.imageView.setImage(url: url)
+
+        } else if let body = viewModel.mediaMessage.body as? MessageCard, let url = URL(string: body.url) {
             mainView.imageView.setImage(url: url)
 
         }
+        
         let swipeDown = UISwipeGestureRecognizer(target: self, action: #selector(respondToSwipeGesture))
             swipeDown.direction = .down
             self.view.addGestureRecognizer(swipeDown)

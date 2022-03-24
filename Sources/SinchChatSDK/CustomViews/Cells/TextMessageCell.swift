@@ -15,13 +15,10 @@ final class TextMessageCell: MessageContentCell {
         if let attributes = layoutAttributes as? ChatFlowLayoutAttributes {
             messageLabel.textInsets = attributes.messageLabelTextInsets
             messageLabel.messageLabelFont = attributes.messageLabelFont
-          
             dateLabel.messageLabelFont = attributes.dateLabelFont
             dateLabel.textInsets = attributes.dateLabelTextInsets
-            
             messageLabel.frame =  attributes.messageLabelFrame
-            dateLabel.frame =  attributes.dateLabelFrame 
-            
+            dateLabel.frame =  attributes.dateLabelFrame
         }
     }
     

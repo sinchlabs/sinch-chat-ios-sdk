@@ -45,11 +45,11 @@ final class ErrorView: SinchView {
 
         switch state {
         case .isOn:
-            textLabel.text = NSLocalizedString("label_connected", bundle: Bundle.staticBundle, comment: "")
+            textLabel.text = localizationConfiguration.connected
             imageView.image = UIImage(named: "connectedIcon", in: Bundle.staticBundle, compatibleWith: nil)
             backgroundColor = UIColor(named: "connectedColor", in: Bundle.staticBundle, compatibleWith: nil)
         case .isOff:
-            textLabel.text = NSLocalizedString("label_no_internet_connection", bundle: Bundle.staticBundle, comment: "")
+            textLabel.text = localizationConfiguration.noInternetConnection
             imageView.image = UIImage(named: "disconnectedIcon", in: Bundle.staticBundle, compatibleWith: nil)
             backgroundColor = UIColor(named: "disconnectedColor", in: Bundle.staticBundle, compatibleWith: nil)
 

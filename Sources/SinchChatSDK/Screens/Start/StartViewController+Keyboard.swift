@@ -33,6 +33,11 @@ internal extension StartViewController {
         case .connectedViaCellularWithoutInternet:
             self.viewModel.setInternetConnectionState(.isOff)
             
+//        case .connectedViaEthernet:
+//            self.viewModel.setInternetConnectionState(.isOn)
+//
+//        case .connectedViaEthernetWithoutInternet:
+//            self.viewModel.setInternetConnectionState(.isOff)
         case .notConnected:
             self.viewModel.setInternetConnectionState(.isOff)
 

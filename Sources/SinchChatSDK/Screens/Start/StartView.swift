@@ -2,28 +2,31 @@ import UIKit
 
 final class StartView: SinchView {
     
-    var uiConfig: SinchSDKConfig.UIConfig
     var messageComposeView: ComposeView
     var collectionView: MessageCollectionView
     let errorView = ErrorView()
     let label = UILabel()
     var errorViewTopConstraint: NSLayoutConstraint?
     
-    init(uiConfig: SinchSDKConfig.UIConfig) {
-        self.uiConfig = uiConfig
-        messageComposeView = ComposeView(configuration: uiConfig)
-        collectionView = MessageCollectionView(configuration:uiConfig)
-        super.init()
+    override init(uiConfiguration: SinchSDKConfig.UIConfig, localizationConfiguration: SinchSDKConfig.LocalizationConfig) {
         
+        messageComposeView = ComposeView(uiConfiguration: uiConfiguration, localizatioConfiguration: localizationConfiguration)
+        collectionView = MessageCollectionView(uiConfiguration: uiConfiguration, localizationConfig:localizationConfiguration)
+        super.init(uiConfiguration: uiConfiguration, localizationConfiguration: localizationConfiguration)
+     
     }
-    
+ 
     override func setupSubviews() {
         backgroundColor = uiConfig.backgroundColor
         collectionView.register(TextMessageCell.self, forCellWithReuseIdentifier: TextMessageCell.cellId)
         collectionView.register(ImageMessageCell.self, forCellWithReuseIdentifier: ImageMessageCell.cellId)
         collectionView.register(EventMessageCell.self, forCellWithReuseIdentifier: EventMessageCell.cellId)
         collectionView.register(DateMessageCell.self, forCellWithReuseIdentifier: DateMessageCell.dateCellId)
-        
+        collectionView.register(MediaTextMessageCell.self, forCellWithReuseIdentifier: MediaTextMessageCell.cellId)
+        collectionView.register(LocationMessageCell.self, forCellWithReuseIdentifier: LocationMessageCell.cellId)
+        collectionView.register(ChoicesMessageCell.self, forCellWithReuseIdentifier: ChoicesMessageCell.cellId)
+        collectionView.register(CardMessageCell.self, forCellWithReuseIdentifier: CardMessageCell.cellId)
+
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(collectionView)
         
@@ -80,6 +83,5 @@ final class StartView: SinchView {
         case .notDetermined:
             break
         }
-        
     }
 }

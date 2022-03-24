@@ -4,5 +4,6 @@
     func didTapImage(in cell: MessageCollectionViewCell)
     func didTapOutsideOfContent(in cell: MessageCollectionViewCell)
     func didTapOutsideOfContent()
+    func didTapOnChoice(_ text: ChoiceMessageType, in cell: MessageCollectionViewCell)
 
 }

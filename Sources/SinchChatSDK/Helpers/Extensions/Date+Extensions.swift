@@ -10,12 +10,12 @@ extension Date {
         return dateFormat.string(from: self)
     }
     
-    func getFormattedDate() -> String {
+    func getFormattedDate(localizationConfiguration: SinchSDKConfig.LocalizationConfig) -> String {
         
         if Calendar.current.isDateInToday(self) {
-            return  NSLocalizedString("label_today", bundle: Bundle.staticBundle, comment: "")
+            return  localizationConfiguration.today
         } else if Calendar.current.isDateInYesterday(self) {
-            return  NSLocalizedString("label_yesterday", bundle: Bundle.staticBundle, comment: "")
+            return  localizationConfiguration.yesterday
 
         } else {
 

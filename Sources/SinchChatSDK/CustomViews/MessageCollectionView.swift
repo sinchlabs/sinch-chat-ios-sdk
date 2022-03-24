@@ -4,6 +4,8 @@ final class MessageCollectionView: UICollectionView {
    
     weak var chatDataSource: ChatDataSource?
     var uiConfig: SinchSDKConfig.UIConfig!
+    var localizationConfig: SinchSDKConfig.LocalizationConfig!
+
     weak var touchDelegate: MessageCellDelegate?
 
     private var indexPathForLastItem: IndexPath? {
@@ -21,11 +23,13 @@ final class MessageCollectionView: UICollectionView {
         super.init(frame: .zero, collectionViewLayout: ChatFlowLayout())
     }
 
-    convenience init(configuration: SinchSDKConfig.UIConfig) {
+    convenience init(uiConfiguration: SinchSDKConfig.UIConfig, localizationConfig: SinchSDKConfig.LocalizationConfig) {
         
         self.init(frame:  .zero, collectionViewLayout: ChatFlowLayout())
         setupGestureRecognizers()
-        self.uiConfig = configuration
+        self.uiConfig = uiConfiguration
+        self.localizationConfig = localizationConfig
+
         backgroundColor = uiConfig.backgroundColor
     }
    
@@ -53,9 +57,6 @@ final class MessageCollectionView: UICollectionView {
         guard numberOfSections > 0 else { return }
         
         let lastSection = numberOfSections - 1
-//        let lastItemIndex = numberOfItems(inSection: lastSection)
-//        
-//        guard lastSection >= 0 else { return }
         
         let indexPath = IndexPath(row: 0, section: lastSection)
         scrollToItem(at: indexPath, at: pos, animated: animated)

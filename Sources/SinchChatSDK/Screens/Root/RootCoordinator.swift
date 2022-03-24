@@ -25,20 +25,20 @@ final class RootCoordinator: BaseCoordinator {
         
     }
     
-    func getRootViewController(uiConfig: SinchSDKConfig.UIConfig) -> StartViewController {
+    func getRootViewController(uiConfig: SinchSDKConfig.UIConfig, localizationConfig: SinchSDKConfig.LocalizationConfig) -> StartViewController {
         let startViewModel: StartViewModel = DefaultStartViewModel(messageDataSource: messageDataSource, notificationPermission: pushPermissionHandler)
         messageDataSource.delegate = startViewModel
-        let startViewController = StartViewController(viewModel: startViewModel, view: .init(uiConfig: uiConfig))
+        let startViewController = StartViewController(viewModel: startViewModel, view: .init(uiConfiguration: uiConfig, localizationConfiguration: localizationConfig))
         startViewController.cordinator = self
         return startViewController
     }
 
-    func presentMediaViewerController(viewController: UIViewController, uiConfig: SinchSDKConfig.UIConfig?, mediaMessage: MessageImage) {
+    func presentMediaViewerController(viewController: UIViewController, uiConfig: SinchSDKConfig.UIConfig, localizationConfig: SinchSDKConfig.LocalizationConfig, mediaMessage: Message) {
         
         let mediaViewController = MediaViewerController(
             viewModel: DefaultMediaViewerViewModel(mediaMessage: mediaMessage),
-            view: .init(uiConfig: uiConfig ?? SinchSDKConfig.UIConfig.defaultValue)
-        )
+            view: .init(uiConfiguration: uiConfig, localizationConfiguration: localizationConfig))
+        
         let mediaNavigationController = UINavigationController(rootViewController: mediaViewController)
         mediaNavigationController.modalPresentationStyle = .fullScreen
         mediaNavigationController.modalTransitionStyle = .crossDissolve

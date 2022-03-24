@@ -5,7 +5,8 @@ class MessageSizeCalculator: ChatCellSizeCalculator {
     public var dateLabelFont = UIFont.preferredFont(forTextStyle: .caption2)
     public var dateLabelInsets = UIEdgeInsets(top: 5, left: 8, bottom: 8, right: 8)
     public var dateLabelTextInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
-    
+    public var buttonHeight = 36.0
+
     init(layout: ChatFlowLayout? = nil) {
         super.init()
         

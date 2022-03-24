@@ -18,7 +18,7 @@ final class DateMessageCell: EventMessageCell {
         if let body = message.body as? MessageDate,
             let dateInSeconds = body.sendDate {
 
-            messageLabel.text = Date(timeIntervalSince1970: TimeInterval(dateInSeconds)).getFormattedDate()
+            messageLabel.text = Date(timeIntervalSince1970: TimeInterval(dateInSeconds)).getFormattedDate(localizationConfiguration: messagesCollectionView.localizationConfig)
         }
         
         if let font = messageLabel.messageLabelFont {
