@@ -20,7 +20,7 @@ public protocol SinchChat {
     /// Sets metadata for single conversation. This methods overrides previous metadata.
     /// - Parameters:
     ///    - metadata: Keys with values.
-    func setConversationMetadata(_ metadata: [String: Any])
+    func setConversationMetadata(_ metadata: [SinchMetadata]) throws
 }
 
 public extension SinchChat {
@@ -94,8 +94,11 @@ final class DefaultSinchChat: SinchChat {
         guard isChatAvailable() == .available, let authDataSource = authDataSource, let region = region else {
             throw SinchChatSDKError.unavailable
         }
+        guard let client = DefaultAPIClient(region: region) else {
+            throw SinchChatSDKError.unavailable
+        }
                 
-        apiClient = DefaultAPIClient(region: region)
+        apiClient = client
         let messageDataSource = DefaultMessageDataSource(apiClient: apiClient!,
                                                          authDataSource: authDataSource)
         let rootCordinator = RootCoordinator(navigationController: navigationController,
@@ -119,7 +122,22 @@ final class DefaultSinchChat: SinchChat {
         }
     }
     
-    public func setConversationMetadata(_ metadata: [String: Any]) {}
+    public func setConversationMetadata(_ metadata: [SinchMetadata]) throws {
+        guard isChatAvailable() == .available, let authDataSource = authDataSource, let region = region else {
+            throw SinchChatSDKError.unavailable
+        }
+        if apiClient == nil {
+            guard let client = DefaultAPIClient(region: region) else {
+                throw SinchChatSDKError.unavailable
+            }
+            apiClient = client
+        }
+        
+        let messageDataSource = DefaultMessageDataSource(apiClient: apiClient!,
+                                                         authDataSource: authDataSource)
+        
+        _ = messageDataSource.sendConversationMetadata(metadata)
+    }
     
     func initilize(region: Region, authDataSource: AuthDataSource) {
         self.authDataSource = authDataSource
@@ -133,5 +151,49 @@ extension DefaultSinchChat: ChatNotificationHandlerDelegate {
     
     func getChatState() -> SinchChatState {
         state
+    }
+}
+
+public protocol SinchMetadata {
+    func getKeyValue() -> (key: String, value: String)
+}
+
+public struct SinchMetadataCustom: SinchMetadata {
+    let key: String
+    let value: String
+    
+    public init(key: String, value: String) {
+        self.key = key
+        self.value = value
+    }
+    
+    public func getKeyValue() -> (key: String, value: String) {
+        return (key, value)
+    }
+}
+
+public struct SinchMetadataEmail: SinchMetadata {
+    private let key: String = "email"
+    private let value: String
+    
+    public init(value: String) {
+        self.value = value
+    }
+    
+    public func getKeyValue() -> (key: String, value: String) {
+        return (key, value)
+    }
+}
+
+public struct SinchMetadataPhoneNumber: SinchMetadata {
+    private let key: String = "phone"
+    private let value: String
+
+    public init(value: String) {
+        self.value = value
+    }
+    
+    public func getKeyValue() -> (key: String, value: String) {
+        return (key, value)
     }
 }

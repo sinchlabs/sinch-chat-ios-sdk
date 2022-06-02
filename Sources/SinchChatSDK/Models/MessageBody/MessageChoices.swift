@@ -18,6 +18,8 @@ enum ChoiceMessageType: Codable {
 
 struct ChoiceText: Codable {
     var text: String
+    let postback: String
+    let entryID: String
 }
 
 struct ChoiceUrl: Codable {

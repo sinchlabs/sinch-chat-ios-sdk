@@ -25,36 +25,54 @@ struct Sinch_Chat_Client_V1alpha2_Client {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var projectID: String = String()
+  var projectID: String {
+    get {return _storage._projectID}
+    set {_uniqueStorage()._projectID = newValue}
+  }
 
-  var clientID: String = String()
+  var clientID: String {
+    get {return _storage._clientID}
+    set {_uniqueStorage()._clientID = newValue}
+  }
 
-  var appID: String = String()
+  var appID: String {
+    get {return _storage._appID}
+    set {_uniqueStorage()._appID = newValue}
+  }
 
   var secret: String {
-    get {return _secret ?? String()}
-    set {_secret = newValue}
+    get {return _storage._secret ?? String()}
+    set {_uniqueStorage()._secret = newValue}
   }
   /// Returns true if `secret` has been explicitly set.
-  var hasSecret: Bool {return self._secret != nil}
+  var hasSecret: Bool {return _storage._secret != nil}
   /// Clears the value of `secret`. Subsequent reads from it will return its default value.
-  mutating func clearSecret() {self._secret = nil}
+  mutating func clearSecret() {_uniqueStorage()._secret = nil}
 
   var settings: Sinch_Chat_Client_V1alpha2_Settings {
-    get {return _settings ?? Sinch_Chat_Client_V1alpha2_Settings()}
-    set {_settings = newValue}
+    get {return _storage._settings ?? Sinch_Chat_Client_V1alpha2_Settings()}
+    set {_uniqueStorage()._settings = newValue}
   }
   /// Returns true if `settings` has been explicitly set.
-  var hasSettings: Bool {return self._settings != nil}
+  var hasSettings: Bool {return _storage._settings != nil}
   /// Clears the value of `settings`. Subsequent reads from it will return its default value.
-  mutating func clearSettings() {self._settings = nil}
+  mutating func clearSettings() {_uniqueStorage()._settings = nil}
+
+  var displayName: String {
+    get {return _storage._displayName}
+    set {_uniqueStorage()._displayName = newValue}
+  }
+
+  var appName: String {
+    get {return _storage._appName}
+    set {_uniqueStorage()._appName = newValue}
+  }
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
-  fileprivate var _secret: String? = nil
-  fileprivate var _settings: Sinch_Chat_Client_V1alpha2_Settings? = nil
+  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 struct Sinch_Chat_Client_V1alpha2_Settings {
@@ -134,6 +152,12 @@ struct Sinch_Chat_Client_V1alpha2_ChatSettings {
   // methods supported on all messages.
 
   var header: String = String()
+
+  var brandColor: String = String()
+
+  var brandColorLight: String = String()
+
+  var brandColorDark: String = String()
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -248,53 +272,109 @@ extension Sinch_Chat_Client_V1alpha2_Client: SwiftProtobuf.Message, SwiftProtobu
     3: .standard(proto: "app_id"),
     4: .same(proto: "secret"),
     5: .same(proto: "settings"),
+    6: .standard(proto: "display_name"),
+    7: .standard(proto: "app_name"),
   ]
 
+  fileprivate class _StorageClass {
+    var _projectID: String = String()
+    var _clientID: String = String()
+    var _appID: String = String()
+    var _secret: String? = nil
+    var _settings: Sinch_Chat_Client_V1alpha2_Settings? = nil
+    var _displayName: String = String()
+    var _appName: String = String()
+
+    static let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _projectID = source._projectID
+      _clientID = source._clientID
+      _appID = source._appID
+      _secret = source._secret
+      _settings = source._settings
+      _displayName = source._displayName
+      _appName = source._appName
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.projectID) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.clientID) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.appID) }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self._secret) }()
-      case 5: try { try decoder.decodeSingularMessageField(value: &self._settings) }()
-      default: break
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularStringField(value: &_storage._projectID) }()
+        case 2: try { try decoder.decodeSingularStringField(value: &_storage._clientID) }()
+        case 3: try { try decoder.decodeSingularStringField(value: &_storage._appID) }()
+        case 4: try { try decoder.decodeSingularStringField(value: &_storage._secret) }()
+        case 5: try { try decoder.decodeSingularMessageField(value: &_storage._settings) }()
+        case 6: try { try decoder.decodeSingularStringField(value: &_storage._displayName) }()
+        case 7: try { try decoder.decodeSingularStringField(value: &_storage._appName) }()
+        default: break
+        }
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.projectID.isEmpty {
-      try visitor.visitSingularStringField(value: self.projectID, fieldNumber: 1)
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      if !_storage._projectID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._projectID, fieldNumber: 1)
+      }
+      if !_storage._clientID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._clientID, fieldNumber: 2)
+      }
+      if !_storage._appID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._appID, fieldNumber: 3)
+      }
+      try { if let v = _storage._secret {
+        try visitor.visitSingularStringField(value: v, fieldNumber: 4)
+      } }()
+      try { if let v = _storage._settings {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+      } }()
+      if !_storage._displayName.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._displayName, fieldNumber: 6)
+      }
+      if !_storage._appName.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._appName, fieldNumber: 7)
+      }
     }
-    if !self.clientID.isEmpty {
-      try visitor.visitSingularStringField(value: self.clientID, fieldNumber: 2)
-    }
-    if !self.appID.isEmpty {
-      try visitor.visitSingularStringField(value: self.appID, fieldNumber: 3)
-    }
-    try { if let v = self._secret {
-      try visitor.visitSingularStringField(value: v, fieldNumber: 4)
-    } }()
-    try { if let v = self._settings {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
-    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Sinch_Chat_Client_V1alpha2_Client, rhs: Sinch_Chat_Client_V1alpha2_Client) -> Bool {
-    if lhs.projectID != rhs.projectID {return false}
-    if lhs.clientID != rhs.clientID {return false}
-    if lhs.appID != rhs.appID {return false}
-    if lhs._secret != rhs._secret {return false}
-    if lhs._settings != rhs._settings {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._projectID != rhs_storage._projectID {return false}
+        if _storage._clientID != rhs_storage._clientID {return false}
+        if _storage._appID != rhs_storage._appID {return false}
+        if _storage._secret != rhs_storage._secret {return false}
+        if _storage._settings != rhs_storage._settings {return false}
+        if _storage._displayName != rhs_storage._displayName {return false}
+        if _storage._appName != rhs_storage._appName {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -370,6 +450,9 @@ extension Sinch_Chat_Client_V1alpha2_ChatSettings: SwiftProtobuf.Message, SwiftP
   static let protoMessageName: String = _protobuf_package + ".ChatSettings"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "header"),
+    2: .standard(proto: "brand_color"),
+    3: .standard(proto: "brand_color_light"),
+    4: .standard(proto: "brand_color_dark"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -379,6 +462,9 @@ extension Sinch_Chat_Client_V1alpha2_ChatSettings: SwiftProtobuf.Message, SwiftP
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.header) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.brandColor) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.brandColorLight) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.brandColorDark) }()
       default: break
       }
     }
@@ -388,11 +474,23 @@ extension Sinch_Chat_Client_V1alpha2_ChatSettings: SwiftProtobuf.Message, SwiftP
     if !self.header.isEmpty {
       try visitor.visitSingularStringField(value: self.header, fieldNumber: 1)
     }
+    if !self.brandColor.isEmpty {
+      try visitor.visitSingularStringField(value: self.brandColor, fieldNumber: 2)
+    }
+    if !self.brandColorLight.isEmpty {
+      try visitor.visitSingularStringField(value: self.brandColorLight, fieldNumber: 3)
+    }
+    if !self.brandColorDark.isEmpty {
+      try visitor.visitSingularStringField(value: self.brandColorDark, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Sinch_Chat_Client_V1alpha2_ChatSettings, rhs: Sinch_Chat_Client_V1alpha2_ChatSettings) -> Bool {
     if lhs.header != rhs.header {return false}
+    if lhs.brandColor != rhs.brandColor {return false}
+    if lhs.brandColorLight != rhs.brandColorLight {return false}
+    if lhs.brandColorDark != rhs.brandColorDark {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

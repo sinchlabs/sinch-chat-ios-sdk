@@ -1,5 +1,10 @@
 import Foundation
 
+enum PushRepositoryError: Error {
+    // Report this error to us.
+    case internalError
+}
+
 protocol PushRepository {
     func sendDeviceToken(token: String, completion: @escaping (Result<Void, Error>) -> Void)
 }
@@ -15,7 +20,10 @@ final class DefaultPushRepository: PushRepository {
 
     func sendDeviceToken(token: String, completion: @escaping (Result<Void, Error>) -> Void) {
         do {
-            let client = DefaultAPIClient(region: region)
+            guard let client = DefaultAPIClient(region: region) else {
+                completion(.failure(PushRepositoryError.internalError))
+                return
+            }
             let service = try getService(apiClient: client)
 
             var request = Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest()
@@ -24,9 +32,9 @@ final class DefaultPushRepository: PushRepository {
                 completion(.success(()))
                 return
             case .sandbox:
-                request.platform = Sinch_Push_V1alpha1_Platform.iosSandbox
+                request.platform = Sinch_Chat_Sdk_V1alpha2_PushPlatform.iosSandbox
             case .prod, nil:
-                request.platform = Sinch_Push_V1alpha1_Platform.ios
+                request.platform = Sinch_Chat_Sdk_V1alpha2_PushPlatform.ios
             }
             request.token = token
 

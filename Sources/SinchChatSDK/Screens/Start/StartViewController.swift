@@ -204,6 +204,11 @@ extension StartViewController: ComposeViewDelegate {
         
         viewModel.sendMessage(.text(text))
     }
+    
+    func sendChoiceResponseMessage(postbackData: String, entryID: String) {
+        
+        viewModel.sendMessage(.choiceResponseMessage(postbackData: postbackData, entryID: entryID))
+    }
 }
 extension StartViewController: StartViewModelDelegate {
     func setVisibleRefreshActivityIndicator(_ isVisible: Bool) {
@@ -535,7 +540,7 @@ extension StartViewController: MessageCellDelegate {
         
         switch choice {
         case .textMessage(let message):
-            sendMessage(text: message.text)
+            sendChoiceResponseMessage(postbackData: message.postback, entryID: message.entryID)
 
         case .urlMessage(let message):
             if let url = URL(string: message.url) {

@@ -22,6 +22,7 @@ class TitleImageButton: UIButton {
         backgroundColor = UIColor.white
         layer.cornerRadius = 10
         layer.masksToBounds = true
-        setInsets(forContentPadding: UIEdgeInsets.zero, imageTitlePadding: 10)
+        setInsets(forContentPadding: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
+                  imageTitlePadding: 10)
     }
 }

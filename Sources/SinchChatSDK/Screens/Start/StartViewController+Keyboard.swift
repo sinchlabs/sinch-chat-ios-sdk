@@ -44,7 +44,7 @@ internal extension StartViewController {
         case .determining:
             break
         default:
-            break
+            self.viewModel.setInternetConnectionState(.isOn)
         }
     }
     
@@ -52,7 +52,7 @@ internal extension StartViewController {
         NotificationCenter.default.addObserver(self, selector: #selector(StartViewController.handleKeyboardDidChangeState(_:)),
                                                name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(StartViewController.handleTextViewDidBeginEditing(_:)),
-                                               name: UITextView.textDidBeginEditingNotification, object: nil)
+                                               name: UITextView.textDidBeginEditingNotification, object: nil)        
     }
     
     func removeKeyboardObservers() {

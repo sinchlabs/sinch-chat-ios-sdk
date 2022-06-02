@@ -109,11 +109,20 @@ struct Sinch_Chat_Sdk_V1alpha2_SendRequest {
     set {payload = .event(newValue)}
   }
 
+  var metadata: String {
+    get {
+      if case .metadata(let v)? = payload {return v}
+      return String()
+    }
+    set {payload = .metadata(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_Payload: Equatable {
     case message(Sinch_Conversationapi_Type_ContactMessage)
     case event(Sinch_Conversationapi_Type_ContactEvent)
+    case metadata(String)
 
   #if !swift(>=4.1)
     static func ==(lhs: Sinch_Chat_Sdk_V1alpha2_SendRequest.OneOf_Payload, rhs: Sinch_Chat_Sdk_V1alpha2_SendRequest.OneOf_Payload) -> Bool {
@@ -127,6 +136,10 @@ struct Sinch_Chat_Sdk_V1alpha2_SendRequest {
       }()
       case (.event, .event): return {
         guard case .event(let l) = lhs, case .event(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.metadata, .metadata): return {
+        guard case .metadata(let l) = lhs, case .metadata(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -255,7 +268,7 @@ struct Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest {
 
   var expireTime: String = String()
 
-  var platform: Sinch_Push_V1alpha1_Platform = .unspecified
+  var platform: Sinch_Chat_Sdk_V1alpha2_PushPlatform = .platformUnspecified
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -472,6 +485,7 @@ extension Sinch_Chat_Sdk_V1alpha2_SendRequest: SwiftProtobuf.Message, SwiftProto
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "message"),
     2: .same(proto: "event"),
+    3: .same(proto: "metadata"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -506,6 +520,14 @@ extension Sinch_Chat_Sdk_V1alpha2_SendRequest: SwiftProtobuf.Message, SwiftProto
           self.payload = .event(v)
         }
       }()
+      case 3: try {
+        var v: String?
+        try decoder.decodeSingularStringField(value: &v)
+        if let v = v {
+          if self.payload != nil {try decoder.handleConflictingOneOf()}
+          self.payload = .metadata(v)
+        }
+      }()
       default: break
       }
     }
@@ -524,6 +546,10 @@ extension Sinch_Chat_Sdk_V1alpha2_SendRequest: SwiftProtobuf.Message, SwiftProto
     case .event?: try {
       guard case .event(let v)? = self.payload else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    }()
+    case .metadata?: try {
+      guard case .metadata(let v)? = self.payload else { preconditionFailure() }
+      try visitor.visitSingularStringField(value: v, fieldNumber: 3)
     }()
     case nil: break
     }
@@ -754,7 +780,7 @@ extension Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest: SwiftProtobuf.Message,
     if !self.expireTime.isEmpty {
       try visitor.visitSingularStringField(value: self.expireTime, fieldNumber: 2)
     }
-    if self.platform != .unspecified {
+    if self.platform != .platformUnspecified {
       try visitor.visitSingularEnumField(value: self.platform, fieldNumber: 3)
     }
     try unknownFields.traverse(visitor: &visitor)

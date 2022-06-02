@@ -3,6 +3,7 @@ import UIKit
 protocol ComposeViewDelegate: AnyObject {
     
     func sendMessage(text: String)
+    func sendChoiceResponseMessage(postbackData: String, entryID: String)
     func choosePhoto()
 }
 

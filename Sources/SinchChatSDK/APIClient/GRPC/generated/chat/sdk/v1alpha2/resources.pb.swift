@@ -20,6 +20,58 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
+enum Sinch_Chat_Sdk_V1alpha2_PushPlatform: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+  case platformUnspecified // = 0
+  case web // = 1
+  case iosSandbox // = 2
+  case ios // = 3
+  case android // = 4
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .platformUnspecified
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .platformUnspecified
+    case 1: self = .web
+    case 2: self = .iosSandbox
+    case 3: self = .ios
+    case 4: self = .android
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .platformUnspecified: return 0
+    case .web: return 1
+    case .iosSandbox: return 2
+    case .ios: return 3
+    case .android: return 4
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Sinch_Chat_Sdk_V1alpha2_PushPlatform: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static var allCases: [Sinch_Chat_Sdk_V1alpha2_PushPlatform] = [
+    .platformUnspecified,
+    .web,
+    .iosSandbox,
+    .ios,
+    .android,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
 struct Sinch_Chat_Sdk_V1alpha2_Entry {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
@@ -68,6 +120,8 @@ struct Sinch_Chat_Sdk_V1alpha2_Entry {
     set {payload = .contactEvent(newValue)}
   }
 
+  var entryID: String = String()
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_Payload: Equatable {
@@ -113,6 +167,16 @@ struct Sinch_Chat_Sdk_V1alpha2_Entry {
 
 fileprivate let _protobuf_package = "sinch.chat.sdk.v1alpha2"
 
+extension Sinch_Chat_Sdk_V1alpha2_PushPlatform: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "PLATFORM_UNSPECIFIED"),
+    1: .same(proto: "WEB"),
+    2: .same(proto: "IOS_SANDBOX"),
+    3: .same(proto: "IOS"),
+    4: .same(proto: "ANDROID"),
+  ]
+}
+
 extension Sinch_Chat_Sdk_V1alpha2_Entry: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".Entry"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -121,6 +185,7 @@ extension Sinch_Chat_Sdk_V1alpha2_Entry: SwiftProtobuf.Message, SwiftProtobuf._M
     3: .standard(proto: "app_event"),
     4: .standard(proto: "contact_message"),
     5: .standard(proto: "contact_event"),
+    6: .standard(proto: "entry_id"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -182,6 +247,7 @@ extension Sinch_Chat_Sdk_V1alpha2_Entry: SwiftProtobuf.Message, SwiftProtobuf._M
           self.payload = .contactEvent(v)
         }
       }()
+      case 6: try { try decoder.decodeSingularStringField(value: &self.entryID) }()
       default: break
       }
     }
@@ -214,12 +280,16 @@ extension Sinch_Chat_Sdk_V1alpha2_Entry: SwiftProtobuf.Message, SwiftProtobuf._M
     }()
     case nil: break
     }
+    if !self.entryID.isEmpty {
+      try visitor.visitSingularStringField(value: self.entryID, fieldNumber: 6)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Sinch_Chat_Sdk_V1alpha2_Entry, rhs: Sinch_Chat_Sdk_V1alpha2_Entry) -> Bool {
     if lhs._deliveryTime != rhs._deliveryTime {return false}
     if lhs.payload != rhs.payload {return false}
+    if lhs.entryID != rhs.entryID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

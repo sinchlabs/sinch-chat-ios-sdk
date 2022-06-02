@@ -26,6 +26,7 @@ protocol MessageDataSource {
     func sendMessage(_ message: MessageType, completion: @escaping (Result<Void, MessageDataSourceError>) -> Void)
     func subscribeForMessages(completion: @escaping (Result<Message, MessageDataSourceError>) -> Void)
     func getMessageHistory(completion: @escaping (Result<[Message], MessageDataSourceError>) -> Void)
+    func sendConversationMetadata(_ metadata: [SinchMetadata]) -> Result<Void, MessageDataSourceError>
     func cancelSubscription()
     func cancelCalls()
     func isSubscribed() -> Bool
@@ -46,6 +47,8 @@ final class DefaultMessageDataSource: MessageDataSource {
     var uploadMediaCall: ClientStreamingCall<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest, Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse>?
     weak var delegate: MessageDataSourceDelegate?
     var firstPage: Bool = true
+    
+    private let jsonEncoder = JSONEncoder()
     
     init(apiClient: APIClient, authDataSource: AuthDataSource) {
         self.client = apiClient
@@ -220,6 +223,36 @@ final class DefaultMessageDataSource: MessageDataSource {
             completion(.failure(.notLoggedIn))
         }
     }
+    
+    func sendConversationMetadata(_ metadata: [SinchMetadata]) -> Result<Void, MessageDataSourceError> {
+        
+        var keyValueDictionary: [String: String] = [:]
+        metadata.forEach { metadata in
+            let data = metadata.getKeyValue()
+            keyValueDictionary[data.key] = data.value
+        }
+        do {
+            let encodedData = try jsonEncoder.encode(keyValueDictionary)
+            
+            var request = Sinch_Chat_Sdk_V1alpha2_SendRequest()
+            request.metadata = String(bytes: encodedData, encoding: .utf8) ?? "{}"
+            
+            try getService().send(request).status.whenComplete { result in
+                switch result {
+                case .failure(let err):
+                    Logger.warning("cannot set conversation metadata", err.localizedDescription)
+                case .success:
+                    break
+                }
+            }
+            
+            return .success(())
+            
+        } catch let error {
+            return .failure(.unknown(error))
+        }
+    }
+    
     func cancelCalls() {
         historyCall?.cancel(promise: nil)
         sendMessageCall?.cancel(promise: nil)
@@ -301,7 +334,8 @@ final class DefaultMessageDataSource: MessageDataSource {
             let incomingChoiceMessage = entry.appMessage.choiceMessage
             if incomingChoiceMessage.hasTextMessage {
                 
-                let choicesArray = createChoicesArray(incomingChoiceMessage.choices)
+                // EntryID is messageID in case od message types.
+                let choicesArray = createChoicesArray(incomingChoiceMessage.choices, entryID: entry.entryID)
                 let messageBody = MessageChoices(text: incomingChoiceMessage.textMessage.text,
                                                  choices: choicesArray,
                                                  sendDate: entry.deliveryTime.seconds)
@@ -320,7 +354,8 @@ final class DefaultMessageDataSource: MessageDataSource {
 
             if incomingCardMessage.hasMediaMessage {
                 
-                let choicesArray = createChoicesArray(incomingCardMessage.choices)
+                // EntryID is messageID in case od message types.
+                let choicesArray = createChoicesArray(incomingCardMessage.choices, entryID: entry.entryID)
                 let messageBody = MessageCard(title: incomingCardMessage.title,
                                               description: incomingCardMessage.description_p,
                                               choices: choicesArray,
@@ -383,7 +418,7 @@ final class DefaultMessageDataSource: MessageDataSource {
         return nil
     }
     
-    func createChoicesArray(_ choices: [Sinch_Conversationapi_Type_Choice]) -> [ChoiceMessageType] {
+    func createChoicesArray(_ choices: [Sinch_Conversationapi_Type_Choice], entryID: String) -> [ChoiceMessageType] {
         
         var choicesArray: [ChoiceMessageType] = []
         
@@ -393,13 +428,16 @@ final class DefaultMessageDataSource: MessageDataSource {
             }
             switch message {
             case .textMessage( let textMessage):
-                choicesArray.append(.textMessage((ChoiceText(text: textMessage.text))))
+                choicesArray.append(.textMessage((ChoiceText(text: textMessage.text, postback: choice.postbackData, entryID: entryID))))
             case .urlMessage(let urlMessage):
                 choicesArray.append(.urlMessage(ChoiceUrl(url: urlMessage.url, text: urlMessage.title)))
             case .callMessage(let callMessage):
                 choicesArray.append(.callMessage(ChoiceCall(text: callMessage.title, phoneNumber: callMessage.phoneNumber)))
             case .locationMessage(let locationMessage):
-                choicesArray.append(.locationMessage(ChoiceLocation(text: locationMessage.title, label: locationMessage.label, latitude: Double(locationMessage.coordinates.latitude), longitude: Double(locationMessage.coordinates.longitude))))
+                let lat = Double(locationMessage.coordinates.latitude)
+                let long = Double(locationMessage.coordinates.longitude)
+                let location = ChoiceLocation(text: locationMessage.title, label: locationMessage.label, latitude: lat, longitude: long)
+                choicesArray.append(.locationMessage(location))
             }
         }
         return choicesArray

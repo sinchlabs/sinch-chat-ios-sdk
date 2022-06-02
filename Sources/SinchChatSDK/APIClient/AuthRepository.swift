@@ -2,6 +2,8 @@ import Foundation
 
 enum AuthRepositoryError: Error {
     case unknown(Error)
+    // Cannot create api client, report it to us, thank you!
+    case internalError
 }
 
 typealias AccessToken = String
@@ -34,7 +36,10 @@ final class DefaultAuthRepository: AuthRepository {
     }
 
     func createAnonymouseToken(completion: @escaping (Result<AuthModel, AuthRepositoryError>) -> Void) {
-        let client = DefaultAPIClient(region: config.region)
+        guard let client = DefaultAPIClient(region: config.region) else {
+            completion(.failure(.internalError))
+            return
+        }
         let service = getService(client: client)
 
         var request = Sinch_Chat_Sdk_V1alpha2_IssueAnonymousTokenRequest()
@@ -58,7 +63,10 @@ final class DefaultAuthRepository: AuthRepository {
     }
 
     func createSignedToken(userId: String, secret: String, completion: @escaping (Result<AuthModel, AuthRepositoryError>) -> Void) {
-        let client = DefaultAPIClient(region: config.region)
+        guard let client = DefaultAPIClient(region: config.region) else {
+            completion(.failure(.internalError))
+            return
+        }
         let service = getService(client: client)
         
         var request = Sinch_Chat_Sdk_V1alpha2_IssueTokenWithSignedUuidRequest()

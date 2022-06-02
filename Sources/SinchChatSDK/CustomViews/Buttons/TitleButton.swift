@@ -21,5 +21,7 @@ class TitleButton: UIButton {
         backgroundColor = UIColor.white
         layer.cornerRadius = 10
         layer.masksToBounds = true
+        titleEdgeInsets = UIEdgeInsets(top: 0.0, left: 8.0, bottom: 0.0, right: 8.0)
     }
+   
 }
