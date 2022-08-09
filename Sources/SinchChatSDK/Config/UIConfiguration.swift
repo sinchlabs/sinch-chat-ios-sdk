@@ -33,8 +33,11 @@ public extension SinchSDKConfig {
         public var messageUrlLinkTextColor = UIColor(named: "primaryLinkColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var dateMessageLabelTextColor = UIColor(named: "primaryDateTextColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var buttonTitleColor = UIColor(named: "buttonTitleColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        public var tappedButtonTitleColor = UIColor(named: "tappedButtonTitleColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var buttonTitleFont = UIFont.boldSystemFont(ofSize: 14)
         public var buttonBackgroundColor = UIColor(named: "buttonBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        public var tappedButtonBackgroundColor = UIColor(named: "tappedButtonBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        public var locationDotColor = UIColor(named: "primaryThemeColor", in: Bundle.staticBundle, compatibleWith: nil)!
 
         // MARK: - System messages user interface settings
         
@@ -51,15 +54,46 @@ public extension SinchSDKConfig {
         public var inputTextViewBorderColor: UIColor =  UIColor(named: "primaryBorderColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var inputTextColor = UIColor(named: "primaryTextColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var inputPlaceholderTextColor = UIColor(named: "primaryTextColor", in: Bundle.staticBundle, compatibleWith: nil)!
-        
         // MARK: - Images
 
         public var photoImage = UIImage(named: "photoIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var plusImage = UIImage(named: "plusIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var voiceRecordingImage = UIImage(named: "recordVoiceIcon", in: Bundle.staticBundle, compatibleWith: nil)
+
         public var emojiImage = UIImage(named: "emojiIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var sendImage = UIImage(named: "sendIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var chatBotImage = UIImage(named: "chatBotIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var locationMessageImage = UIImage(named: "locationIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var locationMarkerImage = UIImage(named: "locationIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var menuButtonTextColor = UIColor(named: "primaryTextColor", in: Bundle.staticBundle, compatibleWith: nil)!
+
+        public var shareLocationMenuImage = UIImage(named: "locationBlueIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var pageControlSelectedColor = UIColor(named: "primaryPageControlColor", in: Bundle.staticBundle, compatibleWith: nil)
+        public var pageControlUnselectedColor = UIColor(named: "secondaryPageControlColor", in: Bundle.staticBundle, compatibleWith: nil)
+
+        // MARK: - InAppMessaging
+        
+        public var inAppMessageBackgroundColor = UIColor(named: "primaryInAppMessageBackground", in: Bundle.staticBundle, compatibleWith: nil)!
+        public var inAppMessageinAppCloseImage = UIImage(named: "inAppCloseIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var inAppMessageDarkCloseImage = UIImage(named: "inAppDarkCloseIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var inAppMessageLightCloseImage = UIImage(named: "inAppLightCloseIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var inAppMessageButtonTitleColor = UIColor(named: "inAppButtonTitleColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        public var inAppMessageTappedButtonTitleColor = UIColor(named: "tappedButtonTitleColor", in: Bundle.staticBundle, compatibleWith: nil)!
+
+        public var inAppMessageButtonBackgroundColor = UIColor(named: "inAppMessageButtonBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        public var inAppMessageButtonTappedBackgroundColor = UIColor(named: "tappedButtonBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
+
+        public var inAppMessageButtonTitleFont = UIFont.boldSystemFont(ofSize: 14)
+        public var inAppMessageTextFont = UIFont.preferredFont(forTextStyle: .body)
+        public var inAppMessageTitleFont = UIFont(descriptor:
+                                                    UIFontDescriptor.preferredFontDescriptor(withTextStyle: .title3).withSymbolicTraits(.traitBold) ?? UIFontDescriptor(),
+                                                  size: 0.0)
+
+        public var inAppMessageMaybeLaterButtonTitleColor = UIColor(named: "inAppMaybeButtonTitleColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        public var inAppMessageMaybeLaterButtonBorderColor = UIColor(named: "inAppMaybeButtonBorderColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        public var inAppMessageTextColor = UIColor(named: "inAppTextColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        public var inAppMessageImagePlaceholder = UIImage(named: "mediaPlaceholder", in: Bundle.staticBundle, compatibleWith: nil)
+        public var inAppMessageImageBackgroundColor = UIColor(named:  "inAppImageBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)
 
     }
 }

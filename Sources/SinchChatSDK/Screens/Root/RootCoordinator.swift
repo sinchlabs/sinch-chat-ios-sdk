@@ -3,22 +3,23 @@
 import UIKit
 import Logging
 import GRPC
+import CoreLocation
 
 final class RootCoordinator: BaseCoordinator {
-
+    
     private var messageDataSource: MessageDataSource
     private let pushPermissionHandler: PushNofiticationPermissionHandler
     private let authDataSource: AuthDataSource
+    lazy var locationManager = CLLocationManager()
 
-    init(navigationController: UINavigationController?,
-         messageDataSource: MessageDataSource,
+    init(messageDataSource: MessageDataSource,
          authDataSource: AuthDataSource,
          pushPermissionHandler: PushNofiticationPermissionHandler) {
         
         self.messageDataSource = messageDataSource
         self.authDataSource = authDataSource
         self.pushPermissionHandler = pushPermissionHandler
-        super.init(navigationController: navigationController)
+        super.init()
     }
     
     override func start() {
@@ -32,17 +33,33 @@ final class RootCoordinator: BaseCoordinator {
         startViewController.cordinator = self
         return startViewController
     }
-
-    func presentMediaViewerController(viewController: UIViewController, uiConfig: SinchSDKConfig.UIConfig, localizationConfig: SinchSDKConfig.LocalizationConfig, mediaMessage: Message) {
+    
+    func presentMediaViewerController(viewController: UIViewController,
+                                      uiConfig: SinchSDKConfig.UIConfig,
+                                      localizationConfig: SinchSDKConfig.LocalizationConfig, url: URL) {
         
         let mediaViewController = MediaViewerController(
-            viewModel: DefaultMediaViewerViewModel(mediaMessage: mediaMessage),
+            viewModel: DefaultMediaViewerViewModel(url: url),
             view: .init(uiConfiguration: uiConfig, localizationConfiguration: localizationConfig))
         
         let mediaNavigationController = UINavigationController(rootViewController: mediaViewController)
         mediaNavigationController.modalPresentationStyle = .fullScreen
         mediaNavigationController.modalTransitionStyle = .crossDissolve
         viewController.present(mediaNavigationController, animated: true, completion: nil)
+        
+    }
+    func presentLocation(viewController: StartViewController,
+                         uiConfig: SinchSDKConfig.UIConfig,
+                         localizationConfig: SinchSDKConfig.LocalizationConfig) {
+        
+        let locationViewController = LocationViewController(
+            viewModel: DefaultLocationViewModel(),
+            view: .init(uiConfiguration: uiConfig, localizationConfiguration: localizationConfig))
+        locationViewController.delegate = viewController
+        locationViewController.locationManager = locationManager
+        locationViewController.modalPresentationStyle = .fullScreen
+        locationViewController.modalTransitionStyle = .crossDissolve
+        viewController.present(locationViewController, animated: true, completion: nil)
         
     }
 }

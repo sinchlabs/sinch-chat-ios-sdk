@@ -110,19 +110,19 @@ struct Sinch_Chat_Sdk_V1alpha2_SendRequest {
   }
 
   var metadata: String {
-    get {
-      if case .metadata(let v)? = payload {return v}
-      return String()
-    }
-    set {payload = .metadata(newValue)}
+    get {return _metadata ?? String()}
+    set {_metadata = newValue}
   }
+  /// Returns true if `metadata` has been explicitly set.
+  var hasMetadata: Bool {return self._metadata != nil}
+  /// Clears the value of `metadata`. Subsequent reads from it will return its default value.
+  mutating func clearMetadata() {self._metadata = nil}
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_Payload: Equatable {
     case message(Sinch_Conversationapi_Type_ContactMessage)
     case event(Sinch_Conversationapi_Type_ContactEvent)
-    case metadata(String)
 
   #if !swift(>=4.1)
     static func ==(lhs: Sinch_Chat_Sdk_V1alpha2_SendRequest.OneOf_Payload, rhs: Sinch_Chat_Sdk_V1alpha2_SendRequest.OneOf_Payload) -> Bool {
@@ -138,10 +138,6 @@ struct Sinch_Chat_Sdk_V1alpha2_SendRequest {
         guard case .event(let l) = lhs, case .event(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
-      case (.metadata, .metadata): return {
-        guard case .metadata(let l) = lhs, case .metadata(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
       default: return false
       }
     }
@@ -149,6 +145,8 @@ struct Sinch_Chat_Sdk_V1alpha2_SendRequest {
   }
 
   init() {}
+
+  fileprivate var _metadata: String? = nil
 }
 
 struct Sinch_Chat_Sdk_V1alpha2_SendResponse {
@@ -156,20 +154,11 @@ struct Sinch_Chat_Sdk_V1alpha2_SendResponse {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var messageID: String {
-    get {return _messageID ?? String()}
-    set {_messageID = newValue}
-  }
-  /// Returns true if `messageID` has been explicitly set.
-  var hasMessageID: Bool {return self._messageID != nil}
-  /// Clears the value of `messageID`. Subsequent reads from it will return its default value.
-  mutating func clearMessageID() {self._messageID = nil}
+  var messageID: String = String()
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
-
-  fileprivate var _messageID: String? = nil
 }
 
 struct Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest {
@@ -270,9 +259,30 @@ struct Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest {
 
   var platform: Sinch_Chat_Sdk_V1alpha2_PushPlatform = .platformUnspecified
 
+  var p256Dh: String {
+    get {return _p256Dh ?? String()}
+    set {_p256Dh = newValue}
+  }
+  /// Returns true if `p256Dh` has been explicitly set.
+  var hasP256Dh: Bool {return self._p256Dh != nil}
+  /// Clears the value of `p256Dh`. Subsequent reads from it will return its default value.
+  mutating func clearP256Dh() {self._p256Dh = nil}
+
+  var endpoint: String {
+    get {return _endpoint ?? String()}
+    set {_endpoint = newValue}
+  }
+  /// Returns true if `endpoint` has been explicitly set.
+  var hasEndpoint: Bool {return self._endpoint != nil}
+  /// Clears the value of `endpoint`. Subsequent reads from it will return its default value.
+  mutating func clearEndpoint() {self._endpoint = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
+
+  fileprivate var _p256Dh: String? = nil
+  fileprivate var _endpoint: String? = nil
 }
 
 struct Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest {
@@ -520,14 +530,7 @@ extension Sinch_Chat_Sdk_V1alpha2_SendRequest: SwiftProtobuf.Message, SwiftProto
           self.payload = .event(v)
         }
       }()
-      case 3: try {
-        var v: String?
-        try decoder.decodeSingularStringField(value: &v)
-        if let v = v {
-          if self.payload != nil {try decoder.handleConflictingOneOf()}
-          self.payload = .metadata(v)
-        }
-      }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self._metadata) }()
       default: break
       }
     }
@@ -547,17 +550,17 @@ extension Sinch_Chat_Sdk_V1alpha2_SendRequest: SwiftProtobuf.Message, SwiftProto
       guard case .event(let v)? = self.payload else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
     }()
-    case .metadata?: try {
-      guard case .metadata(let v)? = self.payload else { preconditionFailure() }
-      try visitor.visitSingularStringField(value: v, fieldNumber: 3)
-    }()
     case nil: break
     }
+    try { if let v = self._metadata {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Sinch_Chat_Sdk_V1alpha2_SendRequest, rhs: Sinch_Chat_Sdk_V1alpha2_SendRequest) -> Bool {
     if lhs.payload != rhs.payload {return false}
+    if lhs._metadata != rhs._metadata {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -575,25 +578,21 @@ extension Sinch_Chat_Sdk_V1alpha2_SendResponse: SwiftProtobuf.Message, SwiftProt
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self._messageID) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.messageID) }()
       default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    try { if let v = self._messageID {
-      try visitor.visitSingularStringField(value: v, fieldNumber: 1)
-    } }()
+    if !self.messageID.isEmpty {
+      try visitor.visitSingularStringField(value: self.messageID, fieldNumber: 1)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Sinch_Chat_Sdk_V1alpha2_SendResponse, rhs: Sinch_Chat_Sdk_V1alpha2_SendResponse) -> Bool {
-    if lhs._messageID != rhs._messageID {return false}
+    if lhs.messageID != rhs.messageID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -757,6 +756,8 @@ extension Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest: SwiftProtobuf.Message,
     1: .same(proto: "token"),
     2: .standard(proto: "expire_time"),
     3: .same(proto: "platform"),
+    4: .same(proto: "p256dh"),
+    5: .same(proto: "endpoint"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -768,12 +769,18 @@ extension Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest: SwiftProtobuf.Message,
       case 1: try { try decoder.decodeSingularStringField(value: &self.token) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.expireTime) }()
       case 3: try { try decoder.decodeSingularEnumField(value: &self.platform) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self._p256Dh) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self._endpoint) }()
       default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
     if !self.token.isEmpty {
       try visitor.visitSingularStringField(value: self.token, fieldNumber: 1)
     }
@@ -783,6 +790,12 @@ extension Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest: SwiftProtobuf.Message,
     if self.platform != .platformUnspecified {
       try visitor.visitSingularEnumField(value: self.platform, fieldNumber: 3)
     }
+    try { if let v = self._p256Dh {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 4)
+    } }()
+    try { if let v = self._endpoint {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 5)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -790,6 +803,8 @@ extension Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest: SwiftProtobuf.Message,
     if lhs.token != rhs.token {return false}
     if lhs.expireTime != rhs.expireTime {return false}
     if lhs.platform != rhs.platform {return false}
+    if lhs._p256Dh != rhs._p256Dh {return false}
+    if lhs._endpoint != rhs._endpoint {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

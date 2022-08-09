@@ -9,7 +9,8 @@ final class CardMessageCell: ImageBaseCell {
     var message: Message?
     var buttons: [TitleButton] = []
     var buttonsFrame: [CGRect] = []
-    
+    var localizationConfig: SinchSDKConfig.LocalizationConfig?
+
     // MARK: - Methods
     override func apply(_ layoutAttributes: UICollectionViewLayoutAttributes) {
         super.apply(layoutAttributes)
@@ -85,9 +86,10 @@ final class CardMessageCell: ImageBaseCell {
     }
     
     override func configure(with message: Message, at indexPath: IndexPath, and messagesCollectionView: MessageCollectionView) {
-        self.message = message
         super.configure(with: message, at: indexPath, and: messagesCollectionView)
-        
+        self.localizationConfig =  messagesCollectionView.localizationConfig
+        self.message = message
+
         setupContainerView(messagesCollectionView, message)
         setupPlaceholderView(messagesCollectionView, message)
         setupImageView(message: message, localizationConfig: messagesCollectionView.localizationConfig)
@@ -150,9 +152,10 @@ final class CardMessageCell: ImageBaseCell {
     
     private func setupButtons(choices: [ChoiceMessageType], messagesCollectionView: MessageCollectionView) {
         for index in 0..<choices.count {
-            let button = TitleButton(frame: buttonsFrame[index])
+            let button = TitleButton(frame: buttonsFrame[index], with: messagesCollectionView.uiConfig)
             button.titleLabel?.font = messagesCollectionView.uiConfig.buttonTitleFont
             button.setTitleColor( messagesCollectionView.uiConfig.buttonTitleColor, for: .normal)
+            button.setTitleColor( messagesCollectionView.uiConfig.tappedButtonTitleColor, for: .selected)
             button.backgroundColor = messagesCollectionView.uiConfig.buttonBackgroundColor
            
             switch choices[index] {
@@ -200,7 +203,15 @@ final class CardMessageCell: ImageBaseCell {
             delegate?.didTapOutsideOfContent(in: self)
         } else if imageView.convert(imageView.frame, to: self.contentView).contains(touchLocation) {
             if !activityIndicator.isAnimating {
-                delegate?.didTapImage(in: self)
+                if  let error = error, let localizationConfiguration = localizationConfig, let message = message, error {
+            
+                    setupImageView(message: message, localizationConfig:  localizationConfiguration)
+                    
+                } else {
+                    if let message = message?.body as? MessageCard, let url = URL(string: message.url) {
+                        delegate?.didTapMedia(with: url)
+                    }
+                }
             }
         } else if messageContainerView.frame.contains(touchLocation) {
             debugPrint("user tap text")
@@ -211,7 +222,9 @@ final class CardMessageCell: ImageBaseCell {
     }
     
     @objc func choiceButtonTapped(_ sender: AnyObject) {
-        if let button = sender as? UIButton, let body = message?.body as? MessageCard {
+        debugPrint("button tapped")
+        if let button = sender as? TitleButton, let body = message?.body as? MessageCard {
+            button.changeButtonAppearanceInChat()
             let tag = button.tag
             let choices = body.choices
             delegate?.didTapOnChoice(choices[tag], in: self)

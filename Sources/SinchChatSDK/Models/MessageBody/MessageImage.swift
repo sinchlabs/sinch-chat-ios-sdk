@@ -1,6 +1,6 @@
 import UIKit
 
-struct MessageImage: MessageBody {
+struct MessageImage: MessageBody, MessageWithURL {
     
     var url: String
     var sendDate: Int64?

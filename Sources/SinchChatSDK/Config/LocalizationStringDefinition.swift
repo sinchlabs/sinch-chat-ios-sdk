@@ -21,6 +21,28 @@ public extension SinchSDKConfig {
         public var alertButtonTitleOk = NSLocalizedString("alert_button_title_ok", bundle: Bundle.staticBundle, comment: "")
         public var menuTitleOptions = NSLocalizedString("menu_title_options", bundle: Bundle.staticBundle, comment: "")
         public var menuButtonTitleCopy = NSLocalizedString("menu_button_title_copy", bundle: Bundle.staticBundle, comment: "")
+        
+        public var menuShareLocation = NSLocalizedString("menu_button_title_share_location", bundle: Bundle.staticBundle, comment: "")
+        public var menuCancel = NSLocalizedString("button_title_cancel", bundle: Bundle.staticBundle, comment: "")
+        public var locationShareCancel = NSLocalizedString("button_title_cancel", bundle: Bundle.staticBundle, comment: "")
+        public var locationShare = NSLocalizedString("button_title_share_location", bundle: Bundle.staticBundle, comment: "")
+
+        public var locationDisabledAlertTitle = NSLocalizedString("alert_title_location_disabled", bundle: Bundle.staticBundle, comment: "")
+        public var locationDisabledAlertMessage = NSLocalizedString("alert_message_location_disabled", bundle: Bundle.staticBundle, comment: "")
+        public var locationAlertButtonTitleOk = NSLocalizedString("alert_button_title_ok", bundle: Bundle.staticBundle, comment: "")
+        public var locationAlertButtonTitleNotNow = NSLocalizedString("alert_button_title_not_now", bundle: Bundle.staticBundle, comment: "")
+        public var locationAlertButtonTitleSettings = NSLocalizedString("alert_button_title_settings", bundle: Bundle.staticBundle, comment: "")
+        
+        public var locationDeniedInAppAlertTitle = NSLocalizedString("alert_title_app_location_status_denied", bundle: Bundle.staticBundle, comment: "")
+        public var outgoingLocationMessageTitle = NSLocalizedString("outgoing_location_message_title", bundle: Bundle.staticBundle, comment: "")
+        
+        public var outgoingLocationMessageButtonTitle = NSLocalizedString("outgoing_location_message_button_title", bundle: Bundle.staticBundle, comment: "")
+
+        
+        // MARK: - InAppMessaging
+        
+        public var buttonTitleClose = NSLocalizedString("button_title_close", bundle: Bundle.staticBundle, comment: "")
+        public var buttonTitleMaybeLater = NSLocalizedString("button_title_maybe_later", bundle: Bundle.staticBundle, comment: "")
 
     }
 }

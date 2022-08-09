@@ -5,6 +5,7 @@ protocol ComposeViewDelegate: AnyObject {
     func sendMessage(text: String)
     func sendChoiceResponseMessage(postbackData: String, entryID: String)
     func choosePhoto()
+    func chooseAction()
 }
 
 final class ComposeView: SinchView {
@@ -22,21 +23,27 @@ final class ComposeView: SinchView {
     private var placeholderFont: UIFont
     private var placeholderTextColor: UIColor
     
-    var emojiButton: UIButton = UIButton()
+    var plusButton: UIButton = UIButton()
+    var voiceRecordingButton: UIButton = UIButton()
     var photoButton: UIButton = UIButton()
     var sendButton: UIButton = UIButton()
     
     var placeholderLabel: UILabel = UILabel()
     var textButtonContainer: UIView = UIView()
-    var stackView: UIStackView = UIStackView()
+    var leftStackView: UIStackView = UIStackView()
+    var rightStackView: UIStackView = UIStackView()
+
     var backgroundView: UIView = UIView()
-    var shouldExpandTextViewToLeft = false
+    var shouldExpandTextViewToRight = true
     weak var delegate: ComposeViewDelegate?
 
     var composeTextView: ComposeTextView!
 
     private var isInputTextViewExpanded: Bool = false
     private var leftStackViewConstraint: NSLayoutConstraint!
+    private var rightStackViewConstraint: NSLayoutConstraint!
+    private var rightStackViewLeadingConstraint: NSLayoutConstraint!
+
     private var sendButtonBottomConstraint: NSLayoutConstraint!
     private var textContainerBottomAnchor: NSLayoutConstraint!
     private var windowAnchor: NSLayoutConstraint?
@@ -54,7 +61,9 @@ final class ComposeView: SinchView {
         placeholderText  = localizatioConfiguration.inputPlaceholderText
         
         photoButton.setImage(uiConfiguration.photoImage, for: .normal)
-        emojiButton.setImage(uiConfiguration.emojiImage, for: .normal)
+        plusButton.setImage(uiConfiguration.plusImage, for: .normal)
+        voiceRecordingButton.setImage(uiConfiguration.voiceRecordingImage, for: .normal)
+        voiceRecordingButton.isHidden = true
         sendButton.setImage(uiConfiguration.sendImage, for: .normal)
         
         composeTextView = ComposeTextView(configuration: uiConfiguration)
@@ -68,7 +77,8 @@ final class ComposeView: SinchView {
         backgroundView.backgroundColor = barBackgroundColor
         backgroundView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(backgroundView)
-        addContentButtons()
+        addLeftContentButtons()
+        addRightContentButtons()
         addTextViewAndSendButtonContainer()
         setupPlaceholderLabel()
        
@@ -76,7 +86,10 @@ final class ComposeView: SinchView {
     
     override func setupConstraints() {
         
-        leftStackViewConstraint = stackView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 19)
+        leftStackViewConstraint = leftStackView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 18)
+        rightStackViewConstraint = rightStackView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -18)
+        rightStackViewLeadingConstraint = rightStackView.leadingAnchor.constraint(equalTo: textButtonContainer.trailingAnchor, constant: 9)
+
         sendButtonBottomConstraint = sendButton.bottomAnchor.constraint(equalTo: textButtonContainer.bottomAnchor)
         backgroundViewBottomAnchor =  backgroundView.bottomAnchor.constraint(equalTo: bottomAnchor)
         textContainerBottomAnchor =  textButtonContainer.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -10)
@@ -84,21 +97,27 @@ final class ComposeView: SinchView {
         NSLayoutConstraint.activate([
             
             leftStackViewConstraint,
-            stackView.trailingAnchor.constraint(equalTo: textButtonContainer.leadingAnchor, constant: -18),
-            stackView.centerYAnchor.constraint(equalTo: sendButton.centerYAnchor, constant: 0),
+            leftStackView.trailingAnchor.constraint(equalTo: textButtonContainer.leadingAnchor, constant: -9),
+            leftStackView.centerYAnchor.constraint(equalTo: sendButton.centerYAnchor, constant: 0),
+            
+            rightStackViewConstraint,
+            rightStackViewLeadingConstraint,
+            rightStackView.centerYAnchor.constraint(equalTo: sendButton.centerYAnchor, constant: 0),
+            
+            plusButton.heightAnchor.constraint(equalToConstant: 40),
+            plusButton.widthAnchor.constraint(equalToConstant: 38),
             
             photoButton.heightAnchor.constraint(equalToConstant: 40),
             photoButton.widthAnchor.constraint(equalToConstant: 38),
             
-            emojiButton.heightAnchor.constraint(equalToConstant: 40),
-            emojiButton.widthAnchor.constraint(equalToConstant: 38),
+            voiceRecordingButton.heightAnchor.constraint(equalToConstant: 40),
+            voiceRecordingButton.widthAnchor.constraint(equalToConstant: 38),
             
             backgroundView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor),
             backgroundViewBottomAnchor,
             backgroundView.leftAnchor.constraint(equalTo: safeAreaLayoutGuide.leftAnchor),
             backgroundView.rightAnchor.constraint(equalTo: safeAreaLayoutGuide.rightAnchor),
             
-            textButtonContainer.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -16),
             textButtonContainer.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 10),
             textContainerBottomAnchor,
             
@@ -186,25 +205,39 @@ final class ComposeView: SinchView {
         sendButton.isHidden = true
     }
     
-    private func addContentButtons() {
+    private func addLeftContentButtons() {
         
-        photoButton.imageEdgeInsets = UIEdgeInsets(top: 8, left: 7, bottom: 8, right: 7)
-        emojiButton.imageEdgeInsets = UIEdgeInsets(top: 8, left: 7, bottom: 8, right: 7)
-        emojiButton.isHidden = true
-        emojiButton.addTarget(self, action: #selector(emojiAction(_:)), for: .touchUpInside)
-        photoButton.addTarget(self, action: #selector(photoAction(_:)), for: .touchUpInside)
+        plusButton.imageEdgeInsets = UIEdgeInsets(top: 8, left: 7, bottom: 8, right: 7)
+        plusButton.addTarget(self, action: #selector(plusButtonAction(_:)), for: .touchUpInside)
         
-        stackView.addArrangedSubview(emojiButton)
-        stackView.addArrangedSubview(photoButton)
-        stackView.distribution = .fill
-        stackView.alignment = .center
-        stackView.axis = .horizontal
-        stackView.spacing = 5
-        stackView.translatesAutoresizingMaskIntoConstraints = false
+        leftStackView.addArrangedSubview(plusButton)
+        leftStackView.distribution = .fill
+        leftStackView.alignment = .center
+        leftStackView.axis = .horizontal
+        leftStackView.spacing = 2
+        leftStackView.translatesAutoresizingMaskIntoConstraints = false
         
-        backgroundView.addSubview(stackView)
+        backgroundView.addSubview(leftStackView)
     }
     
+    private func addRightContentButtons() {
+        
+        photoButton.imageEdgeInsets = UIEdgeInsets(top: 8, left: 7, bottom: 8, right: 7)
+        voiceRecordingButton.imageEdgeInsets = UIEdgeInsets(top: 8, left: 7, bottom: 8, right: 7)
+        voiceRecordingButton.addTarget(self, action: #selector(voiceRecordingAction(_:)), for: .touchUpInside)
+        photoButton.addTarget(self, action: #selector(photoAction(_:)), for: .touchUpInside)
+        
+        rightStackView.addArrangedSubview(photoButton)
+        rightStackView.addArrangedSubview(voiceRecordingButton)
+
+        rightStackView.distribution = .fill
+        rightStackView.alignment = .center
+        rightStackView.axis = .horizontal
+        rightStackView.spacing = 2
+        rightStackView.translatesAutoresizingMaskIntoConstraints = false
+        
+        backgroundView.addSubview(rightStackView)
+    }
     private func updateTextContainerCornerRadius(_ totalHeight: CGFloat) {
         
         if totalHeight < 60 {
@@ -254,7 +287,11 @@ final class ComposeView: SinchView {
         delegate?.choosePhoto()
         
     }
-    @objc private func emojiAction(_ sender: UIButton) {
+    @objc private func plusButtonAction(_ sender: UIButton) {
+        delegate?.chooseAction()
+
+    }
+    @objc private func voiceRecordingAction(_ sender: UIButton) {
         
     }
     @objc private func sendMessage(_ sender: UIButton) {
@@ -270,7 +307,8 @@ final class ComposeView: SinchView {
         if !isInputTextViewExpanded {
             
             isInputTextViewExpanded = true
-            leftStackViewConstraint?.constant = -stackView.frame.width
+            rightStackViewConstraint?.constant = rightStackView.frame.width
+            rightStackViewLeadingConstraint?.constant = 25
             UIView.animate(withDuration: animationDuration, animations: {
                 self.layoutIfNeeded()
                 
@@ -282,7 +320,9 @@ final class ComposeView: SinchView {
         
         if isInputTextViewExpanded {
             isInputTextViewExpanded = false
-            leftStackViewConstraint?.constant = 19
+            rightStackViewConstraint?.constant = -18
+            rightStackViewLeadingConstraint?.constant = 9
+
             UIView.animate(withDuration: animationDuration) {
                 
                 self.layoutIfNeeded()
@@ -292,7 +332,7 @@ final class ComposeView: SinchView {
     private func updateUI(_ textView: UITextView) {
         updateTextViewConstraints()
         
-        if shouldExpandTextViewToLeft {
+        if shouldExpandTextViewToRight {
             if textView.text.isEmpty {
                 
                 collapseTextView()

@@ -97,10 +97,12 @@ class ChoicesMessageCell: MessageContentCell {
     private func setupButtons(choices: [ChoiceMessageType], messagesCollectionView: MessageCollectionView) {
         for index in 0..<choices.count {
                     
-            let button = TitleButton(frame: buttonsFrame[index])
+            let button = TitleButton(frame: buttonsFrame[index], with: messagesCollectionView.uiConfig)
             button.titleLabel?.font = messagesCollectionView.uiConfig.buttonTitleFont
             button.setTitleColor( messagesCollectionView.uiConfig.buttonTitleColor, for: .normal)
+            button.setTitleColor( messagesCollectionView.uiConfig.tappedButtonTitleColor, for: .selected)
             button.backgroundColor = messagesCollectionView.uiConfig.buttonBackgroundColor
+            
             switch choices[index] {
             case .textMessage(let message):
                 button.setTitle(message.text, for: .normal)
@@ -148,7 +150,10 @@ class ChoicesMessageCell: MessageContentCell {
     }
     
     @objc func choiceButtonTapped(_ sender: AnyObject) {
-        if let button = sender as? UIButton, let body = message?.body as? MessageChoices {
+        debugPrint("button tapped")
+
+        if let button = sender as? TitleButton, let body = message?.body as? MessageChoices {
+            button.changeButtonAppearanceInChat()
             let tag = button.tag
             let choices = body.choices
             delegate?.didTapOnChoice(choices[tag], in: self)

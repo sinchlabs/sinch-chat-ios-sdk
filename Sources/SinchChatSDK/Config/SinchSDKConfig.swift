@@ -13,12 +13,14 @@ public struct SinchSDKConfig {
 
         let clientID: ID
         let projectID: ID
+        let configID: ID
         let region: Region
         let locale: Locale
 
-        public init(clientID: String, projectID: String, region: Region, locale: Locale = Locale.current) {
+        public init(clientID: String, projectID: String, configID: String, region: Region, locale: Locale = Locale.current) {
             self.clientID = clientID
             self.projectID = projectID
+            self.configID = configID
             self.region = region
             self.locale = locale
         }

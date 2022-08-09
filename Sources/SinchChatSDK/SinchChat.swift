@@ -8,13 +8,12 @@ public protocol SinchChat {
     
     /// Creating Chat UI. This method may throw
     /// - Parameters:
-    ///    - navigationController: Optional UINavigationController
+   
     ///   - uiConfig: Optionally ui changes might be provided with different settings.
     ///   - localizationConfig: Optionally localization might be provided with different text translation.
     /// - Returns: UIViewController which contains chat UI.
     /// - Throws: SinchChatSDKError enum with specific error.
-    func getChatViewController(navigationController: UINavigationController?,
-                               uiConfig: SinchSDKConfig.UIConfig?,
+    func getChatViewController(uiConfig: SinchSDKConfig.UIConfig?,
                                localizationConfig: SinchSDKConfig.LocalizationConfig?) throws -> UIViewController
     
     /// Sets metadata for single conversation. This methods overrides previous metadata.
@@ -25,10 +24,9 @@ public protocol SinchChat {
 
 public extension SinchChat {
     
-    func getChatViewController(navigationController: UINavigationController? = nil,
-                               uiConfig: SinchSDKConfig.UIConfig? = nil,
+    func getChatViewController(uiConfig: SinchSDKConfig.UIConfig? = nil,
                                localizationConfig: SinchSDKConfig.LocalizationConfig? = nil) throws -> UIViewController {
-        try getChatViewController(navigationController:navigationController, uiConfig: uiConfig, localizationConfig: localizationConfig)
+        try getChatViewController(uiConfig: uiConfig, localizationConfig: localizationConfig)
     }
 }
 
@@ -87,8 +85,7 @@ final class DefaultSinchChat: SinchChat {
         return SinchSDKChatAvailability.available
     }
     
-    public func getChatViewController(navigationController: UINavigationController?,
-                                      uiConfig: SinchSDKConfig.UIConfig? = nil,
+    public func getChatViewController(uiConfig: SinchSDKConfig.UIConfig? = nil,
                                       localizationConfig: SinchSDKConfig.LocalizationConfig? = nil) throws -> UIViewController {
         
         guard isChatAvailable() == .available, let authDataSource = authDataSource, let region = region else {
@@ -101,8 +98,7 @@ final class DefaultSinchChat: SinchChat {
         apiClient = client
         let messageDataSource = DefaultMessageDataSource(apiClient: apiClient!,
                                                          authDataSource: authDataSource)
-        let rootCordinator = RootCoordinator(navigationController: navigationController,
-                                             messageDataSource: messageDataSource,
+        let rootCordinator = RootCoordinator(messageDataSource: messageDataSource,
                                              authDataSource: authDataSource,
                                              pushPermissionHandler: pushPermissionHandler)
         
@@ -110,16 +106,7 @@ final class DefaultSinchChat: SinchChat {
         let uiConfig = uiConfig ?? SinchSDKConfig.UIConfig.defaultValue
         let locConfig = localizationConfig ?? SinchSDKConfig.LocalizationConfig.defaultValue
 
-        let startViewController =  rootCordinator.getRootViewController(uiConfig: uiConfig, localizationConfig: locConfig )
-        if navigationController == nil {
-            let navigationController = UINavigationController(rootViewController: startViewController)
-            
-            return navigationController
-            
-        } else {
-            return startViewController
-            
-        }
+        return rootCordinator.getRootViewController(uiConfig: uiConfig, localizationConfig: locConfig )
     }
     
     public func setConversationMetadata(_ metadata: [SinchMetadata]) throws {

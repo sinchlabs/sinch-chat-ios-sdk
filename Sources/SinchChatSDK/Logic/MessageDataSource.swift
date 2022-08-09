@@ -277,6 +277,7 @@ final class DefaultMessageDataSource: MessageDataSource {
         try Sinch_Chat_Sdk_V1alpha2_SdkServiceClient(channel: client.getChannel(), defaultCallOptions: authDataSource.signRequest(.standardCallOptions))
     }
     
+    // swiftlint:disable function_body_length
     private func handleIncomingMessage(_ entry: Sinch_Chat_Sdk_V1alpha2_Entry) -> Message? {
         
         if entry.hasDeliveryTime {
@@ -310,6 +311,16 @@ final class DefaultMessageDataSource: MessageDataSource {
                                                      sendDate: entry.deliveryTime.seconds))
                 }
             }
+            let outgoingLocationMessage = entry.contactMessage.locationMessage
+            if outgoingLocationMessage.hasCoordinates {
+                let messageBody = MessageLocation(label: outgoingLocationMessage.label,
+                                                  title: outgoingLocationMessage.title,
+                                                  latitude: Double(outgoingLocationMessage.coordinates.latitude),
+                                                  longitude: Double(outgoingLocationMessage.coordinates.longitude),
+                                                  sendDate: entry.deliveryTime.seconds)
+                
+                return Message(owner: .outgoing, body: messageBody)
+            }
             
             let incomingLocationMessage = entry.appMessage.locationMessage
             if incomingLocationMessage.hasCoordinates {
@@ -335,7 +346,8 @@ final class DefaultMessageDataSource: MessageDataSource {
             if incomingChoiceMessage.hasTextMessage {
                 
                 // EntryID is messageID in case od message types.
-                let choicesArray = createChoicesArray(incomingChoiceMessage.choices, entryID: entry.entryID)
+                let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingChoiceMessage.choices, entryID: entry.entryID)
+                
                 let messageBody = MessageChoices(text: incomingChoiceMessage.textMessage.text,
                                                  choices: choicesArray,
                                                  sendDate: entry.deliveryTime.seconds)
@@ -351,11 +363,12 @@ final class DefaultMessageDataSource: MessageDataSource {
                 }
             }
             let incomingCardMessage = entry.appMessage.cardMessage
-
+            
             if incomingCardMessage.hasMediaMessage {
                 
                 // EntryID is messageID in case od message types.
-                let choicesArray = createChoicesArray(incomingCardMessage.choices, entryID: entry.entryID)
+                let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingCardMessage.choices, entryID: entry.entryID)
+                
                 let messageBody = MessageCard(title: incomingCardMessage.title,
                                               description: incomingCardMessage.description_p,
                                               choices: choicesArray,
@@ -372,6 +385,45 @@ final class DefaultMessageDataSource: MessageDataSource {
                     return Message(owner: .incoming(nil), body: messageBody)
                 }
             }
+            
+            let incomingCarouselMessage = entry.appMessage.carouselMessage
+            
+            if !incomingCarouselMessage.cards.isEmpty {
+                
+                var carouselChoicesArray = DefaultMessageDataSource.createChoicesArray(incomingCarouselMessage.choices, entryID: entry.entryID)
+             //   carouselChoicesArray.append(.urlMessage(ChoiceUrl(url: "https://www.google.com", text: "Please go to google")))
+             //   carouselChoicesArray.append(.urlMessage(ChoiceUrl(url: "https://www.google.com", text: "Please go to text")))
+             //   carouselChoicesArray.append(.urlMessage(ChoiceUrl(url: "www.google.com", text: "Please go to rate")))
+
+                var cardsArray: [MessageCard] = []
+                
+                for incomingCardMessage in incomingCarouselMessage.cards {
+                    
+                    var choicesArray = DefaultMessageDataSource.createChoicesArray(incomingCardMessage.choices, entryID: entry.entryID)
+                                    
+                    let messageBody = MessageCard(title: incomingCardMessage.title,
+                                                  description: incomingCardMessage.description_p ,
+                                                  choices: choicesArray,
+                                                  url: incomingCardMessage.mediaMessage.url,
+                                                  sendDate: entry.deliveryTime.seconds)
+                
+                    cardsArray.append(messageBody)
+                    
+                }
+                
+                let messageBody = MessageCarousel(cards: cardsArray, choices: carouselChoicesArray, sendDate: entry.deliveryTime.seconds)
+                
+                if entry.appMessage.hasAgent {
+                    let agent = entry.appMessage.agent
+                    
+                    return Message(owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
+                                   body:  messageBody)
+                } else {
+                    
+                    return Message(owner: .incoming(nil), body: messageBody)
+                }
+            }
+            
             let incomingUrl = entry.appMessage.mediaMessage.url
             
             if !incomingUrl.isEmpty {
@@ -418,7 +470,7 @@ final class DefaultMessageDataSource: MessageDataSource {
         return nil
     }
     
-    func createChoicesArray(_ choices: [Sinch_Conversationapi_Type_Choice], entryID: String) -> [ChoiceMessageType] {
+    static func createChoicesArray(_ choices: [Sinch_Conversationapi_Type_Choice], entryID: String) -> [ChoiceMessageType] {
         
         var choicesArray: [ChoiceMessageType] = []
         
@@ -434,10 +486,10 @@ final class DefaultMessageDataSource: MessageDataSource {
             case .callMessage(let callMessage):
                 choicesArray.append(.callMessage(ChoiceCall(text: callMessage.title, phoneNumber: callMessage.phoneNumber)))
             case .locationMessage(let locationMessage):
-                let lat = Double(locationMessage.coordinates.latitude)
-                let long = Double(locationMessage.coordinates.longitude)
-                let location = ChoiceLocation(text: locationMessage.title, label: locationMessage.label, latitude: lat, longitude: long)
-                choicesArray.append(.locationMessage(location))
+                choicesArray.append(.locationMessage(ChoiceLocation(text: locationMessage.title,
+                                                                    label: locationMessage.label,
+                                                                    latitude: Double(locationMessage.coordinates.latitude),
+                                                                    longitude: Double(locationMessage.coordinates.longitude))))
             }
         }
         return choicesArray

@@ -1,10 +1,19 @@
 import Foundation
 
-struct MessageChoices: MessageBody {
+protocol MessageWithChoices {
+    var choices: [ChoiceMessageType] { get }
+
+}
+
+struct MessageChoices: MessageBody, MessageWithChoices, MessageWithText {
     
     var text: String
     var choices: [ChoiceMessageType]
     var sendDate: Int64?
+    
+    func getText() -> String {
+        return text
+    }
 }
 
 enum ChoiceMessageType: Codable {

@@ -14,3 +14,21 @@
 
 "menu_title_options" = "Options";
 "menu_button_title_copy" = "Copy";
+
+"button_title_close" = "CLOSE";
+"button_title_maybe_later" = "Maybe Later";
+
+"menu_button_title_share_location" = "Share Location";
+"button_title_share_location" = "Share Location";
+"button_title_cancel" = "Cancel";
+
+"alert_title_location_disabled" = "Turn On Location Services to Allow this app to Determine Your Location";
+"alert_message_location_disabled" = "Enable Location Services in Settings > Privacy > Location Services to use this feature";
+
+"alert_title_app_location_status_denied" = "This app does not have access to your location. To enable access, tap Settings > Location";
+
+"alert_button_title_not_now" = "Not Now";
+"alert_button_title_settings" = "Settings";
+
+"outgoing_location_message_title" = "My location";
+"outgoing_location_message_button_title" = "See my location";

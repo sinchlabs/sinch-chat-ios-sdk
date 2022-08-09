@@ -24,7 +24,6 @@ final class ImagePickerHelper: NSObject {
     
     func pickPhoto() {
         if UIImagePickerController.isSourceTypeAvailable(.photoLibrary) {
-          
             presentationController?.present(self.pickerController, animated: true)
         }
     }

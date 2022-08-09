@@ -3,6 +3,7 @@ import Foundation
 protocol AuthStorage {
     func read() -> AuthModel?
     func save(_ token: AuthModel)
+    func deleteToken()
 }
 
 final class DefaultAuthStorage: AuthStorage {
@@ -30,5 +31,9 @@ final class DefaultAuthStorage: AuthStorage {
             return
         }
         userDefaults.set(data, forKey: tokenKey)
+    }
+    func deleteToken() {
+        
+        userDefaults.removeObject(forKey: tokenKey)
     }
 }

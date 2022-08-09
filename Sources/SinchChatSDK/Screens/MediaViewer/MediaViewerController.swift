@@ -7,16 +7,7 @@ final class MediaViewerController: SinchViewController<MediaViewerViewModel, Med
         
         self.title = mainView.localizationConfiguration.navigationBarImageViewText
                 
-        if let body = viewModel.mediaMessage.body as? MessageImage, let url = URL(string: body.url) {
-            mainView.imageView.setImage(url: url)
-
-        } else if let body = viewModel.mediaMessage.body as? MessageMediaText, let url = URL(string: body.url) {
-            mainView.imageView.setImage(url: url)
-
-        } else if let body = viewModel.mediaMessage.body as? MessageCard, let url = URL(string: body.url) {
-            mainView.imageView.setImage(url: url)
-
-        }
+        mainView.imageView.setImage(url: viewModel.url)
         
         let swipeDown = UISwipeGestureRecognizer(target: self, action: #selector(respondToSwipeGesture))
             swipeDown.direction = .down

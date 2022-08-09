@@ -1,6 +1,7 @@
 import Foundation
 import GRPC
 import Logging
+
 public enum Region: Codable, Equatable {
     case EU1
     case US1

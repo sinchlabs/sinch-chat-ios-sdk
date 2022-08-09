@@ -1,6 +1,16 @@
 import UIKit
 
+struct CardAttributes: Equatable {
+    var frame: CGRect = .zero
+    var mediaFrame: CGRect = .zero
+    var titleFrame: CGRect = .zero
+    var messageFrame: CGRect = .zero
+    var buttonFrames: [CGRect] = [.zero]
+
+}
+
 /// The layout attributes used by a `MessageCollectionViewCell` to layout its subviews.
+/// 
  class ChatFlowLayoutAttributes: UICollectionViewLayoutAttributes {
     
     // MARK: - Properties
@@ -23,7 +33,8 @@ import UIKit
     public var buttonsFrame: [CGRect] = [.zero]
     public var buttonInsets: UIEdgeInsets = .zero
     public var mediaFrame: CGRect = .zero
-
+    public var pageControlFrame: CGRect = .zero
+    public var carouselCardFrames: [CardAttributes] = []
     public var avatarPosition = AvatarPosition(horizontal: .notSet)
     
     // MARK: - Methods
@@ -47,9 +58,12 @@ import UIKit
         copy.dateLabelInsets = dateLabelInsets
         copy.dateLabelFont = dateLabelFont
         copy.mapFrame = mapFrame
+        copy.pageControlFrame = pageControlFrame
         copy.buttonsFrame = buttonsFrame
         copy.buttonInsets = buttonInsets
         copy.mediaFrame = mediaFrame
+        copy.carouselCardFrames = carouselCardFrames
+   
         return copy
         // swiftlint:enable force_cast
     }
@@ -75,6 +89,8 @@ import UIKit
             && attributes.titleLabelFrame == titleLabelFrame
             && attributes.titleLabelFont == titleLabelFont
             && attributes.titleLabelTextInsets == titleLabelTextInsets
+            && attributes.carouselCardFrames == carouselCardFrames
+            && attributes.pageControlFrame == pageControlFrame
 
         } else {
             return false

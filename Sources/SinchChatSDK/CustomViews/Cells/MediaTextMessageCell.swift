@@ -5,6 +5,8 @@ final class MediaTextMessageCell: ImageBaseCell {
     static let cellId = "mediaTextMessageCell"
     
     var messageLabel = MessageLabel()
+    var message: Message?
+    var localizationConfig: SinchSDKConfig.LocalizationConfig?
 
     // MARK: - Methods
     
@@ -64,6 +66,9 @@ final class MediaTextMessageCell: ImageBaseCell {
        
     override func configure(with message: Message, at indexPath: IndexPath, and messagesCollectionView: MessageCollectionView) {
         super.configure(with: message, at: indexPath, and: messagesCollectionView)
+        self.message = message
+        self.localizationConfig =  messagesCollectionView.localizationConfig
+
         setupPlaceholderView(messagesCollectionView, message)
         
         setupImageView(message: message, localizationConfig: messagesCollectionView.localizationConfig)
@@ -124,7 +129,15 @@ final class MediaTextMessageCell: ImageBaseCell {
 
         if imageView.convert(imageView.frame, to: self.contentView).contains(touchLocation) {
             if !activityIndicator.isAnimating {
-                delegate?.didTapImage(in: self)
+                if  let error = error, let localizationConfiguration = localizationConfig, let message = message, error {
+                    
+                    setupImageView(message: message, localizationConfig: localizationConfiguration)
+                                    
+                } else {
+                    if let message = message?.body as? MessageMediaText, let url = URL(string: message.url) {
+                        delegate?.didTapMedia(with: url)
+                    }
+                }
             }
         } else if messageContainerView.frame.contains(touchLocation) {
             debugPrint("user tap text")

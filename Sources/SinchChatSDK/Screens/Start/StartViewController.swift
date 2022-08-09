@@ -3,6 +3,8 @@ import SafariServices
 import GRPC
 import Connectivity
 
+// swiftlint:disable file_length
+
 class StartViewController: SinchViewController<StartViewModel, StartView> {
     
     var imagePickerHelper: ImagePickerHelper!
@@ -161,7 +163,7 @@ class StartViewController: SinchViewController<StartViewModel, StartView> {
     }
     
     func resignFirstResponderView() {
-        _ = mainView.messageComposeView.resignFirstResponder()
+        _ = mainView.messageComposeView.composeTextView.resignFirstResponder()
     }
     
     private func addCloseButton() {
@@ -194,6 +196,30 @@ extension StartViewController: ImagePickerDelegate {
 }
 
 extension StartViewController: ComposeViewDelegate {
+    func chooseAction() {
+        
+        let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+
+        let action  = UIAlertAction(title: mainView.localizationConfiguration.menuShareLocation, style: .default, handler: { _ in
+            self.cordinator?.presentLocation(viewController: self,
+                                             uiConfig: self.mainView.uiConfig,
+                                             localizationConfig: self.mainView.localizationConfiguration)
+        })
+        
+        action.setValue(self.mainView.uiConfig.shareLocationMenuImage?.withRenderingMode(.alwaysOriginal), forKey: "image")
+        action.setValue(CATextLayerAlignmentMode.left, forKey: "titleTextAlignment")
+        action.setValue(self.mainView.uiConfig.menuButtonTextColor, forKey:"titleTextColor")
+
+        alert.addAction(action)
+        
+        alert.addAction(UIAlertAction(title: mainView.localizationConfiguration.menuCancel, style: .cancel, handler: { _ in
+            debugPrint("User click cancel button")
+        }))
+
+        self.present(alert, animated: true, completion: nil)
+        
+    }
+    
     func choosePhoto() {
         
         imagePickerHelper.pickPhoto()
@@ -215,7 +241,7 @@ extension StartViewController: StartViewModelDelegate {
         if isVisible {
             if !refreshControl.isRefreshing {
                 refreshControl.beginRefreshing()
-
+                
             }
         } else {
             refreshControl.endRefreshing()
@@ -227,7 +253,7 @@ extension StartViewController: StartViewModelDelegate {
             
         case .isOn:
             debugPrint("ON ***********")
-
+            
             mainView.collectionView.refreshControl = refreshControl
             setVisibleRefreshActivityIndicator(true)
             
@@ -281,9 +307,9 @@ extension StartViewController: StartViewModelDelegate {
         DispatchQueue.main.async {
             CATransaction.begin()
             CATransaction.setCompletionBlock({
-            self.messages =  messages
-            self.mainView.collectionView.reloadData()
-            self.mainView.collectionView.scrollToLastItem(at: .bottom, animated: false)
+                self.messages =  messages
+                self.mainView.collectionView.reloadData()
+                self.mainView.collectionView.scrollToLastItem(at: .bottom, animated: false)
             })
             self.refreshControl.endRefreshing()
             
@@ -397,7 +423,12 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier:  CardMessageCell.cellId, for: indexPath) as! CardMessageCell
             cell.configure(with: message, at: indexPath, and: mainView.collectionView)
             return cell
-        
+        } else if message.body is MessageCarousel {
+            
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier:  CarouselMessageCell.cellId, for: indexPath) as! CarouselMessageCell
+            cell.configure(with: message, at: indexPath, and: mainView.collectionView)
+            return cell
+            
         } else {
             return MessageCollectionViewCell()
         }
@@ -430,17 +461,17 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
         if let message = message.body as? MessageText {
             pasteBoard.string = message.text
         } else if let message = message.body as? MessageMediaText {
-                pasteBoard.string = message.text
-
+            pasteBoard.string = message.text
+            
         } else if let message = message.body as? MessageLocation {
             pasteBoard.string = message.title
-
+            
         } else if let message = message.body as? MessageChoices {
             pasteBoard.string = message.text
-
+            
         } else if let message = message.body as? MessageCard {
             pasteBoard.string = message.description
-
+            
         }
     }
     
@@ -480,7 +511,7 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
         
         return (action == NSSelectorFromString("copy:"))
     }
-        
+    
     func collectionView(_ collectionView: UICollectionView, performAction action: Selector, forItemAt indexPath: IndexPath, withSender sender: Any?) {
         
         populatePasteBoard(indexPath.section)
@@ -506,75 +537,47 @@ extension StartViewController: MessageCellDelegate {
             present(SFSafariViewController(url: url), animated: true)
         }
     }
-    func didTapImage(in cell: MessageCollectionViewCell) {
-        
-        guard let cell  = cell as? ImageBaseCell,
-              let indexPath = mainView.collectionView.indexPath(for: cell),
-           let message = mainView.collectionView.chatDataSource?.messageForItem(at: indexPath, in: mainView.collectionView) else {
-                  debugPrint("Failed to identify message")
-                  return
-        }
-        
-        if  let error = cell.error, error {
+    func didTapMedia(with url:URL) {
+               
+                cordinator?.presentMediaViewerController(viewController: self,
+                                                         uiConfig: mainView.uiConfig,
+                                                         localizationConfig: mainView.localizationConfiguration,
+                                                         url: url)
             
-            cell.setupImageView(message: message, localizationConfig: mainView.localizationConfiguration)
-            
-        } else {
-  
-            cordinator?.presentMediaViewerController(viewController: self,
-                                                     uiConfig: mainView.uiConfig,
-                                                     localizationConfig: mainView.localizationConfiguration,
-                                                     mediaMessage: message)
-            
-        }
     }
+        
     func didTapOutsideOfContent(in cell: MessageCollectionViewCell) {
         resignFirstResponderView()
     }
     
     func didTapOutsideOfContent() {
         resignFirstResponderView()
-
+        
     }
     func didTapOnChoice(_ choice: ChoiceMessageType, in cell: MessageCollectionViewCell) {
         
         switch choice {
         case .textMessage(let message):
             sendChoiceResponseMessage(postbackData: message.postback, entryID: message.entryID)
-
+            
         case .urlMessage(let message):
             if let url = URL(string: message.url) {
                 didSelectURL(url)
             }
-
+            
         case .callMessage(let message):
-            callNumber(phoneNumber: message.phoneNumber)
+            ChoicesHelper.callNumber(phoneNumber: message.phoneNumber)
         case .locationMessage(let message):
-            openAppleMaps(choice: message)
-
+            ChoicesHelper.openAppleMaps(choice: message)
+            
         }
     }
-    private func callNumber(phoneNumber:String) {
-
-      if let phoneCallURL = URL(string: "tel://\(phoneNumber)") {
-
-        let application:UIApplication = UIApplication.shared
-        if application.canOpenURL(phoneCallURL) {
-            application.open(phoneCallURL, options: [:], completionHandler: nil)
-        }
-      }
-    }
-    
-    func openAppleMaps(choice: ChoiceLocation) {
-        guard let title = choice.text.replacingOccurrences(of: " ", with: "+").addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) else {
-        return
-        }
-        let directionsURL = "http://maps.apple.com/?q=\(title)&ll=\(choice.latitude),\(choice.longitude)"
-        guard let url = URL(string: directionsURL) else {
-            return
-        }
+}
+extension StartViewController: LocationDelegate {
+    func didShareLocation(latitude: Float, longitude: Float) {
         
-        UIApplication.shared.open(url, options: [:], completionHandler: nil)
-       
+        viewModel.sendMessage(.location(latitude: latitude,
+                                        longitude: longitude,
+                                        localizationConfig: mainView.localizationConfiguration))
     }
 }

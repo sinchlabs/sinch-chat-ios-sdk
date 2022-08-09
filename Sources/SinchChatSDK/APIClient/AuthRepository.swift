@@ -13,6 +13,7 @@ struct AuthModel: Codable {
     let sinchIdentity: SinchSDKIdentity
     let clientID: String
     let projectID: String
+    let configID: String
     let region: Region
 
     var identityHash: String? {
@@ -24,6 +25,8 @@ struct AuthModel: Codable {
 }
 
 protocol AuthRepository {
+    var configID: String { get }
+    
     func createAnonymouseToken(completion: @escaping (Result<AuthModel, AuthRepositoryError>) -> Void)
     func createSignedToken(userId: String, secret: String, completion: @escaping (Result<AuthModel, AuthRepositoryError>) -> Void)
 }
@@ -31,6 +34,10 @@ protocol AuthRepository {
 final class DefaultAuthRepository: AuthRepository {
     private let config: SinchSDKConfig.AppConfig
 
+    var configID: String {
+        config.configID
+    }
+    
     init(config: SinchSDKConfig.AppConfig) {
         self.config = config
     }
@@ -55,6 +62,7 @@ final class DefaultAuthRepository: AuthRepository {
                                           sinchIdentity: .anonymous,
                                           clientID: self.config.clientID,
                                           projectID: self.config.projectID,
+                                          configID: "test-config-id",
                                           region: self.config.region)))
             case .failure(let err):
                 completion(.failure(.unknown(err)))
@@ -86,6 +94,7 @@ final class DefaultAuthRepository: AuthRepository {
                                           sinchIdentity:.selfSigned(userId: userId, secret: secret),
                                           clientID: self.config.clientID,
                                           projectID: self.config.projectID,
+                                          configID: "test-protoc",
                                           region: self.config.region)))
             case .failure(let err):
                 completion(.failure(.unknown(err)))

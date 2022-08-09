@@ -3,7 +3,8 @@ import UIKit
 final class ImageMessageCell: ImageBaseCell {
     
     static let cellId = "imageMessageCell"
-    
+    var message: Message?
+    var localizationConfig: SinchSDKConfig.LocalizationConfig?
     // MARK: - Methods
     
     /// Responsible for setting up the constraints of the cell's subviews.
@@ -55,6 +56,8 @@ final class ImageMessageCell: ImageBaseCell {
        
     override func configure(with message: Message, at indexPath: IndexPath, and messagesCollectionView: MessageCollectionView) {
         super.configure(with: message, at: indexPath, and: messagesCollectionView)
+        self.message = message
+        self.localizationConfig =  messagesCollectionView.localizationConfig
         setupContainerView(messagesCollectionView, message)
         setupPlaceholderView(messagesCollectionView, message)
         setupImageView(message: message, localizationConfig: messagesCollectionView.localizationConfig)
@@ -100,7 +103,17 @@ final class ImageMessageCell: ImageBaseCell {
             return
         }
         if !activityIndicator.isAnimating {
-            delegate?.didTapImage(in: self)
+            if  let error = error, let localizationConfiguration = localizationConfig, let message = message, error {
+
+                setupImageView(message: message, localizationConfig: localizationConfiguration)
+                
+            } else {
+                
+                if let message = message?.body as? MessageImage, let url = URL(string: message.url) {
+                    delegate?.didTapMedia(with: url)
+                }
+                
+            }
         }
     }
 }

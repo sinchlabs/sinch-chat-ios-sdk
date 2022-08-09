@@ -42,10 +42,12 @@ public protocol SinchPush {
     /// - Returns: Contains information about notification status.
     @available(iOS 13.0, *)
     func checkPushPermission() -> AnyPublisher<SinchSDKNotificationStatus, Never>
+    
 }
 
 final class DefaultSinchPush: SinchPush {
     private let pushNotificationhandler: PushNotificationHandler
+    private lazy var inAppMessageController = DefaultInAppMessageController(pushNotificationHandler: pushNotificationhandler )
 
     init(pushNotificationHandler: PushNotificationHandler) {
         self.pushNotificationhandler = pushNotificationHandler
@@ -57,6 +59,11 @@ final class DefaultSinchPush: SinchPush {
 
     func handleNotification(_ payload: [AnyHashable : Any]) -> IsHandled {
         Logger.debug(payload)
+        
+        if inAppMessageController.showInAppMessage(messagePayload: payload) {
+            return true
+        }
+        
         return pushNotificationhandler.handleNotification(payload: payload)
     }
 

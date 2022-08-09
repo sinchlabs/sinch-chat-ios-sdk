@@ -8,9 +8,11 @@ enum AuthDataSourceError: Error {
 protocol AuthDataSource {
     var isLoggedIn: Bool { get }
     var identityHashValue: String? { get }
+    var currentConfigID: String { get }
     
     func generateToken(config: SinchSDKConfig.AppConfig, identity: SinchSDKIdentity, completion: @escaping (Result<Void, AuthRepositoryError>) -> Void)
     func signRequest(_ callOptions: CallOptions) throws -> CallOptions
+    func deleteToken() 
 }
 
 final class DefaultAuthDataSource: AuthDataSource {
@@ -18,6 +20,10 @@ final class DefaultAuthDataSource: AuthDataSource {
     private let storage: AuthStorage
     private let repository: AuthRepository
 
+    var currentConfigID: String {
+        repository.configID
+    }
+    
     var isLoggedIn: Bool {
         storage.read() != nil
     }
@@ -101,5 +107,8 @@ final class DefaultAuthDataSource: AuthDataSource {
                 completion(.failure(error))
             }
         }
+    }
+    func deleteToken() {
+        storage.deleteToken()
     }
 }

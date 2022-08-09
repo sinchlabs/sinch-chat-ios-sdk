@@ -29,9 +29,13 @@ class LocationMessageSizeCalculator: MessageSizeCalculator {
         if let body = message.body as? MessageLocation {
             text = body.title
         }
-        
+        if text.isEmpty {
+            messageLabelSize = .zero
+        } else {
         attributedText = NSAttributedString(string: text, attributes: [.font: messageLabelFont])
         messageLabelSize = labelSize(for: attributedText, considering: maxWidth - messageLabelInsets.right - messageLabelInsets.left)
+        }
+        
         messageLabelSize.height += (messageLabelInsets.top + messageLabelInsets.bottom)
         messageLabelSize.width += (messageLabelInsets.right + messageLabelInsets.left)
         return messageLabelSize

@@ -15,7 +15,8 @@ final class ChatFlowLayout: UICollectionViewFlowLayout {
     lazy public var locationCellSizeCalculator = LocationMessageSizeCalculator(layout: self)
     lazy public var choicesCellSizeCalculator = ChoiceMessageSizeCalculator(layout: self)
     lazy public var cardCellSizeCalculator = CardMessageSizeCalculator(layout: self)
-    
+    lazy public var carouselCellSizeCalculator = CarouselMessageSizeCalculator(layout: self)
+
     /// The `MessageCollectionView` that owns this layout object.
     public var messagesCollectionView: MessageCollectionView {
         guard let messagesCollectionView = collectionView as? MessageCollectionView else {
@@ -86,6 +87,8 @@ final class ChatFlowLayout: UICollectionViewFlowLayout {
             return choicesCellSizeCalculator
         } else if message.body is MessageCard {
             return cardCellSizeCalculator
+        } else if message.body is MessageCarousel {
+            return carouselCellSizeCalculator
         }
 
         return ChatCellSizeCalculator()

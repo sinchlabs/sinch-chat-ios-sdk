@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'SinchChatSDK'
-  s.version          = '0.2.0'
+  s.version          = '0.3.0'
   s.summary          = 'Sinch Chat SDK which supports In App Chat and Push Notifications'
   s.homepage         = 'https://sinch.com'
   s.license          = { :type => 'MIT', :file => 'LICENSE.md' }
