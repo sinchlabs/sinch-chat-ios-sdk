@@ -22,15 +22,15 @@ final class DefaultPushAPIClient: PushAPIClient {
     private var channel: GRPCChannel
     
     init?(region: Region) {
-//        switch region {
-//        case .EU1:
-//            host = "sdk.sinch-chat.unauth.prod.sinch.com"
-//        case .US1:
-//            fatalError("there is no url for US region provided yet")
-//        case .custom(let host):
-//            self.host = host
-//        }
-        self.host = "{{ push-sdk-api-host-here }}"
+        switch region {
+        case .EU1:
+            host = "sdk.sinch-chat.unauth.prod.sinch.com"
+        case .US1:
+            fatalError("there is no url for US region provided yet")
+        case .custom(let host):
+            self.host = host
+        }
+//        self.host = "{{ push-sdk-api-host-here }}"
         
         let keepalive = ClientConnectionKeepalive(
             interval: .seconds(10),

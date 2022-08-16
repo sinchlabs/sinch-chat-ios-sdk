@@ -21,17 +21,29 @@ final class DefaultPushRepository: PushRepository {
 
     func sendDeviceToken(token: String, completion: @escaping (Result<Void, Error>) -> Void) {
         do {
-            guard let client = DefaultPushAPIClient(region: region) else {
+            guard let client = DefaultAPIClient(region: region) else {
                 completion(.failure(PushRepositoryError.internalError))
                 return
             }
-            let service = try getPushService(apiClient: client)
+            let service = try getService(apiClient: client)
 
-            var request = Sinch_Push_Sdk_V1beta1_SubscribeRequest()
-            request.subscriptionToken = token
-            request.configID = authDataSource.currentConfigID
+            var request = Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest()
+            
+            switch SinchChatSDK.shared.options?.pushNotificationsMode {
+            case .off:
+                completion(.success(()))
+                return
+            case .sandbox:
+                request.platform = Sinch_Chat_Sdk_V1alpha2_PushPlatform.iosSandbox
+            case .prod, nil:
+                request.platform = Sinch_Chat_Sdk_V1alpha2_PushPlatform.ios
+            }
+            request.token = token
+            
+//            request.subscriptionToken = token
+//            request.configID = authDataSource.currentConfigID
                         
-            _ = service.subscribe(request).response.always { result in
+            _ = service.subscribeToPush(request).response.always { result in
                 client.closeChannel()
                 
                 switch result {
@@ -46,24 +58,29 @@ final class DefaultPushRepository: PushRepository {
         }
     }
     func replyToMessageWithTextChoice(choice: ChoiceText, completion: @escaping (Result<Void, Error>) -> Void) {
-        do {
-            guard let client = DefaultPushAPIClient(region: region) else {
-                completion(.failure(PushRepositoryError.internalError))
-                return
-            }
-            let service = try getPushService(apiClient: client)
-            var request = Sinch_Push_Sdk_V1beta1_ReplyRequest()
-            request.messageID = choice.entryID
-
-            service.reply(request)
-            
-        } catch {
-            completion(.failure(error))
-        }
+        completion(.success(()))
+//        do {
+//            guard let client = DefaultPushAPIClient(region: region) else {
+//                completion(.failure(PushRepositoryError.internalError))
+//                return
+//            }
+//            let service = try getPushService(apiClient: client)
+//            var request = Sinch_Push_Sdk_V1beta1_ReplyRequest()
+//            request.messageID = choice.entryID
+//
+//            service.reply(request)
+//
+//        } catch {
+//            completion(.failure(error))
+//        }
     }
 
     // MARK: Private
     
+    private func getService(apiClient: APIClient) throws -> Sinch_Chat_Sdk_V1alpha2_SdkServiceClient {
+        try Sinch_Chat_Sdk_V1alpha2_SdkServiceClient(channel: apiClient.getChannel(), defaultCallOptions: authDataSource.signRequest(.standardCallOptions))
+    }
+        
     private func getPushService(apiClient: PushAPIClient) throws -> Sinch_Push_Sdk_V1beta1_SdkServiceClient {
         try Sinch_Push_Sdk_V1beta1_SdkServiceClient(channel: apiClient.getChannel(), defaultCallOptions: authDataSource.signRequest(.standardCallOptions))
     }
