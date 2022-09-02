@@ -118,6 +118,15 @@ struct Sinch_Chat_Sdk_V1alpha2_SendRequest {
   /// Clears the value of `metadata`. Subsequent reads from it will return its default value.
   mutating func clearMetadata() {self._metadata = nil}
 
+  var topicID: String {
+    get {return _topicID ?? String()}
+    set {_topicID = newValue}
+  }
+  /// Returns true if `topicID` has been explicitly set.
+  var hasTopicID: Bool {return self._topicID != nil}
+  /// Clears the value of `topicID`. Subsequent reads from it will return its default value.
+  mutating func clearTopicID() {self._topicID = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_Payload: Equatable {
@@ -147,6 +156,7 @@ struct Sinch_Chat_Sdk_V1alpha2_SendRequest {
   init() {}
 
   fileprivate var _metadata: String? = nil
+  fileprivate var _topicID: String? = nil
 }
 
 struct Sinch_Chat_Sdk_V1alpha2_SendResponse {
@@ -184,12 +194,22 @@ struct Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest {
   /// Clears the value of `pageSize`. Subsequent reads from it will return its default value.
   mutating func clearPageSize() {self._pageSize = nil}
 
+  var topicID: String {
+    get {return _topicID ?? String()}
+    set {_topicID = newValue}
+  }
+  /// Returns true if `topicID` has been explicitly set.
+  var hasTopicID: Bool {return self._topicID != nil}
+  /// Clears the value of `topicID`. Subsequent reads from it will return its default value.
+  mutating func clearTopicID() {self._topicID = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
   fileprivate var _pageToken: String? = nil
   fileprivate var _pageSize: Int32? = nil
+  fileprivate var _topicID: String? = nil
 }
 
 struct Sinch_Chat_Sdk_V1alpha2_GetHistoryResponse {
@@ -220,11 +240,21 @@ struct Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest {
   /// Clears the value of `startTime`. Subsequent reads from it will return its default value.
   mutating func clearStartTime() {self._startTime = nil}
 
+  var topicID: String {
+    get {return _topicID ?? String()}
+    set {_topicID = newValue}
+  }
+  /// Returns true if `topicID` has been explicitly set.
+  var hasTopicID: Bool {return self._topicID != nil}
+  /// Clears the value of `topicID`. Subsequent reads from it will return its default value.
+  mutating func clearTopicID() {self._topicID = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
   fileprivate var _startTime: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+  fileprivate var _topicID: String? = nil
 }
 
 struct Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamResponse {
@@ -496,6 +526,7 @@ extension Sinch_Chat_Sdk_V1alpha2_SendRequest: SwiftProtobuf.Message, SwiftProto
     1: .same(proto: "message"),
     2: .same(proto: "event"),
     3: .same(proto: "metadata"),
+    4: .standard(proto: "topic_id"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -531,6 +562,7 @@ extension Sinch_Chat_Sdk_V1alpha2_SendRequest: SwiftProtobuf.Message, SwiftProto
         }
       }()
       case 3: try { try decoder.decodeSingularStringField(value: &self._metadata) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self._topicID) }()
       default: break
       }
     }
@@ -555,12 +587,16 @@ extension Sinch_Chat_Sdk_V1alpha2_SendRequest: SwiftProtobuf.Message, SwiftProto
     try { if let v = self._metadata {
       try visitor.visitSingularStringField(value: v, fieldNumber: 3)
     } }()
+    try { if let v = self._topicID {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 4)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Sinch_Chat_Sdk_V1alpha2_SendRequest, rhs: Sinch_Chat_Sdk_V1alpha2_SendRequest) -> Bool {
     if lhs.payload != rhs.payload {return false}
     if lhs._metadata != rhs._metadata {return false}
+    if lhs._topicID != rhs._topicID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -603,6 +639,7 @@ extension Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest: SwiftProtobuf.Message, Swif
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "page_token"),
     2: .standard(proto: "page_size"),
+    3: .standard(proto: "topic_id"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -613,6 +650,7 @@ extension Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest: SwiftProtobuf.Message, Swif
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self._pageToken) }()
       case 2: try { try decoder.decodeSingularInt32Field(value: &self._pageSize) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self._topicID) }()
       default: break
       }
     }
@@ -629,12 +667,16 @@ extension Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest: SwiftProtobuf.Message, Swif
     try { if let v = self._pageSize {
       try visitor.visitSingularInt32Field(value: v, fieldNumber: 2)
     } }()
+    try { if let v = self._topicID {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest, rhs: Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest) -> Bool {
     if lhs._pageToken != rhs._pageToken {return false}
     if lhs._pageSize != rhs._pageSize {return false}
+    if lhs._topicID != rhs._topicID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -682,6 +724,7 @@ extension Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest: SwiftProtobuf.Messag
   static let protoMessageName: String = _protobuf_package + ".SubscribeToStreamRequest"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "start_time"),
+    2: .standard(proto: "topic_id"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -691,6 +734,7 @@ extension Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest: SwiftProtobuf.Messag
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._startTime) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self._topicID) }()
       default: break
       }
     }
@@ -704,11 +748,15 @@ extension Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest: SwiftProtobuf.Messag
     try { if let v = self._startTime {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
     } }()
+    try { if let v = self._topicID {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 2)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest, rhs: Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest) -> Bool {
     if lhs._startTime != rhs._startTime {return false}
+    if lhs._topicID != rhs._topicID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -38,9 +38,6 @@ final class DefaultMessageDataSource: MessageDataSource {
     
     var authDataSource: AuthDataSource
     var client: APIClient
-    private var nextPageToken: String?
-    private let pageSize: Int32 = 10
-    private var subscription: ServerStreamingCall<Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest, Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamResponse>?
     var historyCall: UnaryCall<Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest, Sinch_Chat_Sdk_V1alpha2_GetHistoryResponse>?
     var sendMessageCall: UnaryCall<Sinch_Chat_Sdk_V1alpha2_SendRequest, Sinch_Chat_Sdk_V1alpha2_SendResponse>?
     var uploadStreamMediaCall: ClientStreamingCall<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest, Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse>?
@@ -48,11 +45,28 @@ final class DefaultMessageDataSource: MessageDataSource {
     weak var delegate: MessageDataSourceDelegate?
     var firstPage: Bool = true
     
+    private var nextPageToken: String?
+    private let pageSize: Int32 = 10
+    private var subscription: ServerStreamingCall<Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest, Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamResponse>?
+    
+    private let topicModel: TopicModel?
+    private let metadata: [SinchMetadata]
+    
     private let jsonEncoder = JSONEncoder()
     
-    init(apiClient: APIClient, authDataSource: AuthDataSource) {
+    init(apiClient: APIClient, authDataSource: AuthDataSource, topicModel: TopicModel? = nil, metadata: [SinchMetadata] = []) {
         self.client = apiClient
         self.authDataSource = authDataSource
+        
+        // Optional mode
+        self.topicModel = topicModel
+        self.metadata = metadata
+        
+        let metadataToSend = metadata.filter({ $0.getKeyValue().mode == .withEachMessage })
+        
+        if metadataToSend.isEmpty == false {
+            _ = sendConversationMetadata(metadataToSend)
+        }
     }
     
     func getMessageHistory(completion: @escaping (Result<[Message], MessageDataSourceError>) -> Void) {
@@ -72,6 +86,8 @@ final class DefaultMessageDataSource: MessageDataSource {
                 firstPage = false
                 request.pageToken = nextPageToken
             }
+            
+            request.topicID = topicModel?.topicID ?? ""
             
             self.historyCall = service.getHistory(request, callOptions: nil)
             
@@ -102,10 +118,13 @@ final class DefaultMessageDataSource: MessageDataSource {
         do {
             let service = try getService()
             
-            guard let message = message.convertToSinchMessage else {
+            guard var message = message.convertToSinchMessage else {
                 completion(.failure(.unknownTypeOfMessage))
                 return
             }
+            
+            message.topicID = topicModel?.topicID ?? ""
+            message.metadata = convertSinchMetadataToMetadataJson(metadata: metadata.filter({ $0.getKeyValue().mode == .withEachMessage })) ?? "{}"
             
             sendMessageCall = service.send(message)
             
@@ -187,7 +206,9 @@ final class DefaultMessageDataSource: MessageDataSource {
         }
         do {
             let service = try getService()
-            let request = Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest()
+            var request = Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest()
+            
+            request.topicID = topicModel?.topicID ?? ""
             
             let subscription = service.subscribeToStream(request, callOptions: nil) { [weak self] response in
                 guard let self = self else {
@@ -277,7 +298,7 @@ final class DefaultMessageDataSource: MessageDataSource {
         try Sinch_Chat_Sdk_V1alpha2_SdkServiceClient(channel: client.getChannel(), defaultCallOptions: authDataSource.signRequest(.standardCallOptions))
     }
     
-    // swiftlint:disable function_body_length
+    // swiftlint:disable function_body_length cyclomatic_complexity
     private func handleIncomingMessage(_ entry: Sinch_Chat_Sdk_V1alpha2_Entry) -> Message? {
         
         if entry.hasDeliveryTime {
@@ -301,7 +322,7 @@ final class DefaultMessageDataSource: MessageDataSource {
                 if entry.appMessage.hasAgent {
                     let agent = entry.appMessage.agent
                     
-                    return Message(owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
+                    return Message(owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue, pictureUrl: agent.pictureURL)),
                                    body: MessageText(text: incomingText,
                                                      sendDate: entry.deliveryTime.seconds))
                 } else {
@@ -390,7 +411,7 @@ final class DefaultMessageDataSource: MessageDataSource {
             
             if !incomingCarouselMessage.cards.isEmpty {
                 
-                var carouselChoicesArray = DefaultMessageDataSource.createChoicesArray(incomingCarouselMessage.choices, entryID: entry.entryID)
+                let carouselChoicesArray = DefaultMessageDataSource.createChoicesArray(incomingCarouselMessage.choices, entryID: entry.entryID)
              //   carouselChoicesArray.append(.urlMessage(ChoiceUrl(url: "https://www.google.com", text: "Please go to google")))
              //   carouselChoicesArray.append(.urlMessage(ChoiceUrl(url: "https://www.google.com", text: "Please go to text")))
              //   carouselChoicesArray.append(.urlMessage(ChoiceUrl(url: "www.google.com", text: "Please go to rate")))
@@ -399,7 +420,7 @@ final class DefaultMessageDataSource: MessageDataSource {
                 
                 for incomingCardMessage in incomingCarouselMessage.cards {
                     
-                    var choicesArray = DefaultMessageDataSource.createChoicesArray(incomingCardMessage.choices, entryID: entry.entryID)
+                    let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingCardMessage.choices, entryID: entry.entryID)
                                     
                     let messageBody = MessageCard(title: incomingCardMessage.title,
                                                   description: incomingCardMessage.description_p ,
@@ -470,6 +491,21 @@ final class DefaultMessageDataSource: MessageDataSource {
         return nil
     }
     
+    private func convertSinchMetadataToMetadataJson(metadata: [SinchMetadata]) -> String? {
+        var dictMetadata: [String: String] = [:]
+    
+        metadata.forEach({
+            let tuple = $0.getKeyValue()
+            dictMetadata[tuple.key] = tuple.value
+        })
+        
+        guard let encodedMetadata = try? JSONEncoder().encode(dictMetadata) else {
+            return nil
+        }
+        
+        return String(data: encodedMetadata, encoding: .utf8)
+    }
+    
     static func createChoicesArray(_ choices: [Sinch_Conversationapi_Type_Choice], entryID: String) -> [ChoiceMessageType] {
         
         var choicesArray: [ChoiceMessageType] = []
@@ -494,4 +530,9 @@ final class DefaultMessageDataSource: MessageDataSource {
         }
         return choicesArray
     }
+}
+
+struct TopicModel {
+    let topicID: String
+    
 }

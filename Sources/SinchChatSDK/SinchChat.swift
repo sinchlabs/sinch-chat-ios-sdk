@@ -11,10 +11,12 @@ public protocol SinchChat {
    
     ///   - uiConfig: Optionally ui changes might be provided with different settings.
     ///   - localizationConfig: Optionally localization might be provided with different text translation.
+    ///   - options: Optionally custom chat options.
     /// - Returns: UIViewController which contains chat UI.
     /// - Throws: SinchChatSDKError enum with specific error.
     func getChatViewController(uiConfig: SinchSDKConfig.UIConfig?,
-                               localizationConfig: SinchSDKConfig.LocalizationConfig?) throws -> UIViewController
+                               localizationConfig: SinchSDKConfig.LocalizationConfig?,
+                               options: GetChatViewControllerOptions?) throws -> UIViewController
     
     /// Sets metadata for single conversation. This methods overrides previous metadata.
     /// - Parameters:
@@ -25,8 +27,9 @@ public protocol SinchChat {
 public extension SinchChat {
     
     func getChatViewController(uiConfig: SinchSDKConfig.UIConfig? = nil,
-                               localizationConfig: SinchSDKConfig.LocalizationConfig? = nil) throws -> UIViewController {
-        try getChatViewController(uiConfig: uiConfig, localizationConfig: localizationConfig)
+                               localizationConfig: SinchSDKConfig.LocalizationConfig? = nil,
+                               options: GetChatViewControllerOptions? = nil) throws -> UIViewController {
+        try getChatViewController(uiConfig: uiConfig, localizationConfig: localizationConfig, options: options)
     }
 }
 
@@ -86,7 +89,8 @@ final class DefaultSinchChat: SinchChat {
     }
     
     public func getChatViewController(uiConfig: SinchSDKConfig.UIConfig? = nil,
-                                      localizationConfig: SinchSDKConfig.LocalizationConfig? = nil) throws -> UIViewController {
+                                      localizationConfig: SinchSDKConfig.LocalizationConfig? = nil,
+                                      options: GetChatViewControllerOptions? = nil) throws -> UIViewController {
         
         guard isChatAvailable() == .available, let authDataSource = authDataSource, let region = region else {
             throw SinchChatSDKError.unavailable
@@ -96,8 +100,16 @@ final class DefaultSinchChat: SinchChat {
         }
                 
         apiClient = client
+        
+        var topicModel: TopicModel?
+        if let topicID = options?.topicID {
+            topicModel = TopicModel(topicID: topicID)
+        }
+        
         let messageDataSource = DefaultMessageDataSource(apiClient: apiClient!,
-                                                         authDataSource: authDataSource)
+                                                         authDataSource: authDataSource,
+                                                         topicModel: topicModel,
+                                                         metadata: options?.metadata ?? [])
         let rootCordinator = RootCoordinator(messageDataSource: messageDataSource,
                                              authDataSource: authDataSource,
                                              pushPermissionHandler: pushPermissionHandler)
@@ -121,7 +133,8 @@ final class DefaultSinchChat: SinchChat {
         }
         
         let messageDataSource = DefaultMessageDataSource(apiClient: apiClient!,
-                                                         authDataSource: authDataSource)
+                                                         authDataSource: authDataSource,
+                                                         topicModel: nil)
         
         _ = messageDataSource.sendConversationMetadata(metadata)
     }
@@ -142,45 +155,36 @@ extension DefaultSinchChat: ChatNotificationHandlerDelegate {
 }
 
 public protocol SinchMetadata {
-    func getKeyValue() -> (key: String, value: String)
+    func getKeyValue() -> (key: String, value: String, mode: SinchMetadataMode)
+}
+
+public enum SinchMetadataMode {
+    case once
+    case withEachMessage
+}
+
+public struct GetChatViewControllerOptions {
+    let topicID: String?
+    let metadata: [SinchMetadata]
+    
+    public init(topicID: String? = nil, metadata: [SinchMetadata]) {
+        self.topicID = topicID
+        self.metadata = metadata
+    }
 }
 
 public struct SinchMetadataCustom: SinchMetadata {
     let key: String
     let value: String
+    let mode: SinchMetadataMode
     
-    public init(key: String, value: String) {
+    public init(key: String, value: String, mode: SinchMetadataMode) {
         self.key = key
         self.value = value
+        self.mode = mode
     }
     
-    public func getKeyValue() -> (key: String, value: String) {
-        return (key, value)
-    }
-}
-
-public struct SinchMetadataEmail: SinchMetadata {
-    private let key: String = "email"
-    private let value: String
-    
-    public init(value: String) {
-        self.value = value
-    }
-    
-    public func getKeyValue() -> (key: String, value: String) {
-        return (key, value)
-    }
-}
-
-public struct SinchMetadataPhoneNumber: SinchMetadata {
-    private let key: String = "phone"
-    private let value: String
-
-    public init(value: String) {
-        self.value = value
-    }
-    
-    public func getKeyValue() -> (key: String, value: String) {
-        return (key, value)
+    public func getKeyValue() -> (key: String, value: String, mode: SinchMetadataMode) {
+        return (key, value, mode)
     }
 }

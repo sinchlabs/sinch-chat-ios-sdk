@@ -65,21 +65,43 @@ final class AvatarView: UIView {
         imageView.backgroundColor = uiConfig.incomingMessageChatbotBackgroundColor
         
         if case let .incoming(agent) = message.owner {
-            if let name = agent?.name {
+            
+            if let imageUrl = agent?.pictureUrl,
+               let imageURL = URL(string: imageUrl) {
                 
-                if let firstLetter = name.first?.uppercased() {
-                    nameLabel.text = firstLetter
+                imageView.setImage(url: imageURL) { result in
+                    switch result {
+                    case .success:
+                        self.nameLabel.isHidden = true
+                        self.imageView.isHidden = false
+                        
+                        self.backgroundColor = uiConfig.incomingMessageSenderBackgroundColor
+                    case .failure:
+                        self.handleNonAvatarModels(agent, uiConfig: uiConfig)
+                    }
                 }
-                nameLabel.isHidden = false
-                imageView.isHidden = true
-                backgroundColor = uiConfig.incomingMessageSenderBackgroundColor
                 
             } else {
-                nameLabel.text = ""
-                nameLabel.isHidden = true
-                imageView.isHidden = false
-                backgroundColor = uiConfig.incomingMessageChatbotBackgroundColor
+                handleNonAvatarModels(agent, uiConfig: uiConfig)
             }
+        }
+    }
+    
+    private func handleNonAvatarModels(_ agent: Agent?, uiConfig: SinchSDKConfig.UIConfig) {
+        if let name = agent?.name {
+            
+            if let firstLetter = name.first?.uppercased() {
+                nameLabel.text = firstLetter
+            }
+            nameLabel.isHidden = false
+            imageView.isHidden = true
+            backgroundColor = uiConfig.incomingMessageSenderBackgroundColor
+            
+        } else {
+            nameLabel.text = ""
+            nameLabel.isHidden = true
+            imageView.isHidden = false
+            backgroundColor = uiConfig.incomingMessageChatbotBackgroundColor
         }
     }
 }
