@@ -19,7 +19,7 @@ final class VoiceRecorderController: NSObject, AVAudioRecorderDelegate, AVAudioP
     var recordingSession: AVAudioSession!
     weak var delegate: VoiceRecordingProtocol?
     var audioRecorder: AVAudioRecorder?
-    var audioPlayer: AVAudioPlayer!
+    var audioPlayer: AVAudioPlayer = AVAudioPlayer()
     var isRecording = false
     var isCanceled = false
     var duration = 0.0
@@ -40,8 +40,6 @@ final class VoiceRecorderController: NSObject, AVAudioRecorderDelegate, AVAudioP
             } catch {
                 
             }
-        } else {
-            audioPlayer = AVAudioPlayer()
         }
     }
     deinit {

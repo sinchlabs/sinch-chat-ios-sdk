@@ -29,7 +29,10 @@ let package = Package(
                 .product(name: "GRPC", package: "grpc-swift"),
                 .product(name: "Kingfisher", package: "Kingfisher"),
                 .product(name: "Connectivity", package: "Connectivity")
-            ]),
+            ],
+            resources: [
+                .process("record.wav")]
+        ),
         .testTarget(
             name: "SinchChatSDKTests",
             dependencies: ["SinchChatSDK"])
