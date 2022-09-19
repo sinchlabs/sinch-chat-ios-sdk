@@ -1,4 +1,4 @@
-﻿# iOS Sinch SDK - Getting Started
+# iOS Sinch SDK - Getting Started
 
   
 
@@ -33,7 +33,7 @@ This is documentation how to easily implement our SDK for chat and for push feat
 ### Info.plist permissions
 We need two permissions in info.plist:
 
-- Push notifications permission:
+- Push notifications permission and microphone access:
 - Capability → `Push Notifications`
 - Capability → `background modes` → `Remote notifications` + explanation in info.plist:
 ```swift
@@ -42,7 +42,9 @@ We need two permissions in info.plist:
 	<array>
 		<string>remote-notification</string>
 	</array>
-</dct>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Need microphone access for sending voice messages</string>   
+</dict>
 
 ```
 ## Initialize

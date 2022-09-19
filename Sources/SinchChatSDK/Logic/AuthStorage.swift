@@ -11,7 +11,6 @@ final class DefaultAuthStorage: AuthStorage {
     private let userDefaults: UserDefaults
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
-
     private let config: SinchSDKConfig.AppConfig
 
     init(config: SinchSDKConfig.AppConfig, userDefaults: UserDefaults = .standard) {

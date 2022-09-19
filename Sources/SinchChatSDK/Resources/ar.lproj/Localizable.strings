@@ -24,6 +24,8 @@
 
 "alert_title_location_disabled" = "Turn On Location Services to Allow this app to Determine Your Location";
 "alert_message_location_disabled" = "Enable Location Services in Settings > Privacy > Location Services to use this feature";
+"alert_title_microphone_disabled" = "Turn On Microphone to Allow this app to record Voice message";
+
 
 "alert_title_app_location_status_denied" = "This app does not have access to your location. To enable access, tap Settings > Location";
 
@@ -32,3 +34,6 @@
 
 "outgoing_location_message_title" = "My location";
 "outgoing_location_message_button_title" = "See my location";
+"recording_title" = "Recording";
+"voice_message_title" = "Voice message";
+"alert_message_hold_to_record" = "Hold to record, release to send";

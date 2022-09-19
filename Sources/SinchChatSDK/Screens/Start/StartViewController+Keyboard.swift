@@ -62,7 +62,7 @@ internal extension StartViewController {
     }
     
     // MARK: - Notification Handlers
-    // Todo
+    
      @objc
     private func handleTextViewDidBeginEditing(_ notification: Notification) {
             guard

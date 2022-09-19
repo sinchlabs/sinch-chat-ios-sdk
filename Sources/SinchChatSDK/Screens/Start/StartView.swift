@@ -27,7 +27,8 @@ final class StartView: SinchView {
         collectionView.register(ChoicesMessageCell.self, forCellWithReuseIdentifier: ChoicesMessageCell.cellId)
         collectionView.register(CardMessageCell.self, forCellWithReuseIdentifier: CardMessageCell.cellId)
         collectionView.register(CarouselMessageCell.self, forCellWithReuseIdentifier: CarouselMessageCell.cellId)
-        
+        collectionView.register(VoiceMessageCell.self, forCellWithReuseIdentifier: VoiceMessageCell.cellId)
+
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(collectionView)
         

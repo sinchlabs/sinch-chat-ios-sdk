@@ -64,7 +64,7 @@ final class ImageMessageCell: ImageBaseCell {
 
         dateLabel.configure {
             
-            if let message = message.body as? MessageImage,
+            if let message = message.body as? MessageMedia,
                let dateInSeconds = message.sendDate {
                 dateLabel.text =  Date(timeIntervalSince1970: TimeInterval(dateInSeconds)).getFormattedTime()
             }
@@ -109,7 +109,7 @@ final class ImageMessageCell: ImageBaseCell {
                 
             } else {
                 
-                if let message = message?.body as? MessageImage, let url = URL(string: message.url) {
+                if let message = message?.body as? MessageMedia, let url = URL(string: message.url) {
                     delegate?.didTapMedia(with: url)
                 }
                 

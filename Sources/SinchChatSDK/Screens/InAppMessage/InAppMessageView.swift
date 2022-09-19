@@ -194,7 +194,7 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
             textLabel.text = message.text
             backgroundView.addSubview(textLabel)
             
-        case let message as MessageImage:
+        case let message as MessageMedia:
             backgroundView.addSubview(backgroundImageView)
             backgroundView.addSubview(placeholderImageView)
             backgroundView.addSubview(imageView)
@@ -452,7 +452,7 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
                 
             ])
             
-        case is MessageImage:
+        case is MessageMedia:
             
             let backgroundImageViewTop = backgroundImageView.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 0)
             let backgroundImageViewBottom = backgroundImageView.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -108)

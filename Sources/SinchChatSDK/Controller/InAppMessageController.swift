@@ -14,7 +14,7 @@ class DefaultInAppMessageController: InAppMessageController, InAppMessageViewDel
     var pushNotificationHandler: PushNotificationHandler
     var presentNewInAppMessageAfterInSec: Double = 0.5
     var checkIfAlertIsRemovedInSec: Double = 5.0
-
+    
     init(pushNotificationHandler: PushNotificationHandler) {
         self.pushNotificationHandler = pushNotificationHandler
     }
@@ -56,7 +56,7 @@ class DefaultInAppMessageController: InAppMessageController, InAppMessageViewDel
         }
     }
     func replyToMessage(_ choice: ChoiceText) {
-    
+        
         pushNotificationHandler.pushRepository?.replyToMessageWithTextChoice(choice: choice) { result in
             
         }
@@ -102,7 +102,7 @@ class DefaultInAppMessageController: InAppMessageController, InAppMessageViewDel
             }
             
             do {
-            
+                
                 let incomingTextMessage =  try Sinch_Push_Dispatch_V1beta1_Payload(serializedData: serializedData)
                 
                 return handleIncomingMessage(incomingTextMessage)
@@ -114,107 +114,108 @@ class DefaultInAppMessageController: InAppMessageController, InAppMessageViewDel
         
         return nil
     }
-       
+    
     private func handleIncomingMessage(_ entry: Sinch_Push_Dispatch_V1beta1_Payload) -> Message? {
         
         let dateReceived = Int64(Date().timeIntervalSince1970)
-
-            // MARK: - Incoming messages
-            
+        
+        // MARK: - Incoming messages
+        
         let incomingText = entry.message.textMessage.text
-            if !incomingText.isEmpty {
-                if entry.message.hasAgent {
-                    let agent = entry.message.agent
-                    
-                    return Message(owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
-                                   body: MessageText(text: incomingText,
-                                                     sendDate: dateReceived))
-                } else {
-                    
-                    return Message(owner: .incoming(nil),
-                                   body: MessageText(text: incomingText,
-                                                     sendDate: dateReceived))
-                }
+        if !incomingText.isEmpty {
+            if entry.message.hasAgent {
+                let agent = entry.message.agent
+                
+                return Message(entryId: entry.trackingID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
+                               body: MessageText(text: incomingText,
+                                                 sendDate: dateReceived))
+            } else {
+                
+                return Message(entryId: entry.trackingID, owner: .incoming(nil),
+                               body: MessageText(text: incomingText,
+                                                 sendDate: dateReceived))
             }
-            
-            let incomingLocationMessage = entry.message.locationMessage
-            if incomingLocationMessage.hasCoordinates {
-                let messageBody = MessageLocation(label: incomingLocationMessage.label,
-                                                  title: incomingLocationMessage.title,
-                                                  latitude: Double(incomingLocationMessage.coordinates.latitude),
-                                                  longitude: Double(incomingLocationMessage.coordinates.longitude),
-                                                  sendDate: dateReceived)
-                
-                if entry.message.hasAgent {
-                    let agent = entry.message.agent
-                    
-                    return Message(owner: .incoming(.init(name: agent.displayName,
-                                                          type: agent.type.rawValue)),
-                                   body:  messageBody)
-                } else {
-                    
-                    return Message(owner: .incoming(nil), body: messageBody)
-                }
-            }
-            
-            let incomingChoiceMessage = entry.message.choiceMessage
-            if incomingChoiceMessage.hasTextMessage {
-                
-                let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingChoiceMessage.choices, entryID: entry.trackingID)
-                let messageBody = MessageChoices(text: incomingChoiceMessage.textMessage.text,
-                                                 choices: choicesArray,
-                                                 sendDate: dateReceived)
-                
-                if entry.message.hasAgent {
-                    let agent = entry.message.agent
-                    
-                    return Message(owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
-                                   body:  messageBody)
-                } else {
-                    
-                    return Message(owner: .incoming(nil), body: messageBody)
-                }
-            }
-            let incomingCardMessage = entry.message.cardMessage
-
-            if incomingCardMessage.hasMediaMessage {
-                
-                let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingCardMessage.choices, entryID: entry.trackingID)
-                let messageBody = MessageCard(title: incomingCardMessage.title,
-                                              description: incomingCardMessage.description_p,
-                                              choices: choicesArray,
-                                              url: incomingCardMessage.mediaMessage.url,
+        }
+        
+        let incomingLocationMessage = entry.message.locationMessage
+        if incomingLocationMessage.hasCoordinates {
+            let messageBody = MessageLocation(label: incomingLocationMessage.label,
+                                              title: incomingLocationMessage.title,
+                                              latitude: Double(incomingLocationMessage.coordinates.latitude),
+                                              longitude: Double(incomingLocationMessage.coordinates.longitude),
                                               sendDate: dateReceived)
+            
+            if entry.message.hasAgent {
+                let agent = entry.message.agent
                 
-                if entry.message.hasAgent {
-                    let agent = entry.message.agent
-                    
-                    return Message(owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
-                                   body:  messageBody)
-                } else {
-                    
-                    return Message(owner: .incoming(nil), body: messageBody)
-                }
+                return Message(entryId: entry.trackingID,
+                               owner: .incoming(.init(name: agent.displayName,
+                                                      type: agent.type.rawValue)),
+                               body:  messageBody)
+            } else {
+                
+                return Message(entryId: entry.trackingID, owner: .incoming(nil), body: messageBody)
             }
+        }
+        
+        let incomingChoiceMessage = entry.message.choiceMessage
+        if incomingChoiceMessage.hasTextMessage {
+            
+            let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingChoiceMessage.choices, entryID: entry.trackingID)
+            let messageBody = MessageChoices(text: incomingChoiceMessage.textMessage.text,
+                                             choices: choicesArray,
+                                             sendDate: dateReceived)
+            
+            if entry.message.hasAgent {
+                let agent = entry.message.agent
+                
+                return Message(entryId: entry.trackingID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
+                               body:  messageBody)
+            } else {
+                
+                return Message(entryId: entry.trackingID, owner: .incoming(nil), body: messageBody)
+            }
+        }
+        let incomingCardMessage = entry.message.cardMessage
+        
+        if incomingCardMessage.hasMediaMessage {
+            
+            let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingCardMessage.choices, entryID: entry.trackingID)
+            let messageBody = MessageCard(title: incomingCardMessage.title,
+                                          description: incomingCardMessage.description_p,
+                                          choices: choicesArray,
+                                          url: incomingCardMessage.mediaMessage.url,
+                                          sendDate: dateReceived)
+            
+            if entry.message.hasAgent {
+                let agent = entry.message.agent
+                
+                return Message(entryId: entry.trackingID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
+                               body:  messageBody)
+            } else {
+                
+                return Message(entryId: entry.trackingID, owner: .incoming(nil), body: messageBody)
+            }
+        }
         
         let incomingCarouselMessage = entry.message.carouselMessage
         
         if !incomingCarouselMessage.cards.isEmpty {
             
             let carouselChoicesArray = DefaultMessageDataSource.createChoicesArray(incomingCarouselMessage.choices, entryID: entry.trackingID)
-
+            
             var cardsArray: [MessageCard] = []
             
             for incomingCardMessage in incomingCarouselMessage.cards {
                 
                 let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingCardMessage.choices, entryID: entry.trackingID)
-              
+                
                 let messageBody = MessageCard(title: incomingCardMessage.title,
                                               description: incomingCardMessage.description_p ,
                                               choices: choicesArray,
                                               url: incomingCardMessage.mediaMessage.url,
                                               sendDate: dateReceived)
-            
+                
                 cardsArray.append(messageBody)
             }
             
@@ -223,30 +224,32 @@ class DefaultInAppMessageController: InAppMessageController, InAppMessageViewDel
             if entry.message.hasAgent {
                 let agent = entry.message.agent
                 
-                return Message(owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
+                return Message(entryId: entry.trackingID, owner: .incoming(.init(name: agent.displayName,
+                                                                                 type: agent.type.rawValue)),
                                body:  messageBody)
             } else {
                 
-                return Message(owner: .incoming(nil), body: messageBody)
+                return Message(entryId: entry.trackingID, owner: .incoming(nil), body: messageBody)
             }
         }
         
-            let incomingUrl = entry.message.mediaMessage.url
-            
-            if !incomingUrl.isEmpty {
-                if entry.message.hasAgent {
-                    let agent = entry.message.agent
-                    
-                    return Message(owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
-                                   body: MessageImage(url: incomingUrl,
-                                                      sendDate: dateReceived, placeholderImage: nil))
-                } else {
-                    return Message(owner: .incoming(nil),
-                                   body: MessageImage(url: incomingUrl,
-                                                      sendDate: dateReceived, placeholderImage: nil))
-                }
+        let incomingUrl = entry.message.mediaMessage.url
+        
+        if !incomingUrl.isEmpty {
+            if entry.message.hasAgent {
+                let agent = entry.message.agent
+                
+                return Message(entryId: entry.trackingID, owner: .incoming(.init(name: agent.displayName,
+                                                                                 type: agent.type.rawValue)),
+                               body: MessageMedia(url: incomingUrl,
+                                                  sendDate: dateReceived))
+            } else {
+                return Message(entryId: entry.trackingID, owner: .incoming(nil),
+                               body: MessageMedia(url: incomingUrl,
+                                                  sendDate: dateReceived))
             }
-            
+        }
+        
         return nil
     }
     

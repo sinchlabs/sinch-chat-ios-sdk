@@ -70,6 +70,17 @@ public extension SinchSDKConfig {
         public var shareLocationMenuImage = UIImage(named: "locationBlueIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var pageControlSelectedColor = UIColor(named: "primaryPageControlColor", in: Bundle.staticBundle, compatibleWith: nil)
         public var pageControlUnselectedColor = UIColor(named: "secondaryPageControlColor", in: Bundle.staticBundle, compatibleWith: nil)
+        
+        public var playButtonImage = UIImage(named: "playIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var pauseButtonImage = UIImage(named: "pauseIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var primaryAudioBarBackgroundColor = UIColor(named: "primaryAudioBarBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        public var topAudioBarBackgroundColor = UIColor(named: "secondaryAudioBarBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        public var recordingRedColor = UIColor(named: "primaryRedColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        
+        public var recordButtonImage = UIImage(named: "recordIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var sendFilledImage = UIImage(named: "sendFilledIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var deleteImage = UIImage(named: "deleteIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var progressBarBackgroundColor = UIColor(named: "primaryProgressBarBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
 
         // MARK: - InAppMessaging
         
@@ -94,6 +105,6 @@ public extension SinchSDKConfig {
         public var inAppMessageTextColor = UIColor(named: "inAppTextColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var inAppMessageImagePlaceholder = UIImage(named: "mediaPlaceholder", in: Bundle.staticBundle, compatibleWith: nil)
         public var inAppMessageImageBackgroundColor = UIColor(named:  "inAppImageBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)
-
+        
     }
 }

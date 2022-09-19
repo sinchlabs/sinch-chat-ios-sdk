@@ -5,7 +5,8 @@ enum MessageType {
     case choiceResponseMessage(postbackData: String, entryID: String)
     case image(String)
     case location(latitude: Float, longitude: Float, localizationConfig: SinchSDKConfig.LocalizationConfig)
-    
+    case voice(String)
+
     var convertToSinchMessage: Sinch_Chat_Sdk_V1alpha2_SendRequest? {
         var request = Sinch_Chat_Sdk_V1alpha2_SendRequest()
         var contactMessage = Sinch_Conversationapi_Type_ContactMessage()
@@ -27,13 +28,17 @@ enum MessageType {
             var messageImage = Sinch_Conversationapi_Type_MediaMessage()
             messageImage.url = urlString
             contactMessage.message = .mediaMessage(messageImage)
+        case .voice(let urlString):
+            
+            var messageVoice = Sinch_Conversationapi_Type_MediaMessage()
+            messageVoice.url = urlString
+            contactMessage.message = .mediaMessage(messageVoice)
             
         case let .location(latitude, longitude, localizationConfig):
         
         var locationMessage = Sinch_Conversationapi_Type_LocationMessage()
             locationMessage.title = localizationConfig.outgoingLocationMessageTitle
         locationMessage.label = localizationConfig.outgoingLocationMessageButtonTitle
-
 
         var coordinates = Sinch_Conversationapi_Type_Coordinates()
         coordinates.latitude = latitude

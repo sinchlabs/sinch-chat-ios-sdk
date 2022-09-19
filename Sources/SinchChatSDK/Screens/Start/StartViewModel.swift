@@ -14,6 +14,7 @@ protocol StartViewModel: MessageDataSourceDelegate {
     func onDidEnterBackground()
     func onInternetLost()
     func onInternetOn()
+    func closeChannel()
     
 }
 
@@ -59,7 +60,7 @@ final class DefaultStartViewModel: StartViewModel {
         for array in arraysOfMessages {
             
             if let date = array.first?.body.sendDate {
-                allMessagesArray.append(Message(owner: .system, body: MessageDate(sendDate: date)))
+                allMessagesArray.append(Message(entryId: "-1", owner: .system, body: MessageDate(sendDate: date)))
             }
             allMessagesArray.append(contentsOf: array)
         }
@@ -77,6 +78,10 @@ final class DefaultStartViewModel: StartViewModel {
             }
         }
     }
+    func closeChannel() {
+        dataSource.closeChannel()
+    }
+
     private func setIdleState() {
         dataSource.cancelSubscription()
 
@@ -305,7 +310,13 @@ final class DefaultStartViewModel: StartViewModel {
                 
             case .success(let urlString):
                 
-                self.sendMessage(.image(urlString))
+                switch media {
+                case .image(_):
+                    self.sendMessage(.image(urlString))
+                case .voice(_):
+                    self.sendMessage(.voice(urlString))
+
+                }
                 
             case .failure(let error):
                 Logger.verbose(error)

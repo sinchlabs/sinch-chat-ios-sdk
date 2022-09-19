@@ -1,13 +1,19 @@
 import UIKit
+// import SnapshotTesting
 
 protocol ComposeViewDelegate: AnyObject {
     
     func sendMessage(text: String)
+    func sendVoiceMessage(url: URL)
     func sendChoiceResponseMessage(postbackData: String, entryID: String)
     func choosePhoto()
     func chooseAction()
+    func startPlayingRecordedMessage(url: URL)
+    func stopAudioPlayerIfPlaying(isRecording:Bool)
+    func disabledMicrophoneAccess()
+    func showHoldToRecordAudioMessage()
+    
 }
-
 final class ComposeView: SinchView {
     
     private let maxHeight: CGFloat = 125.0
@@ -15,94 +21,145 @@ final class ComposeView: SinchView {
     private let paddingTop: CGFloat = 10.0
     private let paddingBottom: CGFloat = 10.0
     private let animationDuration: Double = 0.2
-    private var barBackgroundColor: UIColor
-    private var textViewBackgroundColor: UIColor
-    private var textViewBorderColor: UIColor
-        
-    private var placeholderText: String?
-    private var placeholderFont: UIFont
-    private var placeholderTextColor: UIColor
+    private let spacingBetweenButtonsAndText: Double = 9.0
     
-    var plusButton: UIButton = UIButton()
-    var voiceRecordingButton: UIButton = UIButton()
-    var photoButton: UIButton = UIButton()
-    var sendButton: UIButton = UIButton()
+    lazy var voiceRecordingButton: UIButton = {
+        var button = UIButton()
+        button.setImage(uiConfig.voiceRecordingImage, for: .normal)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        
+        return button
+    }()
+    lazy var emptyView: UIView = {
+        var view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        
+        return view
+    }()
+    lazy var photoButton: UIButton = {
+        var button = UIButton()
+        button.setImage(uiConfig.photoImage, for: .normal)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        
+        return button
+    }()
+    lazy var sendButton: UIButton = {
+        var button = UIButton()
+        button.setImage(uiConfig.sendImage, for: .normal)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        
+        return button
+    }()
+    lazy var plusButton: UIButton = {
+        var button = UIButton()
+        button.setImage(uiConfig.plusImage, for: .normal)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        
+        return button
+    }()
     
     var placeholderLabel: UILabel = UILabel()
     var textButtonContainer: UIView = UIView()
     var leftStackView: UIStackView = UIStackView()
     var rightStackView: UIStackView = UIStackView()
-
+    
+    lazy var recordingLabel: UILabel =  {
+        var label = UILabel()
+        label.text = localizationConfiguration.recordingTitle
+        label.textColor = uiConfig.recordingRedColor
+        label.textAlignment = .right
+        label.font = UIFont.systemFont(ofSize: 14)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    lazy var timeLabel: UILabel =  {
+        var label = UILabel()
+        label.text = duration.getTimeFromSeconds()
+        label.textAlignment = .left
+        label.font = UIFont.systemFont(ofSize: 14)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        
+        return label
+        
+    }()
+    var url: URL?
+    
+    lazy var voiceRecorder: VoiceRecorderController! = {
+        let recorder = VoiceRecorderController()
+        recorder.delegate = self
+        return recorder
+    }()
+    
+    var audioBackgroundView: AudioComposeView?
     var backgroundView: UIView = UIView()
     var shouldExpandTextViewToRight = true
     weak var delegate: ComposeViewDelegate?
-
     var composeTextView: ComposeTextView!
-
+    
     private var isInputTextViewExpanded: Bool = false
     private var leftStackViewConstraint: NSLayoutConstraint!
     private var rightStackViewConstraint: NSLayoutConstraint!
     private var rightStackViewLeadingConstraint: NSLayoutConstraint!
-
+    
     private var sendButtonBottomConstraint: NSLayoutConstraint!
     private var textContainerBottomAnchor: NSLayoutConstraint!
     private var windowAnchor: NSLayoutConstraint?
-
+    
     private var backgroundViewBottomAnchor: NSLayoutConstraint!
     private var textViewMaxHeight: NSLayoutConstraint!
+    var duration: Double = 0.0 {
+        didSet {
+            timeLabel.text = duration.getTimeFromSeconds()
+        }
+    }
     
     init(uiConfiguration: SinchSDKConfig.UIConfig, localizatioConfiguration: SinchSDKConfig.LocalizationConfig) {
-        barBackgroundColor = uiConfiguration.inputBarBackgroundColor
-        textViewBackgroundColor = uiConfiguration.inputTextViewBackgroundColor
-        textViewBorderColor = uiConfiguration.inputTextViewBorderColor
-      
-        placeholderTextColor = uiConfiguration.inputPlaceholderTextColor
-        placeholderFont = UIFont.preferredFont(forTextStyle: .body)
-        placeholderText  = localizatioConfiguration.inputPlaceholderText
-        
-        photoButton.setImage(uiConfiguration.photoImage, for: .normal)
-        plusButton.setImage(uiConfiguration.plusImage, for: .normal)
-        voiceRecordingButton.setImage(uiConfiguration.voiceRecordingImage, for: .normal)
-        voiceRecordingButton.isHidden = true
-        sendButton.setImage(uiConfiguration.sendImage, for: .normal)
         
         composeTextView = ComposeTextView(configuration: uiConfiguration)
         
-        super.init()
+        super.init(uiConfiguration: uiConfiguration, localizationConfiguration: localizatioConfiguration)
     }
     
     override func setupSubviews() {
         
         translatesAutoresizingMaskIntoConstraints = false
-        backgroundView.backgroundColor = barBackgroundColor
+        backgroundView.backgroundColor = uiConfig.inputBarBackgroundColor
         backgroundView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(backgroundView)
         addLeftContentButtons()
         addRightContentButtons()
         addTextViewAndSendButtonContainer()
         setupPlaceholderLabel()
-       
     }
     
     override func setupConstraints() {
         
         leftStackViewConstraint = leftStackView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 18)
         rightStackViewConstraint = rightStackView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -18)
-        rightStackViewLeadingConstraint = rightStackView.leadingAnchor.constraint(equalTo: textButtonContainer.trailingAnchor, constant: 9)
-
         sendButtonBottomConstraint = sendButton.bottomAnchor.constraint(equalTo: textButtonContainer.bottomAnchor)
         backgroundViewBottomAnchor =  backgroundView.bottomAnchor.constraint(equalTo: bottomAnchor)
         textContainerBottomAnchor =  textButtonContainer.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -10)
         textViewMaxHeight = composeTextView.heightAnchor.constraint(equalToConstant: maxHeight - paddingTop - paddingBottom)
+        
+        recordingLabel.setContentHuggingPriority(.required, for: .horizontal)
+        emptyView.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        timeLabel.setContentHuggingPriority(.required, for: .horizontal)
+        voiceRecordingButton.setContentHuggingPriority(.required, for: .horizontal)
+        
         NSLayoutConstraint.activate([
             
             leftStackViewConstraint,
-            leftStackView.trailingAnchor.constraint(equalTo: textButtonContainer.leadingAnchor, constant: -9),
+            leftStackView.trailingAnchor.constraint(equalTo: textButtonContainer.leadingAnchor, constant: -spacingBetweenButtonsAndText),
             leftStackView.centerYAnchor.constraint(equalTo: sendButton.centerYAnchor, constant: 0),
             
             rightStackViewConstraint,
-            rightStackViewLeadingConstraint,
+            rightStackView.leadingAnchor.constraint(equalTo: textButtonContainer.trailingAnchor, constant: 9),
             rightStackView.centerYAnchor.constraint(equalTo: sendButton.centerYAnchor, constant: 0),
+            
+            // timeLabel.widthAnchor.constraint(equalToConstant: 70),
+            timeLabel.heightAnchor.constraint(equalToConstant: 40),
+            emptyView.heightAnchor.constraint(equalToConstant: 40),
+            recordingLabel.heightAnchor.constraint(equalToConstant: 40),
             
             plusButton.heightAnchor.constraint(equalToConstant: 40),
             plusButton.widthAnchor.constraint(equalToConstant: 38),
@@ -148,31 +205,28 @@ final class ComposeView: SinchView {
         windowAnchor?.isActive = true
         backgroundViewBottomAnchor.constant = window.safeAreaInsets.bottom
     }
-
+    
     override func resignFirstResponder() -> Bool {
         composeTextView.resignFirstResponder()
         return super.resignFirstResponder()
     }
-
+    
     func setText(_ text: String) {
         composeTextView.text = text
         showHidePlaceholderAndSendButton(in: composeTextView)
     }
-
+    
     // MARK: - Private
     
     private func setupPlaceholderLabel() {
         
-        placeholderLabel.font = placeholderFont
-        placeholderLabel.textColor = placeholderTextColor
+        placeholderLabel.font = UIFont.preferredFont(forTextStyle: .body)
+        placeholderLabel.textColor = uiConfig.inputPlaceholderTextColor
         placeholderLabel.translatesAutoresizingMaskIntoConstraints = false
         placeholderLabel.numberOfLines = 1
         placeholderLabel.backgroundColor = .clear
-        
-        if let placeholderText = placeholderText {
-            placeholderLabel.text = placeholderText
-        }
-        addSubview(placeholderLabel)
+        placeholderLabel.text = localizationConfiguration.inputPlaceholderText
+        textButtonContainer.addSubview(placeholderLabel)
     }
     
     private func setupTextView() {
@@ -182,10 +236,10 @@ final class ComposeView: SinchView {
     
     private func addTextViewAndSendButtonContainer() {
         
-        textButtonContainer.backgroundColor = textViewBackgroundColor
+        textButtonContainer.backgroundColor =  uiConfig.inputTextViewBackgroundColor
         textButtonContainer.layer.cornerRadius = 20.0
         textButtonContainer.layer.borderWidth = 1.0
-        textButtonContainer.layer.borderColor = textViewBorderColor.cgColor
+        textButtonContainer.layer.borderColor = uiConfig.inputTextViewBorderColor.cgColor
         textButtonContainer.clipsToBounds = true
         textButtonContainer.translatesAutoresizingMaskIntoConstraints = false
         
@@ -216,7 +270,6 @@ final class ComposeView: SinchView {
         leftStackView.axis = .horizontal
         leftStackView.spacing = 2
         leftStackView.translatesAutoresizingMaskIntoConstraints = false
-        
         backgroundView.addSubview(leftStackView)
     }
     
@@ -224,12 +277,24 @@ final class ComposeView: SinchView {
         
         photoButton.imageEdgeInsets = UIEdgeInsets(top: 8, left: 7, bottom: 8, right: 7)
         voiceRecordingButton.imageEdgeInsets = UIEdgeInsets(top: 8, left: 7, bottom: 8, right: 7)
-        voiceRecordingButton.addTarget(self, action: #selector(voiceRecordingAction(_:)), for: .touchUpInside)
-        photoButton.addTarget(self, action: #selector(photoAction(_:)), for: .touchUpInside)
+        let longGesture = UILongPressGestureRecognizer(target: self,
+                                                       action: #selector(handleLongPress(gestureReconizer: )))
         
+        voiceRecordingButton.addGestureRecognizer(longGesture)
+        let tapGesture = UITapGestureRecognizer (target: self,
+                                                 action: #selector(tapVoiceRecorder(gestureReconizer: )))
+        
+        voiceRecordingButton.addGestureRecognizer(tapGesture)
+        photoButton.addTarget(self, action: #selector(photoAction(_:)), for: .touchUpInside)
+        timeLabel.isHidden = true
+        recordingLabel.isHidden = true
+        emptyView.isHidden = true
+        rightStackView.addArrangedSubview(timeLabel)
+        rightStackView.addArrangedSubview(emptyView)
+        rightStackView.addArrangedSubview(recordingLabel)
         rightStackView.addArrangedSubview(photoButton)
         rightStackView.addArrangedSubview(voiceRecordingButton)
-
+        
         rightStackView.distribution = .fill
         rightStackView.alignment = .center
         rightStackView.axis = .horizontal
@@ -263,7 +328,7 @@ final class ComposeView: SinchView {
     
     override var intrinsicContentSize: CGSize {
         let size = composeTextView.sizeThatFits(CGSize(width: composeTextView.frame.width, height: CGFloat(MAXFLOAT)))
-        let totalHeight = size.height + paddingTop + paddingBottom
+        let totalHeight = (audioBackgroundView != nil) ? 120 : size.height + paddingTop + paddingBottom
         if totalHeight <= maxHeight {
             updateTextContainerCornerRadius(totalHeight)
             updateButton(size.height)
@@ -289,11 +354,30 @@ final class ComposeView: SinchView {
     }
     @objc private func plusButtonAction(_ sender: UIButton) {
         delegate?.chooseAction()
-
     }
-    @objc private func voiceRecordingAction(_ sender: UIButton) {
+    
+    @objc func handleLongPress(gestureReconizer: UILongPressGestureRecognizer) {
+        
+        if gestureReconizer.state == .began {
+            delegate?.stopAudioPlayerIfPlaying(isRecording: true)
+            voiceRecorder.startRecordingSession()
+            
+        } else if gestureReconizer.state == .ended {
+            voiceRecorder.shouldRecord = false
+            voiceRecorder.finishRecording()
+            
+        }
+    }
+    @objc func tapVoiceRecorder(gestureReconizer: UITapGestureRecognizer) {
+        
+        delegate?.showHoldToRecordAudioMessage()
         
     }
+    
+    func updateAudioComposeView(player: AVPlayerWrapper) {
+        audioBackgroundView?.updateViewWithPlayer(player)
+    }
+    
     @objc private func sendMessage(_ sender: UIButton) {
         
         guard let text = composeTextView.text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
@@ -302,6 +386,54 @@ final class ComposeView: SinchView {
         composeTextView.text = nil
         delegate?.sendMessage(text: text)
         updateUI(composeTextView)
+    }
+    
+    func voiceRecordingStartedUpdateView() {
+        duration = 0.0
+        leftStackViewConstraint?.constant = -(leftStackView.frame.maxX + spacingBetweenButtonsAndText + textButtonContainer.frame.width)
+        
+        rightStackViewLeadingConstraint = rightStackView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 9)
+        rightStackViewLeadingConstraint.isActive = true
+        
+        UIView.animate(withDuration: animationDuration, animations: {
+            self.recordingLabel.isHidden = false
+            self.timeLabel.isHidden = false
+            self.photoButton.isHidden = true
+            self.emptyView.isHidden = false
+            
+            self.layoutIfNeeded()
+            
+        })
+    }
+    
+    func finishedVoiceRecordingUpdateView(url: URL) {
+        
+        audioBackgroundView = AudioComposeView(uiConfiguration: uiConfig, localizationConfiguration: localizationConfiguration, url: url, duration: duration)
+        guard let audioBackgroundView = audioBackgroundView else { return }
+        
+        audioBackgroundView.delegate = self
+        audioBackgroundView.translatesAutoresizingMaskIntoConstraints = false
+        backgroundView.addSubview(audioBackgroundView)
+        NSLayoutConstraint.activate([
+            audioBackgroundView.topAnchor.constraint(equalTo: backgroundView.topAnchor),
+            audioBackgroundView.leftAnchor.constraint(equalTo: backgroundView.leftAnchor),
+            audioBackgroundView.rightAnchor.constraint(equalTo: backgroundView.rightAnchor),
+            audioBackgroundView.heightAnchor.constraint(equalToConstant: 120.0)
+            
+        ])
+        
+        leftStackViewConstraint?.constant = 18
+        rightStackViewLeadingConstraint.isActive = false
+        
+        self.layoutIfNeeded()
+        
+        self.recordingLabel.isHidden = true
+        self.timeLabel.isHidden = true
+        self.photoButton.isHidden = false
+        self.emptyView.isHidden = true
+        
+        invalidateIntrinsicContentSize()
+        
     }
     private func expandTextView() {
         if !isInputTextViewExpanded {
@@ -322,7 +454,7 @@ final class ComposeView: SinchView {
             isInputTextViewExpanded = false
             rightStackViewConstraint?.constant = -18
             rightStackViewLeadingConstraint?.constant = 9
-
+            
             UIView.animate(withDuration: animationDuration) {
                 
                 self.layoutIfNeeded()
@@ -382,5 +514,81 @@ extension ComposeView: UITextViewDelegate {
     func textViewDidChange(_ textView: UITextView) {
         
         updateUI(textView)
+    }
+}
+extension ComposeView: AudioComposeDelegate {
+    private func handleDeleteAndUpdateView() {
+        duration = 0.0
+        audioBackgroundView?.removeFromSuperview()
+        audioBackgroundView = nil
+        invalidateIntrinsicContentSize()
+        delegate?.stopAudioPlayerIfPlaying(isRecording: false)
+        
+    }
+    
+    func deleteRecording(url: URL) {
+        
+        voiceRecorder.removeRecording()
+        handleDeleteAndUpdateView()
+        
+    }
+    
+    func sendRecording(url: URL) {
+        
+        delegate?.sendVoiceMessage(url: url)
+        //TODO delete file if successful
+        voiceRecorder.duration = 0.0
+        handleDeleteAndUpdateView()
+    }
+    
+    func continueRecording(url: URL) {
+        voiceRecorder.continueRecording()
+    }
+    
+    func playRecording(url: URL) {
+        delegate?.startPlayingRecordedMessage(url: url)
+    }
+    
+}
+// MARK: - Conforming to VoiceRecordingProtocol
+extension ComposeView: VoiceRecordingProtocol {
+    func doNotHaveMicrophoneAccess() {
+        delegate?.disabledMicrophoneAccess()
+    }
+    
+    func updateTime(_ duration: Double) {
+        self.duration = duration
+        debugPrint(duration)
+        if let audioBackgroundView = audioBackgroundView {
+            audioBackgroundView.duration = Double(duration)
+        }
+    }
+    
+    func recordingStarted(_ duration: Double, url: URL) {
+        debugPrint("started")
+        voiceRecordingStartedUpdateView()
+    }
+    
+    func recordingContinued(_ duration: Double, url: URL) {
+        if let audioBackgroundView = audioBackgroundView {
+            audioBackgroundView.duration = Double(duration)
+            audioBackgroundView.recordButton.setImage(uiConfig.pauseButtonImage, for: .normal)
+            
+        }
+    }
+    
+    func recordingFinished(_ duration: Double, url: URL) {
+        
+        if let audioBackgroundView = audioBackgroundView {
+            audioBackgroundView.duration = duration
+        }
+    }
+    
+    func errorSavingVoiceMessage(text: String) {
+        debugPrint("error")
+    }
+    
+    func successfullySavedVoiceMessage(url: URL) {
+        finishedVoiceRecordingUpdateView(url: url)
     }
 }

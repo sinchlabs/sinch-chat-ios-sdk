@@ -1,11 +1,16 @@
 import UIKit
 
-struct MessageImage: MessageBody, MessageWithURL {
+enum TypeMessageMedia: Codable {
+    case image
+    case audio
+}
+struct MessageMedia: MessageBody, MessageWithURL {
     
     var url: String
     var sendDate: Int64?
+    var type: TypeMessageMedia?
 
-    init(url: String, sendDate: Int64?, placeholderImage: UIImage?) {
+    init(url: String, sendDate: Int64?, placeholderImage: UIImage? = nil, type: TypeMessageMedia? = nil) {
         self.url = url
         self.sendDate = sendDate
 

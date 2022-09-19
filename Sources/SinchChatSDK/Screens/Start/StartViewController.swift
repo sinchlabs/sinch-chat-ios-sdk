@@ -2,10 +2,16 @@ import UIKit
 import SafariServices
 import GRPC
 import Connectivity
+import AVFoundation
 
 // swiftlint:disable file_length
 
-class StartViewController: SinchViewController<StartViewModel, StartView> {
+enum PlayingItem {
+    case localMedia(url: URL)
+    case mediaMessage(message: Message)
+}
+
+class StartViewController: SinchViewController<StartViewModel, StartView > {
     
     var imagePickerHelper: ImagePickerHelper!
     weak var cordinator: RootCoordinator?
@@ -18,6 +24,7 @@ class StartViewController: SinchViewController<StartViewModel, StartView> {
     }()
     
     var messages: [Message] = []
+    var playingItem: PlayingItem?
     
     var additionalBottomInset: CGFloat = 5 {
         didSet {
@@ -36,6 +43,10 @@ class StartViewController: SinchViewController<StartViewModel, StartView> {
             mainView.collectionView.scrollIndicatorInsets.bottom = messageCollectionViewBottomInset
         }
     }
+    
+    let audioSessionController = AudioSessionController()
+
+    lazy var player = AVPlayerWrapper()
     
     override func commonInit() {
         
@@ -57,6 +68,8 @@ class StartViewController: SinchViewController<StartViewModel, StartView> {
         
         (viewModel as? DefaultStartViewModel)?.delegate = self
         imagePickerHelper = ImagePickerHelper(presentationController: self, delegate: self)
+        player.delegate = self
+        audioSessionController.delegate = self
     }
     
     // MARK: - Lifecycle methods
@@ -121,7 +134,9 @@ class StartViewController: SinchViewController<StartViewModel, StartView> {
         NotificationCenter.default.removeObserver(self, name: UIApplication.didEnterBackgroundNotification, object: nil)
         connectivity.stopNotifier()
         viewModel.onDisappear()
-        
+        player.stop()
+        viewModel.closeChannel()
+
     }
     
     override var canBecomeFirstResponder: Bool {
@@ -184,7 +199,9 @@ class StartViewController: SinchViewController<StartViewModel, StartView> {
     @objc func loadMoreMessages() {
         viewModel.loadHistory()
     }
+   
 }
+
 extension StartViewController: ImagePickerDelegate {
     func didSelect(image: UIImage?) {
         
@@ -196,10 +213,78 @@ extension StartViewController: ImagePickerDelegate {
 }
 
 extension StartViewController: ComposeViewDelegate {
+    func showHoldToRecordAudioMessage() {
+        DispatchQueue.main.async {
+            let alert = UIAlertController(title: "",
+                                          message: self.mainView.localizationConfiguration.alertTitleHoldToRecord,
+                                          preferredStyle: .alert)
+            let okButton = UIAlertAction(title: self.mainView.localizationConfiguration.locationAlertButtonTitleOk, style: .default) { _ in
+
+            }
+
+            alert.addAction(okButton)
+
+            self.present(alert, animated: true, completion: nil)
+        }
+    }
+    
+    func disabledMicrophoneAccess() {
+        DispatchQueue.main.async {
+            let alert = UIAlertController(title: self.mainView.localizationConfiguration.alertTitleError,
+                                          message: self.mainView.localizationConfiguration.microphoneAlertMessage,
+                                          preferredStyle: .alert)
+            let okButton = UIAlertAction(title: self.mainView.localizationConfiguration.locationAlertButtonTitleOk, style: .default) { _ in
+
+            }
+            let settingsButton = UIAlertAction(title: self.mainView.localizationConfiguration.microphoneAlertButtonTitleSettings, style: .default) { _ in
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    if UIApplication.shared.canOpenURL(url) {
+                        UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                    }
+                }
+            }
+
+            alert.addAction(okButton)
+            alert.addAction(settingsButton)
+
+            self.present(alert, animated: true, completion: nil)
+        }
+    }
+    
+    func sendVoiceMessage(url: URL) {
+        viewModel.sendMedia(.voice(url))
+    }
+    
+    func startPlayingRecordedMessage(url: URL) {
+        try? audioSessionController.set(category: .playback)
+
+        if !audioSessionController.audioSessionIsActive {
+            try? audioSessionController.activateSession()
+        }
+        
+        if let playingItem = playingItem {
+
+            switch playingItem {
+            case .localMedia( _):
+                player.togglePlaying()
+                
+            case .mediaMessage( _):
+                stopAudioPlayer()
+                self.playingItem = .localMedia(url: url)
+                player.load(from: url, playWhenReady: true, options: nil)
+            }
+        } else {
+            
+            self.playingItem = .localMedia(url: url)
+            player.load(from: url, playWhenReady: true, options: nil)
+            
+        }
+    }
+    
     func chooseAction() {
         
         let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
-
+        
         let action  = UIAlertAction(title: mainView.localizationConfiguration.menuShareLocation, style: .default, handler: { _ in
             self.cordinator?.presentLocation(viewController: self,
                                              uiConfig: self.mainView.uiConfig,
@@ -209,13 +294,13 @@ extension StartViewController: ComposeViewDelegate {
         action.setValue(self.mainView.uiConfig.shareLocationMenuImage?.withRenderingMode(.alwaysOriginal), forKey: "image")
         action.setValue(CATextLayerAlignmentMode.left, forKey: "titleTextAlignment")
         action.setValue(self.mainView.uiConfig.menuButtonTextColor, forKey:"titleTextColor")
-
+        
         alert.addAction(action)
         
         alert.addAction(UIAlertAction(title: mainView.localizationConfiguration.menuCancel, style: .cancel, handler: { _ in
             debugPrint("User click cancel button")
         }))
-
+        
         self.present(alert, animated: true, completion: nil)
         
     }
@@ -235,6 +320,30 @@ extension StartViewController: ComposeViewDelegate {
         
         viewModel.sendMessage(.choiceResponseMessage(postbackData: postbackData, entryID: entryID))
     }
+    func stopAudioPlayerIfPlaying(isRecording: Bool) {
+        
+        if let playingItem = playingItem {
+            switch playingItem {
+            case .localMedia(url: _):
+                player.stop()
+                self.playingItem = nil
+                
+                // todo when adding recording
+            case .mediaMessage(message: _):
+                
+                if isRecording {
+                    player.stop()
+                    updateAcivePlayerView()
+                    self.playingItem = nil
+
+                } else {
+                    updateAcivePlayerView()
+
+                }
+            }
+        }
+    }
+    
 }
 extension StartViewController: StartViewModelDelegate {
     func setVisibleRefreshActivityIndicator(_ isVisible: Bool) {
@@ -351,7 +460,7 @@ extension StartViewController: StartViewModelDelegate {
     }
     func insertMessages(_ newMessages: [Message]) {
         self.mainView.collectionView.performBatchUpdates({
-            
+            debugPrint(messages.count)
             if newMessages.count == 1 {
                 self.messages.append(newMessages[0])
                 self.mainView.collectionView.insertSections([ self.messages.count - 1])
@@ -387,11 +496,20 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
             cell.configure(with: message, at: indexPath, and: mainView.collectionView)
             return cell
             
-        } else if message.body is MessageImage {
+        } else if let messageBody = message.body as? MessageMedia {
             
-            let cell = collectionView.dequeueReusableCell(withReuseIdentifier:  ImageMessageCell.cellId, for: indexPath) as! ImageMessageCell
-            cell.configure(with: message, at: indexPath, and: mainView.collectionView)
-            return cell
+            switch messageBody.type {
+                
+            case .audio:
+                let cell = collectionView.dequeueReusableCell(withReuseIdentifier:  VoiceMessageCell.cellId, for: indexPath) as! VoiceMessageCell
+                cell.configure(with: message, at: indexPath, and: mainView.collectionView, player: player, playingItem: playingItem)
+                cell.audioDelegate = self
+                return cell
+            default:
+                let cell = collectionView.dequeueReusableCell(withReuseIdentifier:  ImageMessageCell.cellId, for: indexPath) as! ImageMessageCell
+                cell.configure(with: message, at: indexPath, and: mainView.collectionView)
+                return cell
+            }
         } else if message.body is MessageEvent {
             
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier:  EventMessageCell.cellId, for: indexPath) as! EventMessageCell
@@ -538,14 +656,14 @@ extension StartViewController: MessageCellDelegate {
         }
     }
     func didTapMedia(with url:URL) {
-               
-                cordinator?.presentMediaViewerController(viewController: self,
-                                                         uiConfig: mainView.uiConfig,
-                                                         localizationConfig: mainView.localizationConfiguration,
-                                                         url: url)
-            
-    }
         
+        cordinator?.presentMediaViewerController(viewController: self,
+                                                 uiConfig: mainView.uiConfig,
+                                                 localizationConfig: mainView.localizationConfiguration,
+                                                 url: url)
+        
+    }
+    
     func didTapOutsideOfContent(in cell: MessageCollectionViewCell) {
         resignFirstResponderView()
     }
@@ -579,5 +697,147 @@ extension StartViewController: LocationDelegate {
         viewModel.sendMessage(.location(latitude: latitude,
                                         longitude: longitude,
                                         localizationConfig: mainView.localizationConfiguration))
+    }
+}
+
+extension StartViewController: AudioDelegate {
+    
+    private func stopAudioPlayer() {
+        player.stop()
+    }
+    
+    func stopPlaying(model: Message) {
+        playingItem = nil
+        stopAudioPlayer()
+    }
+    
+    private func playMessageFrom(_ model: Message) {
+        try? audioSessionController.set(category: .playback)
+
+        if !audioSessionController.audioSessionIsActive {
+            try? audioSessionController.activateSession()
+        }
+        guard let mediaMessage = model.body as? MessageMedia,
+              let url = URL(string: mediaMessage.url) else { return }
+        
+        self.playingItem = .mediaMessage(message: model)
+        player.load(from: url, playWhenReady: true, options: nil)
+    }
+    
+    func startPlaying(model: Message) {
+
+        if let playingItem = playingItem {
+            
+            switch playingItem {
+            case .localMedia(_):
+                player.stop()
+                mainView.messageComposeView.updateAudioComposeView(player: player)
+                playMessageFrom(model)
+
+            case .mediaMessage(let message):
+                if message.entryId == model.entryId {
+                    player.togglePlaying()
+
+                } else {
+                    stopAudioPlayer()
+                    playMessageFrom(model)
+                }
+            }
+                        
+        } else {
+                playMessageFrom(model)
+        }
+    }
+}
+extension StartViewController: AudioSessionControllerDelegate {
+    func handleInterruption(type: InterruptionType) {
+        switch type {
+        case .began:
+            print("began")
+            stopAudioPlayer()
+            updateAcivePlayerView()
+            playingItem = nil
+        case .ended( _):
+          
+            do {
+            
+                } catch let error as NSError {
+                    print(error.localizedDescription)
+                }
+            }
+        }
+}
+extension StartViewController: AVPlayerWrapperDelegate {
+    
+    func AVWrapper(didChangeState state: AVPlayerWrapperState) {
+        debugPrint("state \(state.rawValue)")
+        updateAcivePlayerView()
+        
+        if state == .paused && player.currentTime == player.duration {
+            playingItem = nil
+        }
+    }
+    
+    func AVWrapper(secondsElapsed seconds: Double) {
+        updateAcivePlayerView()
+        
+    }
+    
+    func AVWrapper(failedWithError error: Error?) {
+        updateAcivePlayerView()
+        
+    }
+    
+    func AVWrapper(seekTo seconds: Int, didFinish: Bool) {
+        
+    }
+    
+    func AVWrapper(didUpdateDuration duration: Double) {
+        updateAcivePlayerView()
+        
+    }
+    
+    func AVWrapper(didReceiveMetadata metadata: [AVTimedMetadataGroup]) {
+        
+    }
+    
+    func AVWrapperItemDidPlayToEndTime() {
+        debugPrint("end playing")
+
+        updateAcivePlayerView()
+        
+    }
+    
+    func AVWrapperDidRecreateAVPlayer() {
+        debugPrint("DidRecreateAVPlayer")
+        try? audioSessionController.set(category: .playback)
+
+    }
+    
+    func updateAcivePlayerView() {
+        
+        if let playingItem = playingItem {
+            switch playingItem {
+            case .localMedia(url: _):
+                mainView.messageComposeView.updateAudioComposeView(player: player)
+
+            case .mediaMessage(message: let message):
+                if let section = getPlayingSection(mediaMessage: message) {
+                    let indexSet = IndexSet(integer: section)
+                    UIView.performWithoutAnimation {
+                        mainView.collectionView.reloadSections(indexSet)
+                    }
+                }
+            }
+        }
+    }
+        
+    private func getPlayingSection(mediaMessage: Message) -> Int? {
+        
+        for (index, message) in self.messages.enumerated() where message.body is MessageMedia && message.entryId == mediaMessage.entryId {
+            return index
+        }
+        
+        return nil
     }
 }

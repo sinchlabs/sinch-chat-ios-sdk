@@ -98,7 +98,7 @@ class ImageBaseCell: MessageContentCell {
     
     func setupImageView(message: Message, localizationConfig: SinchSDKConfig.LocalizationConfig) {
         
-        if let body = message.body as? MessageImage {
+        if let body = message.body as? MessageMedia {
             handleMediaUrl(body.url, localizationConfig: localizationConfig)
             
         } else if let body = message.body as? MessageMediaText {

@@ -7,10 +7,12 @@ enum MessageError: Error {
 }
 
 struct Message: Encodable {
+    var entryId : String
     let owner: Owner
-    let body: MessageBody
+    var body: MessageBody
     
     enum CodingKeys: String, CodingKey {
+        case entryId
         case owner
         case body
     }
@@ -20,14 +22,15 @@ struct Message: Encodable {
         
         if let textMessage = body as? MessageText {
             try cod.encode(textMessage, forKey: .body)
-        } else if let messageImage = body as? MessageImage {
+        } else if let messageImage = body as? MessageMedia {
             try cod.encode(messageImage, forKey: .body)
         } else if let messageEvent = body as? MessageEvent {
             try cod.encode(messageEvent, forKey: .body)
         }
     }
     
-    init(owner: Owner, body: MessageBody) {
+    init(entryId: String, owner: Owner, body: MessageBody) {
+        self.entryId = entryId
         self.owner = owner
         self.body = body
     }
@@ -49,7 +52,8 @@ extension Message: Decodable {
     init(from decoder: Swift.Decoder) throws {
         let dec = try decoder.container(keyedBy: CodingKeys.self)
         owner = try dec.decode(Owner.self, forKey: .owner)
-        
+        entryId = try dec.decode(String.self, forKey: .entryId)
+
         if case .system = owner {
             if let messageEvent = try? dec.decode(MessageEvent.self, forKey: .body) {
                 body = messageEvent
@@ -59,7 +63,7 @@ extension Message: Decodable {
         } else {
             if let textMessage = try? dec.decode(MessageText.self, forKey: .body) {
                 body = textMessage
-            } else if let messageImage = try? dec.decode(MessageImage.self, forKey: .body) {
+            } else if let messageImage = try? dec.decode(MessageMedia.self, forKey: .body) {
                 body = messageImage
             } else {
                 throw MessageError.notSupported

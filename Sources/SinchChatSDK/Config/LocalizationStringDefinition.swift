@@ -37,8 +37,13 @@ public extension SinchSDKConfig {
         public var outgoingLocationMessageTitle = NSLocalizedString("outgoing_location_message_title", bundle: Bundle.staticBundle, comment: "")
         
         public var outgoingLocationMessageButtonTitle = NSLocalizedString("outgoing_location_message_button_title", bundle: Bundle.staticBundle, comment: "")
-
         
+        public var microphoneAlertMessage = NSLocalizedString("alert_title_microphone_disabled", bundle: Bundle.staticBundle, comment: "")
+        public var microphoneAlertButtonTitleSettings = NSLocalizedString("alert_button_title_settings", bundle: Bundle.staticBundle, comment: "")
+        public var recordingTitle = NSLocalizedString("recording_title", bundle: Bundle.staticBundle, comment: "")
+        public var voiceMessageTitle = NSLocalizedString("voice_message_title", bundle: Bundle.staticBundle, comment: "")
+        public var alertTitleHoldToRecord = NSLocalizedString("alert_message_hold_to_record", bundle: Bundle.staticBundle, comment: "")
+
         // MARK: - InAppMessaging
         
         public var buttonTitleClose = NSLocalizedString("button_title_close", bundle: Bundle.staticBundle, comment: "")

@@ -13,6 +13,7 @@ final class ChatFlowLayout: UICollectionViewFlowLayout {
     lazy public var typingCellSizeCalculator = TypeIndicatorCellSizeCalculator(layout: self)
     lazy public var mediaTextCellSizeCalculator = MediaTextMessageSizeCalculator(layout: self)
     lazy public var locationCellSizeCalculator = LocationMessageSizeCalculator(layout: self)
+    lazy public var voiceMessageCellSizeCalculator = VoiceMessageSizeCalculator(layout: self)
     lazy public var choicesCellSizeCalculator = ChoiceMessageSizeCalculator(layout: self)
     lazy public var cardCellSizeCalculator = CardMessageSizeCalculator(layout: self)
     lazy public var carouselCellSizeCalculator = CarouselMessageSizeCalculator(layout: self)
@@ -73,8 +74,15 @@ final class ChatFlowLayout: UICollectionViewFlowLayout {
         let message =  chatDataSource.messageForItem(at: indexPath, in: messagesCollectionView)
         if message.body is MessageText {
             return textMessageSizeCalculator
-        } else if message.body is MessageImage {
-            return imageMessageSizeCalculator
+        } else if let messageBody = message.body as? MessageMedia {
+            
+            switch messageBody.type {
+            case .audio:
+                return voiceMessageCellSizeCalculator
+            default:
+                return imageMessageSizeCalculator
+            }
+
         } else if message.body is MessageEvent {
             return eventMessageSizeCalculator 
         } else if message.body is MessageDate {

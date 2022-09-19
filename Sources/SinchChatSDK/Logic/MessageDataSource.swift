@@ -28,6 +28,7 @@ protocol MessageDataSource {
     func getMessageHistory(completion: @escaping (Result<[Message], MessageDataSourceError>) -> Void)
     func sendConversationMetadata(_ metadata: [SinchMetadata]) -> Result<Void, MessageDataSourceError>
     func cancelSubscription()
+    func closeChannel()
     func cancelCalls()
     func isSubscribed() -> Bool
     func isFirstPage() -> Bool
@@ -44,6 +45,8 @@ final class DefaultMessageDataSource: MessageDataSource {
     var uploadMediaCall: ClientStreamingCall<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest, Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse>?
     weak var delegate: MessageDataSourceDelegate?
     var firstPage: Bool = true
+    lazy var dispatchQueue = DispatchQueue(label: "taskQueue")
+    lazy var dispatchSemaphore = DispatchSemaphore(value: 0)
     
     private var nextPageToken: String?
     private let pageSize: Int32 = 10
@@ -68,7 +71,9 @@ final class DefaultMessageDataSource: MessageDataSource {
             _ = sendConversationMetadata(metadataToSend)
         }
     }
-    
+    func closeChannel() {
+        self.client.closeChannel()
+    }
     func getMessageHistory(completion: @escaping (Result<[Message], MessageDataSourceError>) -> Void) {
         if let nextPageToken = nextPageToken {
             if nextPageToken.isEmpty {
@@ -87,7 +92,9 @@ final class DefaultMessageDataSource: MessageDataSource {
                 request.pageToken = nextPageToken
             }
             
-            request.topicID = topicModel?.topicID ?? ""
+            if let topicModel = topicModel {
+                request.topicID = topicModel.topicID
+            }
             
             self.historyCall = service.getHistory(request, callOptions: nil)
             
@@ -95,14 +102,45 @@ final class DefaultMessageDataSource: MessageDataSource {
                 guard let self = self else {
                     return
                 }
-                debugPrint("@@@@@@@@@\(result)@@@@@@@@@")
                 switch result {
                 case .success(let result):
                     
                     self.nextPageToken = result.nextPageToken
-                    completion(.success(result.entries.compactMap {
-                        return self.handleIncomingMessage($0)
-                    }))
+                    var messages: [Message] = []
+                    
+                    self.dispatchQueue.async {
+                        
+                        for entry in result.entries {
+                            let message = self.handleIncomingMessage(entry)
+                            
+                            guard var message = message else { continue }
+                            
+                            if let mediaMessage = message.body as? MessageMedia {
+                                
+                                self.getMediaMessageTypeFromMessage(mediaMessage, completion: { messageBody in
+                                    if let messageBody = messageBody {
+                                        
+                                        message.body = messageBody
+                                        messages.append(message)
+                                    }
+                                    
+                                    self.dispatchSemaphore.signal()
+                                    
+                                })
+                                
+                                self.dispatchSemaphore.wait()
+                                
+                            } else {
+                                messages.append(message)
+                                
+                            }
+                        }
+                    }
+                    
+                    self.dispatchQueue.async {
+                        completion(.success(messages))
+                        
+                    }
                     
                 case .failure(let err):
                     completion(.failure(.unknown(err)))
@@ -122,9 +160,12 @@ final class DefaultMessageDataSource: MessageDataSource {
                 completion(.failure(.unknownTypeOfMessage))
                 return
             }
-            
-            message.topicID = topicModel?.topicID ?? ""
-            message.metadata = convertSinchMetadataToMetadataJson(metadata: metadata.filter({ $0.getKeyValue().mode == .withEachMessage })) ?? "{}"
+            if let topicModel = topicModel {
+                message.topicID = topicModel.topicID
+            }
+            if let metadata = convertSinchMetadataToMetadataJson(metadata: metadata.filter({ $0.getKeyValue().mode == .withEachMessage })) {
+                message.metadata = metadata
+            }
             
             sendMessageCall = service.send(message)
             
@@ -207,16 +248,42 @@ final class DefaultMessageDataSource: MessageDataSource {
         do {
             let service = try getService()
             var request = Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest()
-            
-            request.topicID = topicModel?.topicID ?? ""
+            if let topicModel = topicModel {
+                request.topicID = topicModel.topicID
+            }
             
             let subscription = service.subscribeToStream(request, callOptions: nil) { [weak self] response in
                 guard let self = self else {
                     return
                 }
-                if let message = self.handleIncomingMessage(response.entry) {
-                    completion(.success(message))
+
+                let message = self.handleIncomingMessage(response.entry)
+
+                guard var message = message else { return }
+                
+                self.dispatchQueue.async {
+                    
+                    if let mediaMessage = message.body as? MessageMedia {
+                        
+                        self.getMediaMessageTypeFromMessage(mediaMessage, completion: { messageBody in
+                            if let messageBody = messageBody {
+                                
+                                message.body = messageBody
+                                self.dispatchSemaphore.signal()
+                                
+                            }
+                        })
+                        self.dispatchSemaphore.wait()
+                        
+                    }
                 }
+                
+                self.dispatchQueue.async {
+                    
+                    completion(.success(message))
+                    
+                }
+                
             }
             
             self.subscription = subscription
@@ -298,6 +365,46 @@ final class DefaultMessageDataSource: MessageDataSource {
         try Sinch_Chat_Sdk_V1alpha2_SdkServiceClient(channel: client.getChannel(), defaultCallOptions: authDataSource.signRequest(.standardCallOptions))
     }
     
+    func getMediaMessageTypeFromMessage(_ message: MessageMedia, completion: @escaping (MessageMedia?) -> Void) {
+        
+        guard let url = URL(string: message.url) else {
+            completion(message)
+            return
+            
+        }
+        var mediaMessage = message
+        var request = URLRequest(url: url)
+        request.httpMethod = "HEAD"
+        
+        let task = URLSession.shared.dataTask(with: request, completionHandler: {  _ , response, error in
+            
+            if let _ = error {
+                completion(nil)
+                
+            }
+       // https://developer.apple.com/library/archive/documentation/2DDrawing/Conceptual/DrawingPrintingiOS/LoadingImages/LoadingImages.html
+         
+            if let response = response as? HTTPURLResponse, let type = response.allHeaderFields["Content-Type"] as? String {
+
+                switch type {
+                    
+                case "audio/mp4", "audio/mp3", "audio/m4a", "audio/wav":
+                    mediaMessage.type = .audio
+                case "image/jpg", "image/jpeg", "image/png", "image/tif", "image/tiff", "image/gif", "image/bmp",
+                    "image/BMPf", "image/ico", "image/cur", "image/xbm" :
+                    mediaMessage.type = .image
+                    
+                default:
+                    break
+                }
+            }
+            
+            completion(mediaMessage)
+        })
+        
+        task.resume()
+    }
+    
     // swiftlint:disable function_body_length cyclomatic_complexity
     private func handleIncomingMessage(_ entry: Sinch_Chat_Sdk_V1alpha2_Entry) -> Message? {
         
@@ -307,13 +414,13 @@ final class DefaultMessageDataSource: MessageDataSource {
             
             let outgoingText = entry.contactMessage.textMessage.text
             if !outgoingText.isEmpty {
-                return Message(owner: .outgoing, body: MessageText(text: outgoingText, sendDate: entry.deliveryTime.seconds))
+                return Message(entryId: entry.entryID, owner: .outgoing, body: MessageText(text: outgoingText, sendDate: entry.deliveryTime.seconds))
             }
             
             let outgoingUrl = entry.contactMessage.mediaMessage.url
             if !outgoingUrl.isEmpty {
                 
-                return Message(owner: .outgoing, body: MessageImage(url: outgoingUrl, sendDate: entry.deliveryTime.seconds, placeholderImage: nil))
+                return Message(entryId: entry.entryID, owner: .outgoing, body: MessageMedia(url: outgoingUrl, sendDate: entry.deliveryTime.seconds))
             }
             // MARK: - Incoming messages
             
@@ -322,12 +429,12 @@ final class DefaultMessageDataSource: MessageDataSource {
                 if entry.appMessage.hasAgent {
                     let agent = entry.appMessage.agent
                     
-                    return Message(owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue, pictureUrl: agent.pictureURL)),
-                                   body: MessageText(text: incomingText,
-                                                     sendDate: entry.deliveryTime.seconds))
+                    return Message(entryId: entry.entryID,
+                                   owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue, pictureUrl: agent.pictureURL)),
+                                   body: MessageText(text: incomingText, sendDate: entry.deliveryTime.seconds))
                 } else {
                     
-                    return Message(owner: .incoming(nil),
+                    return Message(entryId: entry.entryID, owner: .incoming(nil),
                                    body: MessageText(text: incomingText,
                                                      sendDate: entry.deliveryTime.seconds))
                 }
@@ -340,7 +447,7 @@ final class DefaultMessageDataSource: MessageDataSource {
                                                   longitude: Double(outgoingLocationMessage.coordinates.longitude),
                                                   sendDate: entry.deliveryTime.seconds)
                 
-                return Message(owner: .outgoing, body: messageBody)
+                return Message(entryId: entry.entryID, owner: .outgoing, body: messageBody)
             }
             
             let incomingLocationMessage = entry.appMessage.locationMessage
@@ -354,12 +461,12 @@ final class DefaultMessageDataSource: MessageDataSource {
                 if entry.appMessage.hasAgent {
                     let agent = entry.appMessage.agent
                     
-                    return Message(owner: .incoming(.init(name: agent.displayName,
-                                                          type: agent.type.rawValue)),
+                    return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName,
+                                                                                  type: agent.type.rawValue)),
                                    body:  messageBody)
                 } else {
                     
-                    return Message(owner: .incoming(nil), body: messageBody)
+                    return Message(entryId: entry.entryID, owner: .incoming(nil), body: messageBody)
                 }
             }
             
@@ -376,11 +483,11 @@ final class DefaultMessageDataSource: MessageDataSource {
                 if entry.appMessage.hasAgent {
                     let agent = entry.appMessage.agent
                     
-                    return Message(owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
+                    return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
                                    body:  messageBody)
                 } else {
                     
-                    return Message(owner: .incoming(nil), body: messageBody)
+                    return Message(entryId: entry.entryID, owner: .incoming(nil), body: messageBody)
                 }
             }
             let incomingCardMessage = entry.appMessage.cardMessage
@@ -399,11 +506,11 @@ final class DefaultMessageDataSource: MessageDataSource {
                 if entry.appMessage.hasAgent {
                     let agent = entry.appMessage.agent
                     
-                    return Message(owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
+                    return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
                                    body:  messageBody)
                 } else {
                     
-                    return Message(owner: .incoming(nil), body: messageBody)
+                    return Message(entryId: entry.entryID, owner: .incoming(nil), body: messageBody)
                 }
             }
             
@@ -411,23 +518,22 @@ final class DefaultMessageDataSource: MessageDataSource {
             
             if !incomingCarouselMessage.cards.isEmpty {
                 
-                let carouselChoicesArray = DefaultMessageDataSource.createChoicesArray(incomingCarouselMessage.choices, entryID: entry.entryID)
-             //   carouselChoicesArray.append(.urlMessage(ChoiceUrl(url: "https://www.google.com", text: "Please go to google")))
-             //   carouselChoicesArray.append(.urlMessage(ChoiceUrl(url: "https://www.google.com", text: "Please go to text")))
-             //   carouselChoicesArray.append(.urlMessage(ChoiceUrl(url: "www.google.com", text: "Please go to rate")))
-
+                var carouselChoicesArray = DefaultMessageDataSource.createChoicesArray(incomingCarouselMessage.choices, entryID: entry.entryID)
+                //   carouselChoicesArray.append(.urlMessage(ChoiceUrl(url: "https://www.google.com", text: "Please go to google")))
+                //   carouselChoicesArray.append(.urlMessage(ChoiceUrl(url: "https://www.google.com", text: "Please go to text")))
+                //   carouselChoicesArray.append(.urlMessage(ChoiceUrl(url: "www.google.com", text: "Please go to rate")))
+                
                 var cardsArray: [MessageCard] = []
                 
                 for incomingCardMessage in incomingCarouselMessage.cards {
                     
                     let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingCardMessage.choices, entryID: entry.entryID)
-                                    
                     let messageBody = MessageCard(title: incomingCardMessage.title,
                                                   description: incomingCardMessage.description_p ,
                                                   choices: choicesArray,
                                                   url: incomingCardMessage.mediaMessage.url,
                                                   sendDate: entry.deliveryTime.seconds)
-                
+                    
                     cardsArray.append(messageBody)
                     
                 }
@@ -437,11 +543,11 @@ final class DefaultMessageDataSource: MessageDataSource {
                 if entry.appMessage.hasAgent {
                     let agent = entry.appMessage.agent
                     
-                    return Message(owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
+                    return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
                                    body:  messageBody)
                 } else {
                     
-                    return Message(owner: .incoming(nil), body: messageBody)
+                    return Message(entryId: entry.entryID, owner: .incoming(nil), body: messageBody)
                 }
             }
             
@@ -451,12 +557,12 @@ final class DefaultMessageDataSource: MessageDataSource {
                 if entry.appMessage.hasAgent {
                     let agent = entry.appMessage.agent
                     
-                    return Message(owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
-                                   body: MessageImage(url: incomingUrl,
+                    return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
+                                   body: MessageMedia(url: incomingUrl,
                                                       sendDate: entry.deliveryTime.seconds, placeholderImage: nil))
                 } else {
-                    return Message(owner: .incoming(nil),
-                                   body: MessageImage(url: incomingUrl,
+                    return Message(entryId: entry.entryID, owner: .incoming(nil),
+                                   body: MessageMedia(url: incomingUrl,
                                                       sendDate: entry.deliveryTime.seconds, placeholderImage: nil))
                 }
             }
@@ -467,7 +573,7 @@ final class DefaultMessageDataSource: MessageDataSource {
                 
                 let agentThatLeft = entry.appEvent.agentLeftEvent.agent
                 
-                return Message(owner: .system,
+                return Message(entryId: entry.entryID, owner: .system,
                                body: MessageEvent(type: .left(Agent(name: agentThatLeft.displayName,
                                                                     type: agentThatLeft.type.rawValue,
                                                                     pictureUrl: agentThatLeft.pictureURL)),
@@ -479,7 +585,7 @@ final class DefaultMessageDataSource: MessageDataSource {
                 
                 let agentThatJoined = entry.appEvent.agentJoinedEvent.agent
                 
-                return Message(owner: .system,
+                return Message(entryId: entry.entryID, owner: .system,
                                body: MessageEvent(type: .joined(Agent(name: agentThatJoined.displayName,
                                                                       type: agentThatJoined.type.rawValue,
                                                                       pictureUrl: agentThatJoined.pictureURL)),
