@@ -43,9 +43,34 @@ class StartViewController: SinchViewController<StartViewModel, StartView > {
             mainView.collectionView.scrollIndicatorInsets.bottom = messageCollectionViewBottomInset
         }
     }
+    var isLastCellVisible: Bool {
+        
+        if self.messages.isEmpty {
+            return true
+        }
+        
+        let lastIndexPath = IndexPath(item: 0, section: self.messages.count - 1)
+        guard let layout = self.mainView.collectionView.layoutAttributesForItem(at: lastIndexPath) else { return true }
+        let cellFrame = layout.frame
+                
+        let cellRect = self.mainView.collectionView.convert(cellFrame, to: self.mainView.collectionView.superview)
+                
+        var visibleRect = CGRect(x: (self.mainView.collectionView.bounds.origin.x),
+                                 y: (self.mainView.collectionView.bounds.origin.y),
+                                 width: (self.mainView.collectionView.bounds.size.width),
+                                 height: (self.mainView.collectionView.bounds.size.height) - (self.mainView.collectionView.contentInset.bottom)
+        )
+        
+        visibleRect = (self.mainView.collectionView.convert(visibleRect, to: self.mainView.collectionView.superview))
+        
+        if visibleRect.intersects(cellRect) {
+            return true
+        }
+        
+        return false
+    }
     
     let audioSessionController = AudioSessionController()
-
     lazy var player = AVPlayerWrapper()
     
     override func commonInit() {
@@ -213,6 +238,11 @@ extension StartViewController: ImagePickerDelegate {
 }
 
 extension StartViewController: ComposeViewDelegate {
+    func scrollToBottomMessage() {
+        mainView.collectionView.scrollToLastItem(at: .bottom, animated: true)
+        
+    }
+    
     func showHoldToRecordAudioMessage() {
         DispatchQueue.main.async {
             let alert = UIAlertController(title: "",
@@ -414,6 +444,8 @@ extension StartViewController: StartViewModelDelegate {
     
     func didReceiveHistoryFirstMessages(_ messages: [Message]) {
         DispatchQueue.main.async {
+            self.mainView.messageComposeView.scrollToBottomButton.isHidden = true
+
             CATransaction.begin()
             CATransaction.setCompletionBlock({
                 self.messages =  messages
@@ -453,12 +485,16 @@ extension StartViewController: StartViewModelDelegate {
     func didReceiveMessages(_ messages: [Message]) {
         
         DispatchQueue.main.async { [weak self] in
-            
-            self?.insertMessages(messages)
-            self?.mainView.collectionView.scrollToLastItem(animated: true)
+            guard let self = self else { return }
+            self.insertMessages(messages)
+            if !self.isLastItemVisible() {
+                self.mainView.messageComposeView.scrollToBottomButton.alpha = 1.0
+                self.mainView.messageComposeView.scrollToBottomButton.isHidden = false
+            }
         }
     }
     func insertMessages(_ newMessages: [Message]) {
+        var isLastVisible = self.isLastCellVisible
         self.mainView.collectionView.performBatchUpdates({
             debugPrint(messages.count)
             if newMessages.count == 1 {
@@ -470,8 +506,10 @@ extension StartViewController: StartViewModelDelegate {
                 
             }
         }, completion: { [weak self] _ in
-            if self?.isLastItemVisible() == true {
-                self?.mainView.collectionView.scrollToLastItem(animated: false)
+            guard let self = self else { return }
+
+            if isLastVisible {
+                self.mainView.collectionView.scrollToLastItem(animated: true)
             }
         })
     }
@@ -634,7 +672,33 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
         
         populatePasteBoard(indexPath.section)
     }
+    
+    func checkIfLastCellIsVisible() {
+        if isLastCellVisible {
+            DispatchQueue.main.async {
+                UIView.animate(withDuration: 0.5, animations: {
+                    self.mainView.messageComposeView.scrollToBottomButton.alpha = 0.0
+                }, completion: {_ in
+                    self.mainView.messageComposeView.scrollToBottomButton.isHidden = true
+                })
+            }
+        }
+    }
+    
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if !decelerate {
+            checkIfLastCellIsVisible()
+        }
+    }
+    func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
+        checkIfLastCellIsVisible()
+    }
+    
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        checkIfLastCellIsVisible()
+    }
 }
+
 extension StartViewController: ChatDataSource {
     
     func numberOfSections(in messagesCollectionView: MessageCollectionView) -> Int {
@@ -758,14 +822,14 @@ extension StartViewController: AudioSessionControllerDelegate {
             updateAcivePlayerView()
             playingItem = nil
         case .ended( _):
-          
-            do {
             
-                } catch let error as NSError {
-                    print(error.localizedDescription)
-                }
+            do {
+                
+            } catch let error as NSError {
+                print(error.localizedDescription)
             }
         }
+    }
 }
 extension StartViewController: AVPlayerWrapperDelegate {
     

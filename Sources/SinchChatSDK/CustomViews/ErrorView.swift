@@ -50,7 +50,7 @@ final class ErrorView: SinchView {
             backgroundColor = UIColor(named: "connectedColor", in: Bundle.staticBundle, compatibleWith: nil)
         case .isOff:
             textLabel.text = localizationConfiguration.noInternetConnection
-            imageView.image = UIImage(named: "primaryRedColor", in: Bundle.staticBundle, compatibleWith: nil)
+            imageView.image = UIImage(named: "disconnectedIcon", in: Bundle.staticBundle, compatibleWith: nil)
             backgroundColor = UIColor(named: "primaryRedColor", in: Bundle.staticBundle, compatibleWith: nil)
 
         case .notDetermined:

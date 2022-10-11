@@ -12,6 +12,7 @@ protocol ComposeViewDelegate: AnyObject {
     func stopAudioPlayerIfPlaying(isRecording:Bool)
     func disabledMicrophoneAccess()
     func showHoldToRecordAudioMessage()
+    func scrollToBottomMessage()
     
 }
 final class ComposeView: SinchView {
@@ -89,6 +90,18 @@ final class ComposeView: SinchView {
         recorder.delegate = self
         return recorder
     }()
+    lazy var scrollToBottomButton: UIButton = {
+        let scrollToBottomButton = UIButton(type: .custom)
+        scrollToBottomButton.backgroundColor = uiConfig.inputBarBackgroundColor
+        scrollToBottomButton.layer.borderColor = uiConfig.inputTextViewBorderColor.cgColor
+        scrollToBottomButton.layer.borderWidth = 1.0
+        scrollToBottomButton.layer.cornerRadius = 12.0
+        scrollToBottomButton.layer.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner]
+        scrollToBottomButton.imageView?.contentMode = .scaleAspectFit
+        scrollToBottomButton.setImage(uiConfig.scrollToBottomImage, for: .normal)
+        scrollToBottomButton.translatesAutoresizingMaskIntoConstraints = false
+        return scrollToBottomButton
+    }()
     
     var audioBackgroundView: AudioComposeView?
     var backgroundView: UIView = UIView()
@@ -130,8 +143,17 @@ final class ComposeView: SinchView {
         addRightContentButtons()
         addTextViewAndSendButtonContainer()
         setupPlaceholderLabel()
+        setupScrollToBottomButton()
     }
     
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        
+        if scrollToBottomButton.point(inside: convert(point, to: scrollToBottomButton), with: event) {
+            return true
+        }
+        
+        return super.point(inside: point, with: event)
+    }
     override func setupConstraints() {
         
         leftStackViewConstraint = leftStackView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 18)
@@ -155,6 +177,11 @@ final class ComposeView: SinchView {
             rightStackViewConstraint,
             rightStackView.leadingAnchor.constraint(equalTo: textButtonContainer.trailingAnchor, constant: 9),
             rightStackView.centerYAnchor.constraint(equalTo: sendButton.centerYAnchor, constant: 0),
+            
+            scrollToBottomButton.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: -10),
+            scrollToBottomButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: 8),
+            scrollToBottomButton.widthAnchor.constraint(equalToConstant: 48),
+            scrollToBottomButton.heightAnchor.constraint(equalToConstant: 48),
             
             // timeLabel.widthAnchor.constraint(equalToConstant: 70),
             timeLabel.heightAnchor.constraint(equalToConstant: 40),
@@ -218,6 +245,12 @@ final class ComposeView: SinchView {
     
     // MARK: - Private
     
+    private func setupScrollToBottomButton() {
+        scrollToBottomButton.isHidden = true
+        scrollToBottomButton.addTarget(self, action: #selector(scrollToBottom), for: .touchUpInside)
+        addSubview(scrollToBottomButton)
+        bringSubviewToFront(scrollToBottomButton)
+    }
     private func setupPlaceholderLabel() {
         
         placeholderLabel.font = UIFont.preferredFont(forTextStyle: .body)
@@ -347,6 +380,10 @@ final class ComposeView: SinchView {
         }
     }
     
+    @objc private func scrollToBottom(_ sender: UIButton) {
+        delegate?.scrollToBottomMessage()
+        
+    }
     @objc private func photoAction(_ sender: UIButton) {
         
         delegate?.choosePhoto()

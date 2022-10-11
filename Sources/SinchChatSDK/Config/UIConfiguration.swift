@@ -81,6 +81,7 @@ public extension SinchSDKConfig {
         public var sendFilledImage = UIImage(named: "sendFilledIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var deleteImage = UIImage(named: "deleteIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var progressBarBackgroundColor = UIColor(named: "primaryProgressBarBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        public var scrollToBottomImage = UIImage(named: "scrollToBottomIcon", in: Bundle.staticBundle, compatibleWith: nil)
 
         // MARK: - InAppMessaging
         

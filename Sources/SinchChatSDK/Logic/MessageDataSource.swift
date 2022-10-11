@@ -29,6 +29,7 @@ protocol MessageDataSource {
     func sendConversationMetadata(_ metadata: [SinchMetadata]) -> Result<Void, MessageDataSourceError>
     func cancelSubscription()
     func closeChannel()
+    func startChannel()
     func cancelCalls()
     func isSubscribed() -> Bool
     func isFirstPage() -> Bool
@@ -73,6 +74,9 @@ final class DefaultMessageDataSource: MessageDataSource {
     }
     func closeChannel() {
         self.client.closeChannel()
+    }
+    func startChannel() {
+        self.client.startChannel()
     }
     func getMessageHistory(completion: @escaping (Result<[Message], MessageDataSourceError>) -> Void) {
         if let nextPageToken = nextPageToken {

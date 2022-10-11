@@ -207,15 +207,15 @@ final class DefaultStartViewModel: StartViewModel {
     
     func onWillEnterForeground() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: {
-    
+            self.dataSource.startChannel()
             self.setRunningState()
 
         })
     }
                                       
     func onDidEnterBackground() {
-        
         setIdleState()
+        dataSource.closeChannel()
 
     }
     func subscribeForMessages() {

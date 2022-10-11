@@ -11,6 +11,7 @@ public enum Region: Codable, Equatable {
 protocol APIClient {
     func getChannel() -> GRPCChannel
     func closeChannel()
+    func startChannel()
 }
 
 final class DefaultAPIClient: APIClient {
@@ -51,6 +52,23 @@ final class DefaultAPIClient: APIClient {
         } catch let error {
             Logger.error("error during creating GRPCChannelPool", error.localizedDescription)
             return nil
+        }
+    }
+    func startChannel() {
+        let keepalive = ClientConnectionKeepalive(
+            interval: .seconds(10),
+            timeout: .seconds(5)
+        )
+        
+        do {
+            channel = try GRPCChannelPool
+                .with(target: .hostAndPort(host, port),
+                      transportSecurity: .tls(.makeClientConfigurationBackedByNIOSSL()),
+                      eventLoopGroup: DefaultAPIClient.group) {
+                    $0.keepalive = keepalive
+                }
+        } catch let error {
+            Logger.error("error during creating GRPCChannelPool", error.localizedDescription)
         }
     }
     
