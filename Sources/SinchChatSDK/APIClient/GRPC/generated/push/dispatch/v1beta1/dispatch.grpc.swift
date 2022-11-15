@@ -22,6 +22,7 @@
 //
 import GRPC
 import NIO
+import NIOConcurrencyHelpers
 import SwiftProtobuf
 
 
@@ -59,7 +60,7 @@ extension Sinch_Push_Dispatch_V1beta1_DispatchServiceClientProtocol {
     callOptions: CallOptions? = nil
   ) -> UnaryCall<Sinch_Push_Dispatch_V1beta1_DispatchRequest, SwiftProtobuf.Google_Protobuf_Empty> {
     return self.makeUnaryCall(
-      path: "/sinch.push.dispatch.v1beta1.DispatchService/Dispatch",
+      path: Sinch_Push_Dispatch_V1beta1_DispatchServiceClientMetadata.Methods.dispatch.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeDispatchInterceptors() ?? []
@@ -67,14 +68,45 @@ extension Sinch_Push_Dispatch_V1beta1_DispatchServiceClientProtocol {
   }
 }
 
-internal protocol Sinch_Push_Dispatch_V1beta1_DispatchServiceClientInterceptorFactoryProtocol {
+#if compiler(>=5.6)
+@available(*, deprecated)
+extension Sinch_Push_Dispatch_V1beta1_DispatchServiceClient: @unchecked Sendable {}
+#endif // compiler(>=5.6)
 
-  /// - Returns: Interceptors to use when invoking 'dispatch'.
-  func makeDispatchInterceptors() -> [ClientInterceptor<Sinch_Push_Dispatch_V1beta1_DispatchRequest, SwiftProtobuf.Google_Protobuf_Empty>]
+@available(*, deprecated, renamed: "Sinch_Push_Dispatch_V1beta1_DispatchServiceNIOClient")
+internal final class Sinch_Push_Dispatch_V1beta1_DispatchServiceClient: Sinch_Push_Dispatch_V1beta1_DispatchServiceClientProtocol {
+  private let lock = Lock()
+  private var _defaultCallOptions: CallOptions
+  private var _interceptors: Sinch_Push_Dispatch_V1beta1_DispatchServiceClientInterceptorFactoryProtocol?
+  internal let channel: GRPCChannel
+  internal var defaultCallOptions: CallOptions {
+    get { self.lock.withLock { return self._defaultCallOptions } }
+    set { self.lock.withLockVoid { self._defaultCallOptions = newValue } }
+  }
+  internal var interceptors: Sinch_Push_Dispatch_V1beta1_DispatchServiceClientInterceptorFactoryProtocol? {
+    get { self.lock.withLock { return self._interceptors } }
+    set { self.lock.withLockVoid { self._interceptors = newValue } }
+  }
+
+  /// Creates a client for the sinch.push.dispatch.v1beta1.DispatchService service.
+  ///
+  /// - Parameters:
+  ///   - channel: `GRPCChannel` to the service host.
+  ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
+  ///   - interceptors: A factory providing interceptors for each RPC.
+  internal init(
+    channel: GRPCChannel,
+    defaultCallOptions: CallOptions = CallOptions(),
+    interceptors: Sinch_Push_Dispatch_V1beta1_DispatchServiceClientInterceptorFactoryProtocol? = nil
+  ) {
+    self.channel = channel
+    self._defaultCallOptions = defaultCallOptions
+    self._interceptors = interceptors
+  }
 }
 
-internal final class Sinch_Push_Dispatch_V1beta1_DispatchServiceClient: Sinch_Push_Dispatch_V1beta1_DispatchServiceClientProtocol {
-  internal let channel: GRPCChannel
+internal struct Sinch_Push_Dispatch_V1beta1_DispatchServiceNIOClient: Sinch_Push_Dispatch_V1beta1_DispatchServiceClientProtocol {
+  internal var channel: GRPCChannel
   internal var defaultCallOptions: CallOptions
   internal var interceptors: Sinch_Push_Dispatch_V1beta1_DispatchServiceClientInterceptorFactoryProtocol?
 
@@ -95,6 +127,110 @@ internal final class Sinch_Push_Dispatch_V1beta1_DispatchServiceClient: Sinch_Pu
   }
 }
 
+#if compiler(>=5.6)
+///
+///Providing notification dispatch interface for available push providers.
+///Exposes public interface.
+///Public access for authorized users only.
+///Public access controlled by ZAP Platform.
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+internal protocol Sinch_Push_Dispatch_V1beta1_DispatchServiceAsyncClientProtocol: GRPCClient {
+  static var serviceDescriptor: GRPCServiceDescriptor { get }
+  var interceptors: Sinch_Push_Dispatch_V1beta1_DispatchServiceClientInterceptorFactoryProtocol? { get }
+
+  func makeDispatchCall(
+    _ request: Sinch_Push_Dispatch_V1beta1_DispatchRequest,
+    callOptions: CallOptions?
+  ) -> GRPCAsyncUnaryCall<Sinch_Push_Dispatch_V1beta1_DispatchRequest, SwiftProtobuf.Google_Protobuf_Empty>
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension Sinch_Push_Dispatch_V1beta1_DispatchServiceAsyncClientProtocol {
+  internal static var serviceDescriptor: GRPCServiceDescriptor {
+    return Sinch_Push_Dispatch_V1beta1_DispatchServiceClientMetadata.serviceDescriptor
+  }
+
+  internal var interceptors: Sinch_Push_Dispatch_V1beta1_DispatchServiceClientInterceptorFactoryProtocol? {
+    return nil
+  }
+
+  internal func makeDispatchCall(
+    _ request: Sinch_Push_Dispatch_V1beta1_DispatchRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncUnaryCall<Sinch_Push_Dispatch_V1beta1_DispatchRequest, SwiftProtobuf.Google_Protobuf_Empty> {
+    return self.makeAsyncUnaryCall(
+      path: Sinch_Push_Dispatch_V1beta1_DispatchServiceClientMetadata.Methods.dispatch.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeDispatchInterceptors() ?? []
+    )
+  }
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension Sinch_Push_Dispatch_V1beta1_DispatchServiceAsyncClientProtocol {
+  internal func dispatch(
+    _ request: Sinch_Push_Dispatch_V1beta1_DispatchRequest,
+    callOptions: CallOptions? = nil
+  ) async throws -> SwiftProtobuf.Google_Protobuf_Empty {
+    return try await self.performAsyncUnaryCall(
+      path: Sinch_Push_Dispatch_V1beta1_DispatchServiceClientMetadata.Methods.dispatch.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeDispatchInterceptors() ?? []
+    )
+  }
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+internal struct Sinch_Push_Dispatch_V1beta1_DispatchServiceAsyncClient: Sinch_Push_Dispatch_V1beta1_DispatchServiceAsyncClientProtocol {
+  internal var channel: GRPCChannel
+  internal var defaultCallOptions: CallOptions
+  internal var interceptors: Sinch_Push_Dispatch_V1beta1_DispatchServiceClientInterceptorFactoryProtocol?
+
+  internal init(
+    channel: GRPCChannel,
+    defaultCallOptions: CallOptions = CallOptions(),
+    interceptors: Sinch_Push_Dispatch_V1beta1_DispatchServiceClientInterceptorFactoryProtocol? = nil
+  ) {
+    self.channel = channel
+    self.defaultCallOptions = defaultCallOptions
+    self.interceptors = interceptors
+  }
+}
+
+#endif // compiler(>=5.6)
+
+internal protocol Sinch_Push_Dispatch_V1beta1_DispatchServiceClientInterceptorFactoryProtocol: GRPCSendable {
+
+  /// - Returns: Interceptors to use when invoking 'dispatch'.
+  func makeDispatchInterceptors() -> [ClientInterceptor<Sinch_Push_Dispatch_V1beta1_DispatchRequest, SwiftProtobuf.Google_Protobuf_Empty>]
+}
+
+internal enum Sinch_Push_Dispatch_V1beta1_DispatchServiceClientMetadata {
+  internal static let serviceDescriptor = GRPCServiceDescriptor(
+    name: "DispatchService",
+    fullName: "sinch.push.dispatch.v1beta1.DispatchService",
+    methods: [
+      Sinch_Push_Dispatch_V1beta1_DispatchServiceClientMetadata.Methods.dispatch,
+    ]
+  )
+
+  internal enum Methods {
+    internal static let dispatch = GRPCMethodDescriptor(
+      name: "Dispatch",
+      path: "/sinch.push.dispatch.v1beta1.DispatchService/Dispatch",
+      type: GRPCCallType.unary
+    )
+  }
+}
+
+#if compiler(>=5.6)
+@available(swift, deprecated: 5.6)
+extension Sinch_Push_Dispatch_V1beta1_DispatchServiceTestClient: @unchecked Sendable {}
+#endif // compiler(>=5.6)
+
+@available(swift, deprecated: 5.6, message: "Test clients are not Sendable but the 'GRPCClient' API requires clients to be Sendable. Using a localhost client and server is the recommended alternative.")
 internal final class Sinch_Push_Dispatch_V1beta1_DispatchServiceTestClient: Sinch_Push_Dispatch_V1beta1_DispatchServiceClientProtocol {
   private let fakeChannel: FakeChannel
   internal var defaultCallOptions: CallOptions
@@ -121,13 +257,13 @@ internal final class Sinch_Push_Dispatch_V1beta1_DispatchServiceTestClient: Sinc
   internal func makeDispatchResponseStream(
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Push_Dispatch_V1beta1_DispatchRequest>) -> () = { _ in }
   ) -> FakeUnaryResponse<Sinch_Push_Dispatch_V1beta1_DispatchRequest, SwiftProtobuf.Google_Protobuf_Empty> {
-    return self.fakeChannel.makeFakeUnaryResponse(path: "/sinch.push.dispatch.v1beta1.DispatchService/Dispatch", requestHandler: requestHandler)
+    return self.fakeChannel.makeFakeUnaryResponse(path: Sinch_Push_Dispatch_V1beta1_DispatchServiceClientMetadata.Methods.dispatch.path, requestHandler: requestHandler)
   }
 
   internal func enqueueDispatchResponse(
     _ response: SwiftProtobuf.Google_Protobuf_Empty,
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Push_Dispatch_V1beta1_DispatchRequest>) -> () = { _ in }
-  )  {
+  ) {
     let stream = self.makeDispatchResponseStream(requestHandler)
     // This is the only operation on the stream; try! is fine.
     try! stream.sendMessage(response)
@@ -135,7 +271,7 @@ internal final class Sinch_Push_Dispatch_V1beta1_DispatchServiceTestClient: Sinc
 
   /// Returns true if there are response streams enqueued for 'Dispatch'
   internal var hasDispatchResponsesRemaining: Bool {
-    return self.fakeChannel.hasFakeResponseEnqueued(forPath: "/sinch.push.dispatch.v1beta1.DispatchService/Dispatch")
+    return self.fakeChannel.hasFakeResponseEnqueued(forPath: Sinch_Push_Dispatch_V1beta1_DispatchServiceClientMetadata.Methods.dispatch.path)
   }
 }
 

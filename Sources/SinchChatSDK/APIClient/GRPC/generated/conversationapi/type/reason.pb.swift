@@ -332,6 +332,12 @@ struct Sinch_Conversationapi_Type_Reason {
   init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Sinch_Conversationapi_Type_ReasonCode: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ReasonSubCode: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_Reason: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "sinch.conversationapi.type"

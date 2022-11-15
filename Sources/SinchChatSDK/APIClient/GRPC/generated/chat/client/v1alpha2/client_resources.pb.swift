@@ -260,6 +260,17 @@ struct Sinch_Chat_Client_V1alpha2_WebPushSettings {
   fileprivate var _overrides: Sinch_Chat_Client_V1alpha2_PushSettings? = nil
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Sinch_Chat_Client_V1alpha2_Client: @unchecked Sendable {}
+extension Sinch_Chat_Client_V1alpha2_Settings: @unchecked Sendable {}
+extension Sinch_Chat_Client_V1alpha2_ChatSettings: @unchecked Sendable {}
+extension Sinch_Chat_Client_V1alpha2_MobileChatSettings: @unchecked Sendable {}
+extension Sinch_Chat_Client_V1alpha2_WebChatSettings: @unchecked Sendable {}
+extension Sinch_Chat_Client_V1alpha2_PushSettings: @unchecked Sendable {}
+extension Sinch_Chat_Client_V1alpha2_MobilePushSettings: @unchecked Sendable {}
+extension Sinch_Chat_Client_V1alpha2_WebPushSettings: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "sinch.chat.client.v1alpha2"

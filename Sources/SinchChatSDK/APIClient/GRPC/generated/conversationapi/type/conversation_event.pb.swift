@@ -386,6 +386,22 @@ struct Sinch_Conversationapi_Type_AgentLeftEvent {
   fileprivate var _agent: Sinch_Conversationapi_Type_Agent? = nil
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Sinch_Conversationapi_Type_ConversationEvent: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ConversationEvent.OneOf_Event: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_AppEvent: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_AppEvent.OneOf_Event: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ContactEvent: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ContactEvent.OneOf_Event: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ComposingEvent: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ComposingEndEvent: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ConversationDeletedEvent: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_CommentEvent: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_CommentReplyEvent: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_AgentJoinedEvent: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_AgentLeftEvent: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "sinch.conversationapi.type"

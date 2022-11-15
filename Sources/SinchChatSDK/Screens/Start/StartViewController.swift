@@ -32,7 +32,7 @@ class StartViewController: SinchViewController<StartViewModel, StartView > {
             messageCollectionViewBottomInset += delta
         }
     }
-    
+    private var isScrolledToBottom = false
     private var isFirstLayout: Bool = true
     
     internal var isMessagesControllerBeingDismissed: Bool = false
@@ -69,7 +69,7 @@ class StartViewController: SinchViewController<StartViewModel, StartView > {
         
         return false
     }
-    
+  
     let audioSessionController = AudioSessionController()
     lazy var player = AVPlayerWrapper()
     
@@ -487,14 +487,11 @@ extension StartViewController: StartViewModelDelegate {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             self.insertMessages(messages)
-            if !self.isLastItemVisible() {
-                self.mainView.messageComposeView.scrollToBottomButton.alpha = 1.0
-                self.mainView.messageComposeView.scrollToBottomButton.isHidden = false
-            }
+
         }
     }
     func insertMessages(_ newMessages: [Message]) {
-        var isLastVisible = self.isLastCellVisible
+
         self.mainView.collectionView.performBatchUpdates({
             debugPrint(messages.count)
             if newMessages.count == 1 {
@@ -507,9 +504,11 @@ extension StartViewController: StartViewModelDelegate {
             }
         }, completion: { [weak self] _ in
             guard let self = self else { return }
-
-            if isLastVisible {
-                self.mainView.collectionView.scrollToLastItem(animated: true)
+          
+            if self.isScrolledToBottom && !(self.mainView.collectionView.isDragging || self.mainView.collectionView.isDecelerating) {
+                   self.mainView.collectionView.scrollToLastItem(animated: true)
+            } else {
+                self.handleBottomButtonVisibility()
             }
         })
     }
@@ -526,7 +525,7 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        
+
         let message = messages[indexPath.section]
         
         if message.body is MessageText {
@@ -673,8 +672,18 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
         populatePasteBoard(indexPath.section)
     }
     
-    func checkIfLastCellIsVisible() {
-        if isLastCellVisible {
+    func handleBottomButtonVisibility() {
+
+        if !isLastCellVisible {
+            if self.mainView.messageComposeView.scrollToBottomButton.isHidden && !isScrolledToBottom {
+                DispatchQueue.main.async {
+                    self.mainView.messageComposeView.scrollToBottomButton.isHidden = false
+                    UIView.animate(withDuration: 0.5, animations: {
+                        self.mainView.messageComposeView.scrollToBottomButton.alpha = 1.0
+                    })
+                }
+            }
+        } else {
             DispatchQueue.main.async {
                 UIView.animate(withDuration: 0.5, animations: {
                     self.mainView.messageComposeView.scrollToBottomButton.alpha = 0.0
@@ -685,17 +694,26 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
         }
     }
     
-    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
-        if !decelerate {
-            checkIfLastCellIsVisible()
-        }
+    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        handleBottomButtonVisibility()
     }
-    func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
-        checkIfLastCellIsVisible()
+
+    func handleIsScrolledToBottom(_ scrollView: UIScrollView) {
+        let height = scrollView.frame.size.height
+        let contentYOffset = scrollView.contentOffset.y
+        let distanceFromBottom = scrollView.contentSize.height - contentYOffset
+        
+         isScrolledToBottom = distanceFromBottom < height
     }
     
-    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        checkIfLastCellIsVisible()
+    func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
+        handleBottomButtonVisibility()
+        handleIsScrolledToBottom(scrollView)
+    }
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        handleBottomButtonVisibility()
+        handleIsScrolledToBottom(scrollView)
+
     }
 }
 
@@ -750,8 +768,10 @@ extension StartViewController: MessageCellDelegate {
         case .callMessage(let message):
             ChoicesHelper.callNumber(phoneNumber: message.phoneNumber)
         case .locationMessage(let message):
-            ChoicesHelper.openAppleMaps(choice: message)
-            
+            let locationActionHandler = LocationActionHandler(mainView.localizationConfiguration)
+            DispatchQueue.main.async {
+                locationActionHandler.handleOpenLocationAction(self, title: message.text, latitude: message.latitude, longitude: message.longitude)
+            }
         }
     }
 }

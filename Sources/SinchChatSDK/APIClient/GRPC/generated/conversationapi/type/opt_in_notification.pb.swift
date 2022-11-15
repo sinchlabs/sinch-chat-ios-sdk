@@ -114,6 +114,12 @@ struct Sinch_Conversationapi_Type_OptInErrorDetails {
   init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Sinch_Conversationapi_Type_OptInStatus: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_OptInNotification: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_OptInErrorDetails: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "sinch.conversationapi.type"

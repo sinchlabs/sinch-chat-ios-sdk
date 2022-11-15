@@ -160,6 +160,17 @@ struct Sinch_Chat_Client_V1alpha2_SignUuidResponse {
   init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Sinch_Chat_Client_V1alpha2_CreateRequest: @unchecked Sendable {}
+extension Sinch_Chat_Client_V1alpha2_GetRequest: @unchecked Sendable {}
+extension Sinch_Chat_Client_V1alpha2_ListRequest: @unchecked Sendable {}
+extension Sinch_Chat_Client_V1alpha2_ListResponse: @unchecked Sendable {}
+extension Sinch_Chat_Client_V1alpha2_UpdateRequest: @unchecked Sendable {}
+extension Sinch_Chat_Client_V1alpha2_DeleteRequest: @unchecked Sendable {}
+extension Sinch_Chat_Client_V1alpha2_SignUuidRequest: @unchecked Sendable {}
+extension Sinch_Chat_Client_V1alpha2_SignUuidResponse: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "sinch.chat.client.v1alpha2"

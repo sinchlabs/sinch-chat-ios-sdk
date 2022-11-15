@@ -163,6 +163,12 @@ struct Sinch_Chat_Sdk_V1alpha2_Entry {
   fileprivate var _deliveryTime: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Sinch_Chat_Sdk_V1alpha2_PushPlatform: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_Entry: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_Entry.OneOf_Payload: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "sinch.chat.sdk.v1alpha2"

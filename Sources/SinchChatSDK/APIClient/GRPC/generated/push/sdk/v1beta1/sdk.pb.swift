@@ -25,168 +25,37 @@ struct Sinch_Push_Sdk_V1beta1_SubscribeRequest {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var configID: String = String()
+  var subscription: String = String()
 
-  var subscriptionToken: String = String()
+  var config: String = String()
+
+  var token: String = String()
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 }
 
-struct Sinch_Push_Sdk_V1beta1_ConfirmDeliveryRequest {
+struct Sinch_Push_Sdk_V1beta1_UnsubscribeRequest {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var messageID: String = String()
+  var subscription: String = String()
+
+  var config: String = String()
+
+  var token: String = String()
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 }
 
-struct Sinch_Push_Sdk_V1beta1_DeliveryConfirmedEvent {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  var messageID: String = String()
-
-  var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  init() {}
-}
-
-struct Sinch_Push_Sdk_V1beta1_ReplyRequest {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  var messageID: String = String()
-
-  var payload: Sinch_Push_Sdk_V1beta1_ReplyRequest.OneOf_Payload? = nil
-
-  var message: Sinch_Conversationapi_Type_ContactMessage {
-    get {
-      if case .message(let v)? = payload {return v}
-      return Sinch_Conversationapi_Type_ContactMessage()
-    }
-    set {payload = .message(newValue)}
-  }
-
-  var event: Sinch_Conversationapi_Type_ContactEvent {
-    get {
-      if case .event(let v)? = payload {return v}
-      return Sinch_Conversationapi_Type_ContactEvent()
-    }
-    set {payload = .event(newValue)}
-  }
-
-  var metadata: String {
-    get {return _metadata ?? String()}
-    set {_metadata = newValue}
-  }
-  /// Returns true if `metadata` has been explicitly set.
-  var hasMetadata: Bool {return self._metadata != nil}
-  /// Clears the value of `metadata`. Subsequent reads from it will return its default value.
-  mutating func clearMetadata() {self._metadata = nil}
-
-  var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  enum OneOf_Payload: Equatable {
-    case message(Sinch_Conversationapi_Type_ContactMessage)
-    case event(Sinch_Conversationapi_Type_ContactEvent)
-
-  #if !swift(>=4.1)
-    static func ==(lhs: Sinch_Push_Sdk_V1beta1_ReplyRequest.OneOf_Payload, rhs: Sinch_Push_Sdk_V1beta1_ReplyRequest.OneOf_Payload) -> Bool {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch (lhs, rhs) {
-      case (.message, .message): return {
-        guard case .message(let l) = lhs, case .message(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.event, .event): return {
-        guard case .event(let l) = lhs, case .event(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      default: return false
-      }
-    }
-  #endif
-  }
-
-  init() {}
-
-  fileprivate var _metadata: String? = nil
-}
-
-struct Sinch_Push_Sdk_V1beta1_RepliedEvent {
-  // SwiftProtobuf.Message conformance is added in an extension below. See the
-  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
-  // methods supported on all messages.
-
-  var messageID: String = String()
-
-  var payload: Sinch_Push_Sdk_V1beta1_RepliedEvent.OneOf_Payload? = nil
-
-  var message: Sinch_Conversationapi_Type_ContactMessage {
-    get {
-      if case .message(let v)? = payload {return v}
-      return Sinch_Conversationapi_Type_ContactMessage()
-    }
-    set {payload = .message(newValue)}
-  }
-
-  var event: Sinch_Conversationapi_Type_ContactEvent {
-    get {
-      if case .event(let v)? = payload {return v}
-      return Sinch_Conversationapi_Type_ContactEvent()
-    }
-    set {payload = .event(newValue)}
-  }
-
-  var metadata: String {
-    get {return _metadata ?? String()}
-    set {_metadata = newValue}
-  }
-  /// Returns true if `metadata` has been explicitly set.
-  var hasMetadata: Bool {return self._metadata != nil}
-  /// Clears the value of `metadata`. Subsequent reads from it will return its default value.
-  mutating func clearMetadata() {self._metadata = nil}
-
-  var unknownFields = SwiftProtobuf.UnknownStorage()
-
-  enum OneOf_Payload: Equatable {
-    case message(Sinch_Conversationapi_Type_ContactMessage)
-    case event(Sinch_Conversationapi_Type_ContactEvent)
-
-  #if !swift(>=4.1)
-    static func ==(lhs: Sinch_Push_Sdk_V1beta1_RepliedEvent.OneOf_Payload, rhs: Sinch_Push_Sdk_V1beta1_RepliedEvent.OneOf_Payload) -> Bool {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch (lhs, rhs) {
-      case (.message, .message): return {
-        guard case .message(let l) = lhs, case .message(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.event, .event): return {
-        guard case .event(let l) = lhs, case .event(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      default: return false
-      }
-    }
-  #endif
-  }
-
-  init() {}
-
-  fileprivate var _metadata: String? = nil
-}
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Sinch_Push_Sdk_V1beta1_SubscribeRequest: @unchecked Sendable {}
+extension Sinch_Push_Sdk_V1beta1_UnsubscribeRequest: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
@@ -195,8 +64,9 @@ fileprivate let _protobuf_package = "sinch.push.sdk.v1beta1"
 extension Sinch_Push_Sdk_V1beta1_SubscribeRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".SubscribeRequest"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "config_id"),
-    2: .standard(proto: "subscription_token"),
+    1: .same(proto: "subscription"),
+    2: .same(proto: "config"),
+    3: .same(proto: "token"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -205,35 +75,42 @@ extension Sinch_Push_Sdk_V1beta1_SubscribeRequest: SwiftProtobuf.Message, SwiftP
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.configID) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.subscriptionToken) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.subscription) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.config) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.token) }()
       default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.configID.isEmpty {
-      try visitor.visitSingularStringField(value: self.configID, fieldNumber: 1)
+    if !self.subscription.isEmpty {
+      try visitor.visitSingularStringField(value: self.subscription, fieldNumber: 1)
     }
-    if !self.subscriptionToken.isEmpty {
-      try visitor.visitSingularStringField(value: self.subscriptionToken, fieldNumber: 2)
+    if !self.config.isEmpty {
+      try visitor.visitSingularStringField(value: self.config, fieldNumber: 2)
+    }
+    if !self.token.isEmpty {
+      try visitor.visitSingularStringField(value: self.token, fieldNumber: 3)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Sinch_Push_Sdk_V1beta1_SubscribeRequest, rhs: Sinch_Push_Sdk_V1beta1_SubscribeRequest) -> Bool {
-    if lhs.configID != rhs.configID {return false}
-    if lhs.subscriptionToken != rhs.subscriptionToken {return false}
+    if lhs.subscription != rhs.subscription {return false}
+    if lhs.config != rhs.config {return false}
+    if lhs.token != rhs.token {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Sinch_Push_Sdk_V1beta1_ConfirmDeliveryRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".ConfirmDeliveryRequest"
+extension Sinch_Push_Sdk_V1beta1_UnsubscribeRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".UnsubscribeRequest"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "message_id"),
+    1: .same(proto: "subscription"),
+    2: .same(proto: "config"),
+    3: .same(proto: "token"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -242,217 +119,31 @@ extension Sinch_Push_Sdk_V1beta1_ConfirmDeliveryRequest: SwiftProtobuf.Message, 
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.messageID) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.subscription) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.config) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.token) }()
       default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.messageID.isEmpty {
-      try visitor.visitSingularStringField(value: self.messageID, fieldNumber: 1)
+    if !self.subscription.isEmpty {
+      try visitor.visitSingularStringField(value: self.subscription, fieldNumber: 1)
+    }
+    if !self.config.isEmpty {
+      try visitor.visitSingularStringField(value: self.config, fieldNumber: 2)
+    }
+    if !self.token.isEmpty {
+      try visitor.visitSingularStringField(value: self.token, fieldNumber: 3)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Sinch_Push_Sdk_V1beta1_ConfirmDeliveryRequest, rhs: Sinch_Push_Sdk_V1beta1_ConfirmDeliveryRequest) -> Bool {
-    if lhs.messageID != rhs.messageID {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension Sinch_Push_Sdk_V1beta1_DeliveryConfirmedEvent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".DeliveryConfirmedEvent"
-  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "message_id"),
-  ]
-
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.messageID) }()
-      default: break
-      }
-    }
-  }
-
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.messageID.isEmpty {
-      try visitor.visitSingularStringField(value: self.messageID, fieldNumber: 1)
-    }
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  static func ==(lhs: Sinch_Push_Sdk_V1beta1_DeliveryConfirmedEvent, rhs: Sinch_Push_Sdk_V1beta1_DeliveryConfirmedEvent) -> Bool {
-    if lhs.messageID != rhs.messageID {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension Sinch_Push_Sdk_V1beta1_ReplyRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".ReplyRequest"
-  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "message_id"),
-    2: .same(proto: "message"),
-    3: .same(proto: "event"),
-    4: .same(proto: "metadata"),
-  ]
-
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.messageID) }()
-      case 2: try {
-        var v: Sinch_Conversationapi_Type_ContactMessage?
-        var hadOneofValue = false
-        if let current = self.payload {
-          hadOneofValue = true
-          if case .message(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.payload = .message(v)
-        }
-      }()
-      case 3: try {
-        var v: Sinch_Conversationapi_Type_ContactEvent?
-        var hadOneofValue = false
-        if let current = self.payload {
-          hadOneofValue = true
-          if case .event(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.payload = .event(v)
-        }
-      }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self._metadata) }()
-      default: break
-      }
-    }
-  }
-
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.messageID.isEmpty {
-      try visitor.visitSingularStringField(value: self.messageID, fieldNumber: 1)
-    }
-    switch self.payload {
-    case .message?: try {
-      guard case .message(let v)? = self.payload else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    }()
-    case .event?: try {
-      guard case .event(let v)? = self.payload else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    }()
-    case nil: break
-    }
-    try { if let v = self._metadata {
-      try visitor.visitSingularStringField(value: v, fieldNumber: 4)
-    } }()
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  static func ==(lhs: Sinch_Push_Sdk_V1beta1_ReplyRequest, rhs: Sinch_Push_Sdk_V1beta1_ReplyRequest) -> Bool {
-    if lhs.messageID != rhs.messageID {return false}
-    if lhs.payload != rhs.payload {return false}
-    if lhs._metadata != rhs._metadata {return false}
-    if lhs.unknownFields != rhs.unknownFields {return false}
-    return true
-  }
-}
-
-extension Sinch_Push_Sdk_V1beta1_RepliedEvent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".RepliedEvent"
-  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "message_id"),
-    2: .same(proto: "message"),
-    3: .same(proto: "event"),
-    4: .same(proto: "metadata"),
-  ]
-
-  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.messageID) }()
-      case 2: try {
-        var v: Sinch_Conversationapi_Type_ContactMessage?
-        var hadOneofValue = false
-        if let current = self.payload {
-          hadOneofValue = true
-          if case .message(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.payload = .message(v)
-        }
-      }()
-      case 3: try {
-        var v: Sinch_Conversationapi_Type_ContactEvent?
-        var hadOneofValue = false
-        if let current = self.payload {
-          hadOneofValue = true
-          if case .event(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.payload = .event(v)
-        }
-      }()
-      case 4: try { try decoder.decodeSingularStringField(value: &self._metadata) }()
-      default: break
-      }
-    }
-  }
-
-  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.messageID.isEmpty {
-      try visitor.visitSingularStringField(value: self.messageID, fieldNumber: 1)
-    }
-    switch self.payload {
-    case .message?: try {
-      guard case .message(let v)? = self.payload else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
-    }()
-    case .event?: try {
-      guard case .event(let v)? = self.payload else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    }()
-    case nil: break
-    }
-    try { if let v = self._metadata {
-      try visitor.visitSingularStringField(value: v, fieldNumber: 4)
-    } }()
-    try unknownFields.traverse(visitor: &visitor)
-  }
-
-  static func ==(lhs: Sinch_Push_Sdk_V1beta1_RepliedEvent, rhs: Sinch_Push_Sdk_V1beta1_RepliedEvent) -> Bool {
-    if lhs.messageID != rhs.messageID {return false}
-    if lhs.payload != rhs.payload {return false}
-    if lhs._metadata != rhs._metadata {return false}
+  static func ==(lhs: Sinch_Push_Sdk_V1beta1_UnsubscribeRequest, rhs: Sinch_Push_Sdk_V1beta1_UnsubscribeRequest) -> Bool {
+    if lhs.subscription != rhs.subscription {return false}
+    if lhs.config != rhs.config {return false}
+    if lhs.token != rhs.token {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

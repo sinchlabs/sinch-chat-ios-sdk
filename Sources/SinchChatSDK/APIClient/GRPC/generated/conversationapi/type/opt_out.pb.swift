@@ -55,6 +55,10 @@ struct Sinch_Conversationapi_Type_OptOut {
   fileprivate var _recipient: Sinch_Conversationapi_Type_Recipient? = nil
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Sinch_Conversationapi_Type_OptOut: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "sinch.conversationapi.type"

@@ -22,6 +22,7 @@
 //
 import GRPC
 import NIO
+import NIOConcurrencyHelpers
 import SwiftProtobuf
 
 
@@ -77,7 +78,7 @@ extension Sinch_Chat_Client_V1alpha2_ClientServiceClientProtocol {
     callOptions: CallOptions? = nil
   ) -> UnaryCall<Sinch_Chat_Client_V1alpha2_CreateRequest, Sinch_Chat_Client_V1alpha2_Client> {
     return self.makeUnaryCall(
-      path: "/sinch.chat.client.v1alpha2.ClientService/Create",
+      path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.create.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeCreateInterceptors() ?? []
@@ -95,7 +96,7 @@ extension Sinch_Chat_Client_V1alpha2_ClientServiceClientProtocol {
     callOptions: CallOptions? = nil
   ) -> UnaryCall<Sinch_Chat_Client_V1alpha2_GetRequest, Sinch_Chat_Client_V1alpha2_Client> {
     return self.makeUnaryCall(
-      path: "/sinch.chat.client.v1alpha2.ClientService/Get",
+      path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.get.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeGetInterceptors() ?? []
@@ -113,7 +114,7 @@ extension Sinch_Chat_Client_V1alpha2_ClientServiceClientProtocol {
     callOptions: CallOptions? = nil
   ) -> UnaryCall<Sinch_Chat_Client_V1alpha2_ListRequest, Sinch_Chat_Client_V1alpha2_ListResponse> {
     return self.makeUnaryCall(
-      path: "/sinch.chat.client.v1alpha2.ClientService/List",
+      path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.list.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeListInterceptors() ?? []
@@ -131,7 +132,7 @@ extension Sinch_Chat_Client_V1alpha2_ClientServiceClientProtocol {
     callOptions: CallOptions? = nil
   ) -> UnaryCall<Sinch_Chat_Client_V1alpha2_UpdateRequest, SwiftProtobuf.Google_Protobuf_Empty> {
     return self.makeUnaryCall(
-      path: "/sinch.chat.client.v1alpha2.ClientService/Update",
+      path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.update.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeUpdateInterceptors() ?? []
@@ -149,7 +150,7 @@ extension Sinch_Chat_Client_V1alpha2_ClientServiceClientProtocol {
     callOptions: CallOptions? = nil
   ) -> UnaryCall<Sinch_Chat_Client_V1alpha2_DeleteRequest, SwiftProtobuf.Google_Protobuf_Empty> {
     return self.makeUnaryCall(
-      path: "/sinch.chat.client.v1alpha2.ClientService/Delete",
+      path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.delete.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeDeleteInterceptors() ?? []
@@ -167,7 +168,7 @@ extension Sinch_Chat_Client_V1alpha2_ClientServiceClientProtocol {
     callOptions: CallOptions? = nil
   ) -> UnaryCall<Sinch_Chat_Client_V1alpha2_SignUuidRequest, Sinch_Chat_Client_V1alpha2_SignUuidResponse> {
     return self.makeUnaryCall(
-      path: "/sinch.chat.client.v1alpha2.ClientService/SignUuid",
+      path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.signUuid.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeSignUuidInterceptors() ?? []
@@ -175,29 +176,45 @@ extension Sinch_Chat_Client_V1alpha2_ClientServiceClientProtocol {
   }
 }
 
-internal protocol Sinch_Chat_Client_V1alpha2_ClientServiceClientInterceptorFactoryProtocol {
+#if compiler(>=5.6)
+@available(*, deprecated)
+extension Sinch_Chat_Client_V1alpha2_ClientServiceClient: @unchecked Sendable {}
+#endif // compiler(>=5.6)
 
-  /// - Returns: Interceptors to use when invoking 'create'.
-  func makeCreateInterceptors() -> [ClientInterceptor<Sinch_Chat_Client_V1alpha2_CreateRequest, Sinch_Chat_Client_V1alpha2_Client>]
+@available(*, deprecated, renamed: "Sinch_Chat_Client_V1alpha2_ClientServiceNIOClient")
+internal final class Sinch_Chat_Client_V1alpha2_ClientServiceClient: Sinch_Chat_Client_V1alpha2_ClientServiceClientProtocol {
+  private let lock = Lock()
+  private var _defaultCallOptions: CallOptions
+  private var _interceptors: Sinch_Chat_Client_V1alpha2_ClientServiceClientInterceptorFactoryProtocol?
+  internal let channel: GRPCChannel
+  internal var defaultCallOptions: CallOptions {
+    get { self.lock.withLock { return self._defaultCallOptions } }
+    set { self.lock.withLockVoid { self._defaultCallOptions = newValue } }
+  }
+  internal var interceptors: Sinch_Chat_Client_V1alpha2_ClientServiceClientInterceptorFactoryProtocol? {
+    get { self.lock.withLock { return self._interceptors } }
+    set { self.lock.withLockVoid { self._interceptors = newValue } }
+  }
 
-  /// - Returns: Interceptors to use when invoking 'get'.
-  func makeGetInterceptors() -> [ClientInterceptor<Sinch_Chat_Client_V1alpha2_GetRequest, Sinch_Chat_Client_V1alpha2_Client>]
-
-  /// - Returns: Interceptors to use when invoking 'list'.
-  func makeListInterceptors() -> [ClientInterceptor<Sinch_Chat_Client_V1alpha2_ListRequest, Sinch_Chat_Client_V1alpha2_ListResponse>]
-
-  /// - Returns: Interceptors to use when invoking 'update'.
-  func makeUpdateInterceptors() -> [ClientInterceptor<Sinch_Chat_Client_V1alpha2_UpdateRequest, SwiftProtobuf.Google_Protobuf_Empty>]
-
-  /// - Returns: Interceptors to use when invoking 'delete'.
-  func makeDeleteInterceptors() -> [ClientInterceptor<Sinch_Chat_Client_V1alpha2_DeleteRequest, SwiftProtobuf.Google_Protobuf_Empty>]
-
-  /// - Returns: Interceptors to use when invoking 'signUuid'.
-  func makeSignUuidInterceptors() -> [ClientInterceptor<Sinch_Chat_Client_V1alpha2_SignUuidRequest, Sinch_Chat_Client_V1alpha2_SignUuidResponse>]
+  /// Creates a client for the sinch.chat.client.v1alpha2.ClientService service.
+  ///
+  /// - Parameters:
+  ///   - channel: `GRPCChannel` to the service host.
+  ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
+  ///   - interceptors: A factory providing interceptors for each RPC.
+  internal init(
+    channel: GRPCChannel,
+    defaultCallOptions: CallOptions = CallOptions(),
+    interceptors: Sinch_Chat_Client_V1alpha2_ClientServiceClientInterceptorFactoryProtocol? = nil
+  ) {
+    self.channel = channel
+    self._defaultCallOptions = defaultCallOptions
+    self._interceptors = interceptors
+  }
 }
 
-internal final class Sinch_Chat_Client_V1alpha2_ClientServiceClient: Sinch_Chat_Client_V1alpha2_ClientServiceClientProtocol {
-  internal let channel: GRPCChannel
+internal struct Sinch_Chat_Client_V1alpha2_ClientServiceNIOClient: Sinch_Chat_Client_V1alpha2_ClientServiceClientProtocol {
+  internal var channel: GRPCChannel
   internal var defaultCallOptions: CallOptions
   internal var interceptors: Sinch_Chat_Client_V1alpha2_ClientServiceClientInterceptorFactoryProtocol?
 
@@ -218,6 +235,300 @@ internal final class Sinch_Chat_Client_V1alpha2_ClientServiceClient: Sinch_Chat_
   }
 }
 
+#if compiler(>=5.6)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+internal protocol Sinch_Chat_Client_V1alpha2_ClientServiceAsyncClientProtocol: GRPCClient {
+  static var serviceDescriptor: GRPCServiceDescriptor { get }
+  var interceptors: Sinch_Chat_Client_V1alpha2_ClientServiceClientInterceptorFactoryProtocol? { get }
+
+  func makeCreateCall(
+    _ request: Sinch_Chat_Client_V1alpha2_CreateRequest,
+    callOptions: CallOptions?
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Client_V1alpha2_CreateRequest, Sinch_Chat_Client_V1alpha2_Client>
+
+  func makeGetCall(
+    _ request: Sinch_Chat_Client_V1alpha2_GetRequest,
+    callOptions: CallOptions?
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Client_V1alpha2_GetRequest, Sinch_Chat_Client_V1alpha2_Client>
+
+  func makeListCall(
+    _ request: Sinch_Chat_Client_V1alpha2_ListRequest,
+    callOptions: CallOptions?
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Client_V1alpha2_ListRequest, Sinch_Chat_Client_V1alpha2_ListResponse>
+
+  func makeUpdateCall(
+    _ request: Sinch_Chat_Client_V1alpha2_UpdateRequest,
+    callOptions: CallOptions?
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Client_V1alpha2_UpdateRequest, SwiftProtobuf.Google_Protobuf_Empty>
+
+  func makeDeleteCall(
+    _ request: Sinch_Chat_Client_V1alpha2_DeleteRequest,
+    callOptions: CallOptions?
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Client_V1alpha2_DeleteRequest, SwiftProtobuf.Google_Protobuf_Empty>
+
+  func makeSignUuidCall(
+    _ request: Sinch_Chat_Client_V1alpha2_SignUuidRequest,
+    callOptions: CallOptions?
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Client_V1alpha2_SignUuidRequest, Sinch_Chat_Client_V1alpha2_SignUuidResponse>
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension Sinch_Chat_Client_V1alpha2_ClientServiceAsyncClientProtocol {
+  internal static var serviceDescriptor: GRPCServiceDescriptor {
+    return Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.serviceDescriptor
+  }
+
+  internal var interceptors: Sinch_Chat_Client_V1alpha2_ClientServiceClientInterceptorFactoryProtocol? {
+    return nil
+  }
+
+  internal func makeCreateCall(
+    _ request: Sinch_Chat_Client_V1alpha2_CreateRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Client_V1alpha2_CreateRequest, Sinch_Chat_Client_V1alpha2_Client> {
+    return self.makeAsyncUnaryCall(
+      path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.create.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeCreateInterceptors() ?? []
+    )
+  }
+
+  internal func makeGetCall(
+    _ request: Sinch_Chat_Client_V1alpha2_GetRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Client_V1alpha2_GetRequest, Sinch_Chat_Client_V1alpha2_Client> {
+    return self.makeAsyncUnaryCall(
+      path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.get.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeGetInterceptors() ?? []
+    )
+  }
+
+  internal func makeListCall(
+    _ request: Sinch_Chat_Client_V1alpha2_ListRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Client_V1alpha2_ListRequest, Sinch_Chat_Client_V1alpha2_ListResponse> {
+    return self.makeAsyncUnaryCall(
+      path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.list.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeListInterceptors() ?? []
+    )
+  }
+
+  internal func makeUpdateCall(
+    _ request: Sinch_Chat_Client_V1alpha2_UpdateRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Client_V1alpha2_UpdateRequest, SwiftProtobuf.Google_Protobuf_Empty> {
+    return self.makeAsyncUnaryCall(
+      path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.update.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeUpdateInterceptors() ?? []
+    )
+  }
+
+  internal func makeDeleteCall(
+    _ request: Sinch_Chat_Client_V1alpha2_DeleteRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Client_V1alpha2_DeleteRequest, SwiftProtobuf.Google_Protobuf_Empty> {
+    return self.makeAsyncUnaryCall(
+      path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.delete.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeDeleteInterceptors() ?? []
+    )
+  }
+
+  internal func makeSignUuidCall(
+    _ request: Sinch_Chat_Client_V1alpha2_SignUuidRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Client_V1alpha2_SignUuidRequest, Sinch_Chat_Client_V1alpha2_SignUuidResponse> {
+    return self.makeAsyncUnaryCall(
+      path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.signUuid.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeSignUuidInterceptors() ?? []
+    )
+  }
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension Sinch_Chat_Client_V1alpha2_ClientServiceAsyncClientProtocol {
+  internal func create(
+    _ request: Sinch_Chat_Client_V1alpha2_CreateRequest,
+    callOptions: CallOptions? = nil
+  ) async throws -> Sinch_Chat_Client_V1alpha2_Client {
+    return try await self.performAsyncUnaryCall(
+      path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.create.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeCreateInterceptors() ?? []
+    )
+  }
+
+  internal func get(
+    _ request: Sinch_Chat_Client_V1alpha2_GetRequest,
+    callOptions: CallOptions? = nil
+  ) async throws -> Sinch_Chat_Client_V1alpha2_Client {
+    return try await self.performAsyncUnaryCall(
+      path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.get.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeGetInterceptors() ?? []
+    )
+  }
+
+  internal func list(
+    _ request: Sinch_Chat_Client_V1alpha2_ListRequest,
+    callOptions: CallOptions? = nil
+  ) async throws -> Sinch_Chat_Client_V1alpha2_ListResponse {
+    return try await self.performAsyncUnaryCall(
+      path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.list.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeListInterceptors() ?? []
+    )
+  }
+
+  internal func update(
+    _ request: Sinch_Chat_Client_V1alpha2_UpdateRequest,
+    callOptions: CallOptions? = nil
+  ) async throws -> SwiftProtobuf.Google_Protobuf_Empty {
+    return try await self.performAsyncUnaryCall(
+      path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.update.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeUpdateInterceptors() ?? []
+    )
+  }
+
+  internal func delete(
+    _ request: Sinch_Chat_Client_V1alpha2_DeleteRequest,
+    callOptions: CallOptions? = nil
+  ) async throws -> SwiftProtobuf.Google_Protobuf_Empty {
+    return try await self.performAsyncUnaryCall(
+      path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.delete.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeDeleteInterceptors() ?? []
+    )
+  }
+
+  internal func signUuid(
+    _ request: Sinch_Chat_Client_V1alpha2_SignUuidRequest,
+    callOptions: CallOptions? = nil
+  ) async throws -> Sinch_Chat_Client_V1alpha2_SignUuidResponse {
+    return try await self.performAsyncUnaryCall(
+      path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.signUuid.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeSignUuidInterceptors() ?? []
+    )
+  }
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+internal struct Sinch_Chat_Client_V1alpha2_ClientServiceAsyncClient: Sinch_Chat_Client_V1alpha2_ClientServiceAsyncClientProtocol {
+  internal var channel: GRPCChannel
+  internal var defaultCallOptions: CallOptions
+  internal var interceptors: Sinch_Chat_Client_V1alpha2_ClientServiceClientInterceptorFactoryProtocol?
+
+  internal init(
+    channel: GRPCChannel,
+    defaultCallOptions: CallOptions = CallOptions(),
+    interceptors: Sinch_Chat_Client_V1alpha2_ClientServiceClientInterceptorFactoryProtocol? = nil
+  ) {
+    self.channel = channel
+    self.defaultCallOptions = defaultCallOptions
+    self.interceptors = interceptors
+  }
+}
+
+#endif // compiler(>=5.6)
+
+internal protocol Sinch_Chat_Client_V1alpha2_ClientServiceClientInterceptorFactoryProtocol: GRPCSendable {
+
+  /// - Returns: Interceptors to use when invoking 'create'.
+  func makeCreateInterceptors() -> [ClientInterceptor<Sinch_Chat_Client_V1alpha2_CreateRequest, Sinch_Chat_Client_V1alpha2_Client>]
+
+  /// - Returns: Interceptors to use when invoking 'get'.
+  func makeGetInterceptors() -> [ClientInterceptor<Sinch_Chat_Client_V1alpha2_GetRequest, Sinch_Chat_Client_V1alpha2_Client>]
+
+  /// - Returns: Interceptors to use when invoking 'list'.
+  func makeListInterceptors() -> [ClientInterceptor<Sinch_Chat_Client_V1alpha2_ListRequest, Sinch_Chat_Client_V1alpha2_ListResponse>]
+
+  /// - Returns: Interceptors to use when invoking 'update'.
+  func makeUpdateInterceptors() -> [ClientInterceptor<Sinch_Chat_Client_V1alpha2_UpdateRequest, SwiftProtobuf.Google_Protobuf_Empty>]
+
+  /// - Returns: Interceptors to use when invoking 'delete'.
+  func makeDeleteInterceptors() -> [ClientInterceptor<Sinch_Chat_Client_V1alpha2_DeleteRequest, SwiftProtobuf.Google_Protobuf_Empty>]
+
+  /// - Returns: Interceptors to use when invoking 'signUuid'.
+  func makeSignUuidInterceptors() -> [ClientInterceptor<Sinch_Chat_Client_V1alpha2_SignUuidRequest, Sinch_Chat_Client_V1alpha2_SignUuidResponse>]
+}
+
+internal enum Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata {
+  internal static let serviceDescriptor = GRPCServiceDescriptor(
+    name: "ClientService",
+    fullName: "sinch.chat.client.v1alpha2.ClientService",
+    methods: [
+      Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.create,
+      Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.get,
+      Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.list,
+      Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.update,
+      Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.delete,
+      Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.signUuid,
+    ]
+  )
+
+  internal enum Methods {
+    internal static let create = GRPCMethodDescriptor(
+      name: "Create",
+      path: "/sinch.chat.client.v1alpha2.ClientService/Create",
+      type: GRPCCallType.unary
+    )
+
+    internal static let get = GRPCMethodDescriptor(
+      name: "Get",
+      path: "/sinch.chat.client.v1alpha2.ClientService/Get",
+      type: GRPCCallType.unary
+    )
+
+    internal static let list = GRPCMethodDescriptor(
+      name: "List",
+      path: "/sinch.chat.client.v1alpha2.ClientService/List",
+      type: GRPCCallType.unary
+    )
+
+    internal static let update = GRPCMethodDescriptor(
+      name: "Update",
+      path: "/sinch.chat.client.v1alpha2.ClientService/Update",
+      type: GRPCCallType.unary
+    )
+
+    internal static let delete = GRPCMethodDescriptor(
+      name: "Delete",
+      path: "/sinch.chat.client.v1alpha2.ClientService/Delete",
+      type: GRPCCallType.unary
+    )
+
+    internal static let signUuid = GRPCMethodDescriptor(
+      name: "SignUuid",
+      path: "/sinch.chat.client.v1alpha2.ClientService/SignUuid",
+      type: GRPCCallType.unary
+    )
+  }
+}
+
+#if compiler(>=5.6)
+@available(swift, deprecated: 5.6)
+extension Sinch_Chat_Client_V1alpha2_ClientServiceTestClient: @unchecked Sendable {}
+#endif // compiler(>=5.6)
+
+@available(swift, deprecated: 5.6, message: "Test clients are not Sendable but the 'GRPCClient' API requires clients to be Sendable. Using a localhost client and server is the recommended alternative.")
 internal final class Sinch_Chat_Client_V1alpha2_ClientServiceTestClient: Sinch_Chat_Client_V1alpha2_ClientServiceClientProtocol {
   private let fakeChannel: FakeChannel
   internal var defaultCallOptions: CallOptions
@@ -244,13 +555,13 @@ internal final class Sinch_Chat_Client_V1alpha2_ClientServiceTestClient: Sinch_C
   internal func makeCreateResponseStream(
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Client_V1alpha2_CreateRequest>) -> () = { _ in }
   ) -> FakeUnaryResponse<Sinch_Chat_Client_V1alpha2_CreateRequest, Sinch_Chat_Client_V1alpha2_Client> {
-    return self.fakeChannel.makeFakeUnaryResponse(path: "/sinch.chat.client.v1alpha2.ClientService/Create", requestHandler: requestHandler)
+    return self.fakeChannel.makeFakeUnaryResponse(path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.create.path, requestHandler: requestHandler)
   }
 
   internal func enqueueCreateResponse(
     _ response: Sinch_Chat_Client_V1alpha2_Client,
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Client_V1alpha2_CreateRequest>) -> () = { _ in }
-  )  {
+  ) {
     let stream = self.makeCreateResponseStream(requestHandler)
     // This is the only operation on the stream; try! is fine.
     try! stream.sendMessage(response)
@@ -258,7 +569,7 @@ internal final class Sinch_Chat_Client_V1alpha2_ClientServiceTestClient: Sinch_C
 
   /// Returns true if there are response streams enqueued for 'Create'
   internal var hasCreateResponsesRemaining: Bool {
-    return self.fakeChannel.hasFakeResponseEnqueued(forPath: "/sinch.chat.client.v1alpha2.ClientService/Create")
+    return self.fakeChannel.hasFakeResponseEnqueued(forPath: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.create.path)
   }
 
   /// Make a unary response for the Get RPC. This must be called
@@ -268,13 +579,13 @@ internal final class Sinch_Chat_Client_V1alpha2_ClientServiceTestClient: Sinch_C
   internal func makeGetResponseStream(
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Client_V1alpha2_GetRequest>) -> () = { _ in }
   ) -> FakeUnaryResponse<Sinch_Chat_Client_V1alpha2_GetRequest, Sinch_Chat_Client_V1alpha2_Client> {
-    return self.fakeChannel.makeFakeUnaryResponse(path: "/sinch.chat.client.v1alpha2.ClientService/Get", requestHandler: requestHandler)
+    return self.fakeChannel.makeFakeUnaryResponse(path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.get.path, requestHandler: requestHandler)
   }
 
   internal func enqueueGetResponse(
     _ response: Sinch_Chat_Client_V1alpha2_Client,
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Client_V1alpha2_GetRequest>) -> () = { _ in }
-  )  {
+  ) {
     let stream = self.makeGetResponseStream(requestHandler)
     // This is the only operation on the stream; try! is fine.
     try! stream.sendMessage(response)
@@ -282,7 +593,7 @@ internal final class Sinch_Chat_Client_V1alpha2_ClientServiceTestClient: Sinch_C
 
   /// Returns true if there are response streams enqueued for 'Get'
   internal var hasGetResponsesRemaining: Bool {
-    return self.fakeChannel.hasFakeResponseEnqueued(forPath: "/sinch.chat.client.v1alpha2.ClientService/Get")
+    return self.fakeChannel.hasFakeResponseEnqueued(forPath: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.get.path)
   }
 
   /// Make a unary response for the List RPC. This must be called
@@ -292,13 +603,13 @@ internal final class Sinch_Chat_Client_V1alpha2_ClientServiceTestClient: Sinch_C
   internal func makeListResponseStream(
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Client_V1alpha2_ListRequest>) -> () = { _ in }
   ) -> FakeUnaryResponse<Sinch_Chat_Client_V1alpha2_ListRequest, Sinch_Chat_Client_V1alpha2_ListResponse> {
-    return self.fakeChannel.makeFakeUnaryResponse(path: "/sinch.chat.client.v1alpha2.ClientService/List", requestHandler: requestHandler)
+    return self.fakeChannel.makeFakeUnaryResponse(path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.list.path, requestHandler: requestHandler)
   }
 
   internal func enqueueListResponse(
     _ response: Sinch_Chat_Client_V1alpha2_ListResponse,
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Client_V1alpha2_ListRequest>) -> () = { _ in }
-  )  {
+  ) {
     let stream = self.makeListResponseStream(requestHandler)
     // This is the only operation on the stream; try! is fine.
     try! stream.sendMessage(response)
@@ -306,7 +617,7 @@ internal final class Sinch_Chat_Client_V1alpha2_ClientServiceTestClient: Sinch_C
 
   /// Returns true if there are response streams enqueued for 'List'
   internal var hasListResponsesRemaining: Bool {
-    return self.fakeChannel.hasFakeResponseEnqueued(forPath: "/sinch.chat.client.v1alpha2.ClientService/List")
+    return self.fakeChannel.hasFakeResponseEnqueued(forPath: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.list.path)
   }
 
   /// Make a unary response for the Update RPC. This must be called
@@ -316,13 +627,13 @@ internal final class Sinch_Chat_Client_V1alpha2_ClientServiceTestClient: Sinch_C
   internal func makeUpdateResponseStream(
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Client_V1alpha2_UpdateRequest>) -> () = { _ in }
   ) -> FakeUnaryResponse<Sinch_Chat_Client_V1alpha2_UpdateRequest, SwiftProtobuf.Google_Protobuf_Empty> {
-    return self.fakeChannel.makeFakeUnaryResponse(path: "/sinch.chat.client.v1alpha2.ClientService/Update", requestHandler: requestHandler)
+    return self.fakeChannel.makeFakeUnaryResponse(path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.update.path, requestHandler: requestHandler)
   }
 
   internal func enqueueUpdateResponse(
     _ response: SwiftProtobuf.Google_Protobuf_Empty,
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Client_V1alpha2_UpdateRequest>) -> () = { _ in }
-  )  {
+  ) {
     let stream = self.makeUpdateResponseStream(requestHandler)
     // This is the only operation on the stream; try! is fine.
     try! stream.sendMessage(response)
@@ -330,7 +641,7 @@ internal final class Sinch_Chat_Client_V1alpha2_ClientServiceTestClient: Sinch_C
 
   /// Returns true if there are response streams enqueued for 'Update'
   internal var hasUpdateResponsesRemaining: Bool {
-    return self.fakeChannel.hasFakeResponseEnqueued(forPath: "/sinch.chat.client.v1alpha2.ClientService/Update")
+    return self.fakeChannel.hasFakeResponseEnqueued(forPath: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.update.path)
   }
 
   /// Make a unary response for the Delete RPC. This must be called
@@ -340,13 +651,13 @@ internal final class Sinch_Chat_Client_V1alpha2_ClientServiceTestClient: Sinch_C
   internal func makeDeleteResponseStream(
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Client_V1alpha2_DeleteRequest>) -> () = { _ in }
   ) -> FakeUnaryResponse<Sinch_Chat_Client_V1alpha2_DeleteRequest, SwiftProtobuf.Google_Protobuf_Empty> {
-    return self.fakeChannel.makeFakeUnaryResponse(path: "/sinch.chat.client.v1alpha2.ClientService/Delete", requestHandler: requestHandler)
+    return self.fakeChannel.makeFakeUnaryResponse(path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.delete.path, requestHandler: requestHandler)
   }
 
   internal func enqueueDeleteResponse(
     _ response: SwiftProtobuf.Google_Protobuf_Empty,
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Client_V1alpha2_DeleteRequest>) -> () = { _ in }
-  )  {
+  ) {
     let stream = self.makeDeleteResponseStream(requestHandler)
     // This is the only operation on the stream; try! is fine.
     try! stream.sendMessage(response)
@@ -354,7 +665,7 @@ internal final class Sinch_Chat_Client_V1alpha2_ClientServiceTestClient: Sinch_C
 
   /// Returns true if there are response streams enqueued for 'Delete'
   internal var hasDeleteResponsesRemaining: Bool {
-    return self.fakeChannel.hasFakeResponseEnqueued(forPath: "/sinch.chat.client.v1alpha2.ClientService/Delete")
+    return self.fakeChannel.hasFakeResponseEnqueued(forPath: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.delete.path)
   }
 
   /// Make a unary response for the SignUuid RPC. This must be called
@@ -364,13 +675,13 @@ internal final class Sinch_Chat_Client_V1alpha2_ClientServiceTestClient: Sinch_C
   internal func makeSignUuidResponseStream(
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Client_V1alpha2_SignUuidRequest>) -> () = { _ in }
   ) -> FakeUnaryResponse<Sinch_Chat_Client_V1alpha2_SignUuidRequest, Sinch_Chat_Client_V1alpha2_SignUuidResponse> {
-    return self.fakeChannel.makeFakeUnaryResponse(path: "/sinch.chat.client.v1alpha2.ClientService/SignUuid", requestHandler: requestHandler)
+    return self.fakeChannel.makeFakeUnaryResponse(path: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.signUuid.path, requestHandler: requestHandler)
   }
 
   internal func enqueueSignUuidResponse(
     _ response: Sinch_Chat_Client_V1alpha2_SignUuidResponse,
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Client_V1alpha2_SignUuidRequest>) -> () = { _ in }
-  )  {
+  ) {
     let stream = self.makeSignUuidResponseStream(requestHandler)
     // This is the only operation on the stream; try! is fine.
     try! stream.sendMessage(response)
@@ -378,7 +689,7 @@ internal final class Sinch_Chat_Client_V1alpha2_ClientServiceTestClient: Sinch_C
 
   /// Returns true if there are response streams enqueued for 'SignUuid'
   internal var hasSignUuidResponsesRemaining: Bool {
-    return self.fakeChannel.hasFakeResponseEnqueued(forPath: "/sinch.chat.client.v1alpha2.ClientService/SignUuid")
+    return self.fakeChannel.hasFakeResponseEnqueued(forPath: Sinch_Chat_Client_V1alpha2_ClientServiceClientMetadata.Methods.signUuid.path)
   }
 }
 

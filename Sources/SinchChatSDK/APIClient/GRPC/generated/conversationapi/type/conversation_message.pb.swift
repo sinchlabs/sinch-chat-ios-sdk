@@ -1143,6 +1143,40 @@ struct Sinch_Conversationapi_Type_UrlInfo {
   init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Sinch_Conversationapi_Type_ConversationDirection: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_CardHeight: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ConversationMessage: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ConversationMessage.OneOf_Message: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_AppMessage: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_AppMessage.OneOf_Message: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ContactMessage: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ContactMessage.OneOf_Message: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_TextMessage: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_MediaMessage: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_MediaCardMessage: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_FallbackMessage: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_TemplateMessage: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_TemplateReference: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_LocationMessage: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_Choice: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_Choice.OneOf_Choice: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_CallMessage: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ChoiceMessage: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_CardMessage: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_CarouselMessage: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ChoiceResponseMessage: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_UrlMessage: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ReplyTo: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ContactInfoMessage: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_AddressInfo: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_EmailInfo: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_NameInfo: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_OrganizationInfo: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_PhoneNumberInfo: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_UrlInfo: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "sinch.conversationapi.type"

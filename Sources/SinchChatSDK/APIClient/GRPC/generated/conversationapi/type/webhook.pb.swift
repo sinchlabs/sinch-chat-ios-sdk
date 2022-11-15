@@ -253,6 +253,13 @@ struct Sinch_Conversationapi_Type_ClientCredentials {
   init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Sinch_Conversationapi_Type_WebhookTargetType: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_WebhookTrigger: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_Webhook: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ClientCredentials: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "sinch.conversationapi.type"

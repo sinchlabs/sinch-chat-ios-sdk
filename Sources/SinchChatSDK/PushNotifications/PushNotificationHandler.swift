@@ -13,6 +13,7 @@ protocol PushNotificationHandler: PushNofiticationPermissionHandler {
     var authDataSource: AuthDataSource? { get set }
 
     func sendDeviceToken(token: Data)
+    func unsubscribe(_ completion: @escaping (Result<Void, Error>) -> Void)
 
     func handleNotification(payload: [AnyHashable: Any]) -> IsHandled
 
@@ -68,6 +69,10 @@ final class DefaultPushNotificationHandler: PushNotificationHandler {
     func sendDeviceToken(token: Data) {
         pushDeviceTokenCoordinator.setTokenToSend(deviceToken: token)
         sendTokenIfNeeded()
+    }
+    
+    func unsubscribe(_ completion: @escaping (Result<Void, Error>) -> Void) {
+        pushRepository?.unsubscribe(completion)
     }
 
     func askForPermissions(completion: ((SinchSDKNotificationStatus) -> Void)?) {

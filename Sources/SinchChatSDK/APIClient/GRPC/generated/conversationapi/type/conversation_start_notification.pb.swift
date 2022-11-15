@@ -42,6 +42,10 @@ struct Sinch_Conversationapi_Type_ConversationStartNotification {
   fileprivate var _conversation: Sinch_Conversationapi_Type_Conversation? = nil
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Sinch_Conversationapi_Type_ConversationStartNotification: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "sinch.conversationapi.type"

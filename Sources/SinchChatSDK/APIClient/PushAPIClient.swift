@@ -24,13 +24,12 @@ final class DefaultPushAPIClient: PushAPIClient {
     init?(region: Region) {
         switch region {
         case .EU1:
-            host = "sdk.sinch-chat.unauth.prod.sinch.com"
+            host = "grpc.sinch-push.prod.sinch.com"
         case .US1:
             fatalError("there is no url for US region provided yet")
-        case .custom(let host):
+        case .custom(_, let host):
             self.host = host
         }
-//        self.host = "{{ push-sdk-api-host-here }}"
         
         let keepalive = ClientConnectionKeepalive(
             interval: .seconds(10),

@@ -5,7 +5,7 @@ import Logging
 public enum Region: Codable, Equatable {
     case EU1
     case US1
-    case custom(host: String)
+    case custom(host: String, pushAPIHost: String)
 }
 
 protocol APIClient {
@@ -34,7 +34,7 @@ final class DefaultAPIClient: APIClient {
             host = "sdk.sinch-chat.unauth.prod.sinch.com"
         case .US1:
             fatalError("there is no url for US region provided yet")
-        case .custom(let host):
+        case .custom(let host, _):
             self.host = host
         }
         

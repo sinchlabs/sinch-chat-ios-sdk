@@ -49,7 +49,7 @@ class LocationMessageCell: MessageContentCell {
         messageContainerView.addSubview(messageLabel)
         messageContainerView.addSubview(locationButton)
         messageContainerView.addSubview(dateLabel)
-        locationButton.addTarget(self, action: #selector(openAppleMaps), for: .touchUpInside)
+        locationButton.addTarget(self, action: #selector(openMaps), for: .touchUpInside)
     }
     
     override func configure(with message: Message, at indexPath: IndexPath, and messagesCollectionView: MessageCollectionView) {
@@ -137,17 +137,14 @@ class LocationMessageCell: MessageContentCell {
         }
     }
     
-    @objc func openAppleMaps() {
+    @objc func openMaps() {
         guard let message = message?.body as? MessageLocation,
               let title = message.title.replacingOccurrences(of: " ", with: "+").addingPercentEncoding(withAllowedCharacters: .urlHostAllowed) else {
-        return
-        }
-        let directionsURL = "http://maps.apple.com/?q=\(title)&ll=\(message.latitude),\(message.longitude)"
-        guard let url = URL(string: directionsURL) else {
             return
         }
         
-        UIApplication.shared.open(url, options: [:], completionHandler: nil)
-       
+        let locationChoice = ChoiceLocation(text: title, label: message.label, latitude: message.latitude, longitude: message.longitude)
+        
+        delegate?.didTapOnChoice(.locationMessage(locationChoice), in: self)
     }
 }

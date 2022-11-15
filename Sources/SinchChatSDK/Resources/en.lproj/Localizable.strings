@@ -36,3 +36,7 @@
 "recording_title" = "Recording";
 "voice_message_title" = "Voice message";
 "alert_message_hold_to_record" = "Hold to record, release to send";
+
+"location_action_sheet_title" = "Choose app";
+"location_action_sheet_apple_maps" = "Apple Maps";
+"location_action_sheet_google_maps" = "Google Maps";

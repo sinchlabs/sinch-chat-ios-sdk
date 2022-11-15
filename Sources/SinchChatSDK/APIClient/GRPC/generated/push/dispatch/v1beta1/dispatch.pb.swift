@@ -130,6 +130,13 @@ struct Sinch_Push_Dispatch_V1beta1_Payload {
   init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Sinch_Push_Dispatch_V1beta1_DispatchRequest: @unchecked Sendable {}
+extension Sinch_Push_Dispatch_V1beta1_DispatchedEvent: @unchecked Sendable {}
+extension Sinch_Push_Dispatch_V1beta1_Payload: @unchecked Sendable {}
+extension Sinch_Push_Dispatch_V1beta1_Payload.OneOf_Type: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "sinch.push.dispatch.v1beta1"

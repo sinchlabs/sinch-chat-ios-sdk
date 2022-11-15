@@ -96,7 +96,6 @@ final class ComposeView: SinchView {
         scrollToBottomButton.layer.borderColor = uiConfig.inputTextViewBorderColor.cgColor
         scrollToBottomButton.layer.borderWidth = 1.0
         scrollToBottomButton.layer.cornerRadius = 12.0
-        scrollToBottomButton.layer.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner]
         scrollToBottomButton.imageView?.contentMode = .scaleAspectFit
         scrollToBottomButton.setImage(uiConfig.scrollToBottomImage, for: .normal)
         scrollToBottomButton.translatesAutoresizingMaskIntoConstraints = false
@@ -179,7 +178,7 @@ final class ComposeView: SinchView {
             rightStackView.centerYAnchor.constraint(equalTo: sendButton.centerYAnchor, constant: 0),
             
             scrollToBottomButton.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: -10),
-            scrollToBottomButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: 8),
+            scrollToBottomButton.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: 10),
             scrollToBottomButton.widthAnchor.constraint(equalToConstant: 48),
             scrollToBottomButton.heightAnchor.constraint(equalToConstant: 48),
             

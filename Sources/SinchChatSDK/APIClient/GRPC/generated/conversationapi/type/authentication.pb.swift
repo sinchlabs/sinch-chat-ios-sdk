@@ -471,6 +471,23 @@ struct Sinch_Conversationapi_Type_LineCredentials {
   init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Sinch_Conversationapi_Type_ChannelIntegrationStatus: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ConversationChannelCredential: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ConversationChannelCredential.OneOf_Credential: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_StaticBearerCredential: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_StaticTokenCredential: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_BasicAuthCredential: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_MMSCredentials: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_TelegramCredentials: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_InstagramCredentials: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_KakaoTalkCredentials: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_AppleBcCredentials: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ChannelIntegrationState: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_WeChatCredentials: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_LineCredentials: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "sinch.conversationapi.type"

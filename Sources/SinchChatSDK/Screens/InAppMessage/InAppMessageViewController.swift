@@ -55,13 +55,16 @@ final class InAppMessageViewController: SinchViewController<InAppMessageViewMode
         case .callMessage(let message):
             ChoicesHelper.callNumber(phoneNumber: message.phoneNumber)
         case .locationMessage(let message):
-            ChoicesHelper.openAppleMaps(choice: message)
-
+            let action = LocationActionHandler(mainView.localizationConfiguration)
+            DispatchQueue.main.async {
+                action.handleOpenLocationAction(self, title: message.text, latitude: message.latitude, longitude: message.longitude)
+            }
         }
     }
     func didTapOnUrl(_ url: URL) {
         didSelectURL(url)
     }
+    
     func didTapOnMediaUrl(_ url: URL) {
         
         let mediaViewController = MediaViewerController(

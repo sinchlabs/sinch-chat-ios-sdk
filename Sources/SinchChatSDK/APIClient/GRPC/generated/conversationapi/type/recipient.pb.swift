@@ -107,6 +107,13 @@ struct Sinch_Conversationapi_Type_ChannelRecipientIdentity {
   init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Sinch_Conversationapi_Type_Recipient: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_Recipient.OneOf_Recipient: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ChannelIdentities: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ChannelRecipientIdentity: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "sinch.conversationapi.type"

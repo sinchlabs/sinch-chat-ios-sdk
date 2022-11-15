@@ -22,6 +22,7 @@
 //
 import GRPC
 import NIO
+import NIOConcurrencyHelpers
 import SwiftProtobuf
 
 
@@ -41,15 +42,10 @@ internal protocol Sinch_Push_Sdk_V1beta1_SdkServiceClientProtocol: GRPCClient {
     callOptions: CallOptions?
   ) -> UnaryCall<Sinch_Push_Sdk_V1beta1_SubscribeRequest, SwiftProtobuf.Google_Protobuf_Empty>
 
-  func confirmDelivery(
-    _ request: Sinch_Push_Sdk_V1beta1_ConfirmDeliveryRequest,
+  func unsubscribe(
+    _ request: Sinch_Push_Sdk_V1beta1_UnsubscribeRequest,
     callOptions: CallOptions?
-  ) -> UnaryCall<Sinch_Push_Sdk_V1beta1_ConfirmDeliveryRequest, SwiftProtobuf.Google_Protobuf_Empty>
-
-  func reply(
-    _ request: Sinch_Push_Sdk_V1beta1_ReplyRequest,
-    callOptions: CallOptions?
-  ) -> UnaryCall<Sinch_Push_Sdk_V1beta1_ReplyRequest, SwiftProtobuf.Google_Protobuf_Empty>
+  ) -> UnaryCall<Sinch_Push_Sdk_V1beta1_UnsubscribeRequest, SwiftProtobuf.Google_Protobuf_Empty>
 }
 
 extension Sinch_Push_Sdk_V1beta1_SdkServiceClientProtocol {
@@ -58,7 +54,7 @@ extension Sinch_Push_Sdk_V1beta1_SdkServiceClientProtocol {
   }
 
   ///
-  ///Subscribing for push notifications.
+  ///Subscribing to push notifications.
   ///
   /// - Parameters:
   ///   - request: Request to send to Subscribe.
@@ -69,7 +65,7 @@ extension Sinch_Push_Sdk_V1beta1_SdkServiceClientProtocol {
     callOptions: CallOptions? = nil
   ) -> UnaryCall<Sinch_Push_Sdk_V1beta1_SubscribeRequest, SwiftProtobuf.Google_Protobuf_Empty> {
     return self.makeUnaryCall(
-      path: "/sinch.push.sdk.v1beta1.SdkService/Subscribe",
+      path: Sinch_Push_Sdk_V1beta1_SdkServiceClientMetadata.Methods.subscribe.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeSubscribeInterceptors() ?? []
@@ -77,60 +73,64 @@ extension Sinch_Push_Sdk_V1beta1_SdkServiceClientProtocol {
   }
 
   ///
-  ///Confirming push notification delivery.
-  ///Publishes DeliveryConfirmedEvent meant for adapter.
+  ///Unsubscribing from push notifications.
   ///
   /// - Parameters:
-  ///   - request: Request to send to ConfirmDelivery.
+  ///   - request: Request to send to Unsubscribe.
   ///   - callOptions: Call options.
   /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func confirmDelivery(
-    _ request: Sinch_Push_Sdk_V1beta1_ConfirmDeliveryRequest,
+  internal func unsubscribe(
+    _ request: Sinch_Push_Sdk_V1beta1_UnsubscribeRequest,
     callOptions: CallOptions? = nil
-  ) -> UnaryCall<Sinch_Push_Sdk_V1beta1_ConfirmDeliveryRequest, SwiftProtobuf.Google_Protobuf_Empty> {
+  ) -> UnaryCall<Sinch_Push_Sdk_V1beta1_UnsubscribeRequest, SwiftProtobuf.Google_Protobuf_Empty> {
     return self.makeUnaryCall(
-      path: "/sinch.push.sdk.v1beta1.SdkService/ConfirmDelivery",
+      path: Sinch_Push_Sdk_V1beta1_SdkServiceClientMetadata.Methods.unsubscribe.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
-      interceptors: self.interceptors?.makeConfirmDeliveryInterceptors() ?? []
-    )
-  }
-
-  ///
-  ///Sending a reply message or event.
-  ///Publishes RepliedEvent meant for adapter.
-  ///
-  /// - Parameters:
-  ///   - request: Request to send to Reply.
-  ///   - callOptions: Call options.
-  /// - Returns: A `UnaryCall` with futures for the metadata, status and response.
-  internal func reply(
-    _ request: Sinch_Push_Sdk_V1beta1_ReplyRequest,
-    callOptions: CallOptions? = nil
-  ) -> UnaryCall<Sinch_Push_Sdk_V1beta1_ReplyRequest, SwiftProtobuf.Google_Protobuf_Empty> {
-    return self.makeUnaryCall(
-      path: "/sinch.push.sdk.v1beta1.SdkService/Reply",
-      request: request,
-      callOptions: callOptions ?? self.defaultCallOptions,
-      interceptors: self.interceptors?.makeReplyInterceptors() ?? []
+      interceptors: self.interceptors?.makeUnsubscribeInterceptors() ?? []
     )
   }
 }
 
-internal protocol Sinch_Push_Sdk_V1beta1_SdkServiceClientInterceptorFactoryProtocol {
+#if compiler(>=5.6)
+@available(*, deprecated)
+extension Sinch_Push_Sdk_V1beta1_SdkServiceClient: @unchecked Sendable {}
+#endif // compiler(>=5.6)
 
-  /// - Returns: Interceptors to use when invoking 'subscribe'.
-  func makeSubscribeInterceptors() -> [ClientInterceptor<Sinch_Push_Sdk_V1beta1_SubscribeRequest, SwiftProtobuf.Google_Protobuf_Empty>]
-
-  /// - Returns: Interceptors to use when invoking 'confirmDelivery'.
-  func makeConfirmDeliveryInterceptors() -> [ClientInterceptor<Sinch_Push_Sdk_V1beta1_ConfirmDeliveryRequest, SwiftProtobuf.Google_Protobuf_Empty>]
-
-  /// - Returns: Interceptors to use when invoking 'reply'.
-  func makeReplyInterceptors() -> [ClientInterceptor<Sinch_Push_Sdk_V1beta1_ReplyRequest, SwiftProtobuf.Google_Protobuf_Empty>]
-}
-
+@available(*, deprecated, renamed: "Sinch_Push_Sdk_V1beta1_SdkServiceNIOClient")
 internal final class Sinch_Push_Sdk_V1beta1_SdkServiceClient: Sinch_Push_Sdk_V1beta1_SdkServiceClientProtocol {
+  private let lock = Lock()
+  private var _defaultCallOptions: CallOptions
+  private var _interceptors: Sinch_Push_Sdk_V1beta1_SdkServiceClientInterceptorFactoryProtocol?
   internal let channel: GRPCChannel
+  internal var defaultCallOptions: CallOptions {
+    get { self.lock.withLock { return self._defaultCallOptions } }
+    set { self.lock.withLockVoid { self._defaultCallOptions = newValue } }
+  }
+  internal var interceptors: Sinch_Push_Sdk_V1beta1_SdkServiceClientInterceptorFactoryProtocol? {
+    get { self.lock.withLock { return self._interceptors } }
+    set { self.lock.withLockVoid { self._interceptors = newValue } }
+  }
+
+  /// Creates a client for the sinch.push.sdk.v1beta1.SdkService service.
+  ///
+  /// - Parameters:
+  ///   - channel: `GRPCChannel` to the service host.
+  ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
+  ///   - interceptors: A factory providing interceptors for each RPC.
+  internal init(
+    channel: GRPCChannel,
+    defaultCallOptions: CallOptions = CallOptions(),
+    interceptors: Sinch_Push_Sdk_V1beta1_SdkServiceClientInterceptorFactoryProtocol? = nil
+  ) {
+    self.channel = channel
+    self._defaultCallOptions = defaultCallOptions
+    self._interceptors = interceptors
+  }
+}
+
+internal struct Sinch_Push_Sdk_V1beta1_SdkServiceNIOClient: Sinch_Push_Sdk_V1beta1_SdkServiceClientProtocol {
+  internal var channel: GRPCChannel
   internal var defaultCallOptions: CallOptions
   internal var interceptors: Sinch_Push_Sdk_V1beta1_SdkServiceClientInterceptorFactoryProtocol?
 
@@ -151,6 +151,149 @@ internal final class Sinch_Push_Sdk_V1beta1_SdkServiceClient: Sinch_Push_Sdk_V1b
   }
 }
 
+#if compiler(>=5.6)
+///
+///Providing unified public interface for Sinch Push SDK.
+///Facade service.
+///Exposes public interface.
+///Public access controlled by CSSP Platform.
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+internal protocol Sinch_Push_Sdk_V1beta1_SdkServiceAsyncClientProtocol: GRPCClient {
+  static var serviceDescriptor: GRPCServiceDescriptor { get }
+  var interceptors: Sinch_Push_Sdk_V1beta1_SdkServiceClientInterceptorFactoryProtocol? { get }
+
+  func makeSubscribeCall(
+    _ request: Sinch_Push_Sdk_V1beta1_SubscribeRequest,
+    callOptions: CallOptions?
+  ) -> GRPCAsyncUnaryCall<Sinch_Push_Sdk_V1beta1_SubscribeRequest, SwiftProtobuf.Google_Protobuf_Empty>
+
+  func makeUnsubscribeCall(
+    _ request: Sinch_Push_Sdk_V1beta1_UnsubscribeRequest,
+    callOptions: CallOptions?
+  ) -> GRPCAsyncUnaryCall<Sinch_Push_Sdk_V1beta1_UnsubscribeRequest, SwiftProtobuf.Google_Protobuf_Empty>
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension Sinch_Push_Sdk_V1beta1_SdkServiceAsyncClientProtocol {
+  internal static var serviceDescriptor: GRPCServiceDescriptor {
+    return Sinch_Push_Sdk_V1beta1_SdkServiceClientMetadata.serviceDescriptor
+  }
+
+  internal var interceptors: Sinch_Push_Sdk_V1beta1_SdkServiceClientInterceptorFactoryProtocol? {
+    return nil
+  }
+
+  internal func makeSubscribeCall(
+    _ request: Sinch_Push_Sdk_V1beta1_SubscribeRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncUnaryCall<Sinch_Push_Sdk_V1beta1_SubscribeRequest, SwiftProtobuf.Google_Protobuf_Empty> {
+    return self.makeAsyncUnaryCall(
+      path: Sinch_Push_Sdk_V1beta1_SdkServiceClientMetadata.Methods.subscribe.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeSubscribeInterceptors() ?? []
+    )
+  }
+
+  internal func makeUnsubscribeCall(
+    _ request: Sinch_Push_Sdk_V1beta1_UnsubscribeRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncUnaryCall<Sinch_Push_Sdk_V1beta1_UnsubscribeRequest, SwiftProtobuf.Google_Protobuf_Empty> {
+    return self.makeAsyncUnaryCall(
+      path: Sinch_Push_Sdk_V1beta1_SdkServiceClientMetadata.Methods.unsubscribe.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeUnsubscribeInterceptors() ?? []
+    )
+  }
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension Sinch_Push_Sdk_V1beta1_SdkServiceAsyncClientProtocol {
+  internal func subscribe(
+    _ request: Sinch_Push_Sdk_V1beta1_SubscribeRequest,
+    callOptions: CallOptions? = nil
+  ) async throws -> SwiftProtobuf.Google_Protobuf_Empty {
+    return try await self.performAsyncUnaryCall(
+      path: Sinch_Push_Sdk_V1beta1_SdkServiceClientMetadata.Methods.subscribe.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeSubscribeInterceptors() ?? []
+    )
+  }
+
+  internal func unsubscribe(
+    _ request: Sinch_Push_Sdk_V1beta1_UnsubscribeRequest,
+    callOptions: CallOptions? = nil
+  ) async throws -> SwiftProtobuf.Google_Protobuf_Empty {
+    return try await self.performAsyncUnaryCall(
+      path: Sinch_Push_Sdk_V1beta1_SdkServiceClientMetadata.Methods.unsubscribe.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeUnsubscribeInterceptors() ?? []
+    )
+  }
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+internal struct Sinch_Push_Sdk_V1beta1_SdkServiceAsyncClient: Sinch_Push_Sdk_V1beta1_SdkServiceAsyncClientProtocol {
+  internal var channel: GRPCChannel
+  internal var defaultCallOptions: CallOptions
+  internal var interceptors: Sinch_Push_Sdk_V1beta1_SdkServiceClientInterceptorFactoryProtocol?
+
+  internal init(
+    channel: GRPCChannel,
+    defaultCallOptions: CallOptions = CallOptions(),
+    interceptors: Sinch_Push_Sdk_V1beta1_SdkServiceClientInterceptorFactoryProtocol? = nil
+  ) {
+    self.channel = channel
+    self.defaultCallOptions = defaultCallOptions
+    self.interceptors = interceptors
+  }
+}
+
+#endif // compiler(>=5.6)
+
+internal protocol Sinch_Push_Sdk_V1beta1_SdkServiceClientInterceptorFactoryProtocol: GRPCSendable {
+
+  /// - Returns: Interceptors to use when invoking 'subscribe'.
+  func makeSubscribeInterceptors() -> [ClientInterceptor<Sinch_Push_Sdk_V1beta1_SubscribeRequest, SwiftProtobuf.Google_Protobuf_Empty>]
+
+  /// - Returns: Interceptors to use when invoking 'unsubscribe'.
+  func makeUnsubscribeInterceptors() -> [ClientInterceptor<Sinch_Push_Sdk_V1beta1_UnsubscribeRequest, SwiftProtobuf.Google_Protobuf_Empty>]
+}
+
+internal enum Sinch_Push_Sdk_V1beta1_SdkServiceClientMetadata {
+  internal static let serviceDescriptor = GRPCServiceDescriptor(
+    name: "SdkService",
+    fullName: "sinch.push.sdk.v1beta1.SdkService",
+    methods: [
+      Sinch_Push_Sdk_V1beta1_SdkServiceClientMetadata.Methods.subscribe,
+      Sinch_Push_Sdk_V1beta1_SdkServiceClientMetadata.Methods.unsubscribe,
+    ]
+  )
+
+  internal enum Methods {
+    internal static let subscribe = GRPCMethodDescriptor(
+      name: "Subscribe",
+      path: "/sinch.push.sdk.v1beta1.SdkService/Subscribe",
+      type: GRPCCallType.unary
+    )
+
+    internal static let unsubscribe = GRPCMethodDescriptor(
+      name: "Unsubscribe",
+      path: "/sinch.push.sdk.v1beta1.SdkService/Unsubscribe",
+      type: GRPCCallType.unary
+    )
+  }
+}
+
+#if compiler(>=5.6)
+@available(swift, deprecated: 5.6)
+extension Sinch_Push_Sdk_V1beta1_SdkServiceTestClient: @unchecked Sendable {}
+#endif // compiler(>=5.6)
+
+@available(swift, deprecated: 5.6, message: "Test clients are not Sendable but the 'GRPCClient' API requires clients to be Sendable. Using a localhost client and server is the recommended alternative.")
 internal final class Sinch_Push_Sdk_V1beta1_SdkServiceTestClient: Sinch_Push_Sdk_V1beta1_SdkServiceClientProtocol {
   private let fakeChannel: FakeChannel
   internal var defaultCallOptions: CallOptions
@@ -177,13 +320,13 @@ internal final class Sinch_Push_Sdk_V1beta1_SdkServiceTestClient: Sinch_Push_Sdk
   internal func makeSubscribeResponseStream(
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Push_Sdk_V1beta1_SubscribeRequest>) -> () = { _ in }
   ) -> FakeUnaryResponse<Sinch_Push_Sdk_V1beta1_SubscribeRequest, SwiftProtobuf.Google_Protobuf_Empty> {
-    return self.fakeChannel.makeFakeUnaryResponse(path: "/sinch.push.sdk.v1beta1.SdkService/Subscribe", requestHandler: requestHandler)
+    return self.fakeChannel.makeFakeUnaryResponse(path: Sinch_Push_Sdk_V1beta1_SdkServiceClientMetadata.Methods.subscribe.path, requestHandler: requestHandler)
   }
 
   internal func enqueueSubscribeResponse(
     _ response: SwiftProtobuf.Google_Protobuf_Empty,
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Push_Sdk_V1beta1_SubscribeRequest>) -> () = { _ in }
-  )  {
+  ) {
     let stream = self.makeSubscribeResponseStream(requestHandler)
     // This is the only operation on the stream; try! is fine.
     try! stream.sendMessage(response)
@@ -191,55 +334,31 @@ internal final class Sinch_Push_Sdk_V1beta1_SdkServiceTestClient: Sinch_Push_Sdk
 
   /// Returns true if there are response streams enqueued for 'Subscribe'
   internal var hasSubscribeResponsesRemaining: Bool {
-    return self.fakeChannel.hasFakeResponseEnqueued(forPath: "/sinch.push.sdk.v1beta1.SdkService/Subscribe")
+    return self.fakeChannel.hasFakeResponseEnqueued(forPath: Sinch_Push_Sdk_V1beta1_SdkServiceClientMetadata.Methods.subscribe.path)
   }
 
-  /// Make a unary response for the ConfirmDelivery RPC. This must be called
-  /// before calling 'confirmDelivery'. See also 'FakeUnaryResponse'.
+  /// Make a unary response for the Unsubscribe RPC. This must be called
+  /// before calling 'unsubscribe'. See also 'FakeUnaryResponse'.
   ///
   /// - Parameter requestHandler: a handler for request parts sent by the RPC.
-  internal func makeConfirmDeliveryResponseStream(
-    _ requestHandler: @escaping (FakeRequestPart<Sinch_Push_Sdk_V1beta1_ConfirmDeliveryRequest>) -> () = { _ in }
-  ) -> FakeUnaryResponse<Sinch_Push_Sdk_V1beta1_ConfirmDeliveryRequest, SwiftProtobuf.Google_Protobuf_Empty> {
-    return self.fakeChannel.makeFakeUnaryResponse(path: "/sinch.push.sdk.v1beta1.SdkService/ConfirmDelivery", requestHandler: requestHandler)
+  internal func makeUnsubscribeResponseStream(
+    _ requestHandler: @escaping (FakeRequestPart<Sinch_Push_Sdk_V1beta1_UnsubscribeRequest>) -> () = { _ in }
+  ) -> FakeUnaryResponse<Sinch_Push_Sdk_V1beta1_UnsubscribeRequest, SwiftProtobuf.Google_Protobuf_Empty> {
+    return self.fakeChannel.makeFakeUnaryResponse(path: Sinch_Push_Sdk_V1beta1_SdkServiceClientMetadata.Methods.unsubscribe.path, requestHandler: requestHandler)
   }
 
-  internal func enqueueConfirmDeliveryResponse(
+  internal func enqueueUnsubscribeResponse(
     _ response: SwiftProtobuf.Google_Protobuf_Empty,
-    _ requestHandler: @escaping (FakeRequestPart<Sinch_Push_Sdk_V1beta1_ConfirmDeliveryRequest>) -> () = { _ in }
-  )  {
-    let stream = self.makeConfirmDeliveryResponseStream(requestHandler)
+    _ requestHandler: @escaping (FakeRequestPart<Sinch_Push_Sdk_V1beta1_UnsubscribeRequest>) -> () = { _ in }
+  ) {
+    let stream = self.makeUnsubscribeResponseStream(requestHandler)
     // This is the only operation on the stream; try! is fine.
     try! stream.sendMessage(response)
   }
 
-  /// Returns true if there are response streams enqueued for 'ConfirmDelivery'
-  internal var hasConfirmDeliveryResponsesRemaining: Bool {
-    return self.fakeChannel.hasFakeResponseEnqueued(forPath: "/sinch.push.sdk.v1beta1.SdkService/ConfirmDelivery")
-  }
-
-  /// Make a unary response for the Reply RPC. This must be called
-  /// before calling 'reply'. See also 'FakeUnaryResponse'.
-  ///
-  /// - Parameter requestHandler: a handler for request parts sent by the RPC.
-  internal func makeReplyResponseStream(
-    _ requestHandler: @escaping (FakeRequestPart<Sinch_Push_Sdk_V1beta1_ReplyRequest>) -> () = { _ in }
-  ) -> FakeUnaryResponse<Sinch_Push_Sdk_V1beta1_ReplyRequest, SwiftProtobuf.Google_Protobuf_Empty> {
-    return self.fakeChannel.makeFakeUnaryResponse(path: "/sinch.push.sdk.v1beta1.SdkService/Reply", requestHandler: requestHandler)
-  }
-
-  internal func enqueueReplyResponse(
-    _ response: SwiftProtobuf.Google_Protobuf_Empty,
-    _ requestHandler: @escaping (FakeRequestPart<Sinch_Push_Sdk_V1beta1_ReplyRequest>) -> () = { _ in }
-  )  {
-    let stream = self.makeReplyResponseStream(requestHandler)
-    // This is the only operation on the stream; try! is fine.
-    try! stream.sendMessage(response)
-  }
-
-  /// Returns true if there are response streams enqueued for 'Reply'
-  internal var hasReplyResponsesRemaining: Bool {
-    return self.fakeChannel.hasFakeResponseEnqueued(forPath: "/sinch.push.sdk.v1beta1.SdkService/Reply")
+  /// Returns true if there are response streams enqueued for 'Unsubscribe'
+  internal var hasUnsubscribeResponsesRemaining: Bool {
+    return self.fakeChannel.hasFakeResponseEnqueued(forPath: Sinch_Push_Sdk_V1beta1_SdkServiceClientMetadata.Methods.unsubscribe.path)
   }
 }
 

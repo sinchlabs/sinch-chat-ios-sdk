@@ -22,6 +22,7 @@
 //
 import GRPC
 import NIO
+import NIOConcurrencyHelpers
 import SwiftProtobuf
 
 
@@ -92,7 +93,7 @@ extension Sinch_Chat_Sdk_V1alpha2_SdkServiceClientProtocol {
     callOptions: CallOptions? = nil
   ) -> UnaryCall<Sinch_Chat_Sdk_V1alpha2_GetClientRequest, Sinch_Chat_Client_V1alpha2_Client> {
     return self.makeUnaryCall(
-      path: "/sinch.chat.sdk.v1alpha2.SdkService/GetClient",
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.getClient.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeGetClientInterceptors() ?? []
@@ -110,7 +111,7 @@ extension Sinch_Chat_Sdk_V1alpha2_SdkServiceClientProtocol {
     callOptions: CallOptions? = nil
   ) -> UnaryCall<Sinch_Chat_Sdk_V1alpha2_IssueAnonymousTokenRequest, Sinch_Chat_Sdk_V1alpha2_IssueAnonymousTokenResponse> {
     return self.makeUnaryCall(
-      path: "/sinch.chat.sdk.v1alpha2.SdkService/IssueAnonymousToken",
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.issueAnonymousToken.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeIssueAnonymousTokenInterceptors() ?? []
@@ -128,7 +129,7 @@ extension Sinch_Chat_Sdk_V1alpha2_SdkServiceClientProtocol {
     callOptions: CallOptions? = nil
   ) -> UnaryCall<Sinch_Chat_Sdk_V1alpha2_IssueTokenWithSignedUuidRequest, Sinch_Chat_Sdk_V1alpha2_IssueTokenWithSignedUuidResponse> {
     return self.makeUnaryCall(
-      path: "/sinch.chat.sdk.v1alpha2.SdkService/IssueTokenWithSignedUuid",
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.issueTokenWithSignedUuid.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeIssueTokenWithSignedUuidInterceptors() ?? []
@@ -146,7 +147,7 @@ extension Sinch_Chat_Sdk_V1alpha2_SdkServiceClientProtocol {
     callOptions: CallOptions? = nil
   ) -> UnaryCall<Sinch_Chat_Sdk_V1alpha2_SendRequest, Sinch_Chat_Sdk_V1alpha2_SendResponse> {
     return self.makeUnaryCall(
-      path: "/sinch.chat.sdk.v1alpha2.SdkService/Send",
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.send.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeSendInterceptors() ?? []
@@ -164,7 +165,7 @@ extension Sinch_Chat_Sdk_V1alpha2_SdkServiceClientProtocol {
     callOptions: CallOptions? = nil
   ) -> UnaryCall<Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest, Sinch_Chat_Sdk_V1alpha2_GetHistoryResponse> {
     return self.makeUnaryCall(
-      path: "/sinch.chat.sdk.v1alpha2.SdkService/GetHistory",
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.getHistory.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeGetHistoryInterceptors() ?? []
@@ -184,7 +185,7 @@ extension Sinch_Chat_Sdk_V1alpha2_SdkServiceClientProtocol {
     handler: @escaping (Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamResponse) -> Void
   ) -> ServerStreamingCall<Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest, Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamResponse> {
     return self.makeServerStreamingCall(
-      path: "/sinch.chat.sdk.v1alpha2.SdkService/SubscribeToStream",
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.subscribeToStream.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeSubscribeToStreamInterceptors() ?? [],
@@ -203,7 +204,7 @@ extension Sinch_Chat_Sdk_V1alpha2_SdkServiceClientProtocol {
     callOptions: CallOptions? = nil
   ) -> UnaryCall<Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest, SwiftProtobuf.Google_Protobuf_Empty> {
     return self.makeUnaryCall(
-      path: "/sinch.chat.sdk.v1alpha2.SdkService/SubscribeToPush",
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.subscribeToPush.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeSubscribeToPushInterceptors() ?? []
@@ -221,7 +222,7 @@ extension Sinch_Chat_Sdk_V1alpha2_SdkServiceClientProtocol {
     callOptions: CallOptions? = nil
   ) -> UnaryCall<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest, Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse> {
     return self.makeUnaryCall(
-      path: "/sinch.chat.sdk.v1alpha2.SdkService/UploadMedia",
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.uploadMedia.path,
       request: request,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeUploadMediaInterceptors() ?? []
@@ -240,14 +241,383 @@ extension Sinch_Chat_Sdk_V1alpha2_SdkServiceClientProtocol {
     callOptions: CallOptions? = nil
   ) -> ClientStreamingCall<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest, Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse> {
     return self.makeClientStreamingCall(
-      path: "/sinch.chat.sdk.v1alpha2.SdkService/UploadMediaStream",
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.uploadMediaStream.path,
       callOptions: callOptions ?? self.defaultCallOptions,
       interceptors: self.interceptors?.makeUploadMediaStreamInterceptors() ?? []
     )
   }
 }
 
-internal protocol Sinch_Chat_Sdk_V1alpha2_SdkServiceClientInterceptorFactoryProtocol {
+#if compiler(>=5.6)
+@available(*, deprecated)
+extension Sinch_Chat_Sdk_V1alpha2_SdkServiceClient: @unchecked Sendable {}
+#endif // compiler(>=5.6)
+
+@available(*, deprecated, renamed: "Sinch_Chat_Sdk_V1alpha2_SdkServiceNIOClient")
+internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceClient: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientProtocol {
+  private let lock = Lock()
+  private var _defaultCallOptions: CallOptions
+  private var _interceptors: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientInterceptorFactoryProtocol?
+  internal let channel: GRPCChannel
+  internal var defaultCallOptions: CallOptions {
+    get { self.lock.withLock { return self._defaultCallOptions } }
+    set { self.lock.withLockVoid { self._defaultCallOptions = newValue } }
+  }
+  internal var interceptors: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientInterceptorFactoryProtocol? {
+    get { self.lock.withLock { return self._interceptors } }
+    set { self.lock.withLockVoid { self._interceptors = newValue } }
+  }
+
+  /// Creates a client for the sinch.chat.sdk.v1alpha2.SdkService service.
+  ///
+  /// - Parameters:
+  ///   - channel: `GRPCChannel` to the service host.
+  ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
+  ///   - interceptors: A factory providing interceptors for each RPC.
+  internal init(
+    channel: GRPCChannel,
+    defaultCallOptions: CallOptions = CallOptions(),
+    interceptors: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientInterceptorFactoryProtocol? = nil
+  ) {
+    self.channel = channel
+    self._defaultCallOptions = defaultCallOptions
+    self._interceptors = interceptors
+  }
+}
+
+internal struct Sinch_Chat_Sdk_V1alpha2_SdkServiceNIOClient: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientProtocol {
+  internal var channel: GRPCChannel
+  internal var defaultCallOptions: CallOptions
+  internal var interceptors: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientInterceptorFactoryProtocol?
+
+  /// Creates a client for the sinch.chat.sdk.v1alpha2.SdkService service.
+  ///
+  /// - Parameters:
+  ///   - channel: `GRPCChannel` to the service host.
+  ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
+  ///   - interceptors: A factory providing interceptors for each RPC.
+  internal init(
+    channel: GRPCChannel,
+    defaultCallOptions: CallOptions = CallOptions(),
+    interceptors: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientInterceptorFactoryProtocol? = nil
+  ) {
+    self.channel = channel
+    self.defaultCallOptions = defaultCallOptions
+    self.interceptors = interceptors
+  }
+}
+
+#if compiler(>=5.6)
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+internal protocol Sinch_Chat_Sdk_V1alpha2_SdkServiceAsyncClientProtocol: GRPCClient {
+  static var serviceDescriptor: GRPCServiceDescriptor { get }
+  var interceptors: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientInterceptorFactoryProtocol? { get }
+
+  func makeGetClientCall(
+    _ request: Sinch_Chat_Sdk_V1alpha2_GetClientRequest,
+    callOptions: CallOptions?
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Sdk_V1alpha2_GetClientRequest, Sinch_Chat_Client_V1alpha2_Client>
+
+  func makeIssueAnonymousTokenCall(
+    _ request: Sinch_Chat_Sdk_V1alpha2_IssueAnonymousTokenRequest,
+    callOptions: CallOptions?
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Sdk_V1alpha2_IssueAnonymousTokenRequest, Sinch_Chat_Sdk_V1alpha2_IssueAnonymousTokenResponse>
+
+  func makeIssueTokenWithSignedUuidCall(
+    _ request: Sinch_Chat_Sdk_V1alpha2_IssueTokenWithSignedUuidRequest,
+    callOptions: CallOptions?
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Sdk_V1alpha2_IssueTokenWithSignedUuidRequest, Sinch_Chat_Sdk_V1alpha2_IssueTokenWithSignedUuidResponse>
+
+  func makeSendCall(
+    _ request: Sinch_Chat_Sdk_V1alpha2_SendRequest,
+    callOptions: CallOptions?
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Sdk_V1alpha2_SendRequest, Sinch_Chat_Sdk_V1alpha2_SendResponse>
+
+  func makeGetHistoryCall(
+    _ request: Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest,
+    callOptions: CallOptions?
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest, Sinch_Chat_Sdk_V1alpha2_GetHistoryResponse>
+
+  func makeSubscribeToStreamCall(
+    _ request: Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest,
+    callOptions: CallOptions?
+  ) -> GRPCAsyncServerStreamingCall<Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest, Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamResponse>
+
+  func makeSubscribeToPushCall(
+    _ request: Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest,
+    callOptions: CallOptions?
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest, SwiftProtobuf.Google_Protobuf_Empty>
+
+  func makeUploadMediaCall(
+    _ request: Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest,
+    callOptions: CallOptions?
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest, Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse>
+
+  func makeUploadMediaStreamCall(
+    callOptions: CallOptions?
+  ) -> GRPCAsyncClientStreamingCall<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest, Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse>
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension Sinch_Chat_Sdk_V1alpha2_SdkServiceAsyncClientProtocol {
+  internal static var serviceDescriptor: GRPCServiceDescriptor {
+    return Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.serviceDescriptor
+  }
+
+  internal var interceptors: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientInterceptorFactoryProtocol? {
+    return nil
+  }
+
+  internal func makeGetClientCall(
+    _ request: Sinch_Chat_Sdk_V1alpha2_GetClientRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Sdk_V1alpha2_GetClientRequest, Sinch_Chat_Client_V1alpha2_Client> {
+    return self.makeAsyncUnaryCall(
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.getClient.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeGetClientInterceptors() ?? []
+    )
+  }
+
+  internal func makeIssueAnonymousTokenCall(
+    _ request: Sinch_Chat_Sdk_V1alpha2_IssueAnonymousTokenRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Sdk_V1alpha2_IssueAnonymousTokenRequest, Sinch_Chat_Sdk_V1alpha2_IssueAnonymousTokenResponse> {
+    return self.makeAsyncUnaryCall(
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.issueAnonymousToken.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeIssueAnonymousTokenInterceptors() ?? []
+    )
+  }
+
+  internal func makeIssueTokenWithSignedUuidCall(
+    _ request: Sinch_Chat_Sdk_V1alpha2_IssueTokenWithSignedUuidRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Sdk_V1alpha2_IssueTokenWithSignedUuidRequest, Sinch_Chat_Sdk_V1alpha2_IssueTokenWithSignedUuidResponse> {
+    return self.makeAsyncUnaryCall(
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.issueTokenWithSignedUuid.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeIssueTokenWithSignedUuidInterceptors() ?? []
+    )
+  }
+
+  internal func makeSendCall(
+    _ request: Sinch_Chat_Sdk_V1alpha2_SendRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Sdk_V1alpha2_SendRequest, Sinch_Chat_Sdk_V1alpha2_SendResponse> {
+    return self.makeAsyncUnaryCall(
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.send.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeSendInterceptors() ?? []
+    )
+  }
+
+  internal func makeGetHistoryCall(
+    _ request: Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest, Sinch_Chat_Sdk_V1alpha2_GetHistoryResponse> {
+    return self.makeAsyncUnaryCall(
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.getHistory.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeGetHistoryInterceptors() ?? []
+    )
+  }
+
+  internal func makeSubscribeToStreamCall(
+    _ request: Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncServerStreamingCall<Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest, Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamResponse> {
+    return self.makeAsyncServerStreamingCall(
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.subscribeToStream.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeSubscribeToStreamInterceptors() ?? []
+    )
+  }
+
+  internal func makeSubscribeToPushCall(
+    _ request: Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest, SwiftProtobuf.Google_Protobuf_Empty> {
+    return self.makeAsyncUnaryCall(
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.subscribeToPush.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeSubscribeToPushInterceptors() ?? []
+    )
+  }
+
+  internal func makeUploadMediaCall(
+    _ request: Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncUnaryCall<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest, Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse> {
+    return self.makeAsyncUnaryCall(
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.uploadMedia.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeUploadMediaInterceptors() ?? []
+    )
+  }
+
+  internal func makeUploadMediaStreamCall(
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncClientStreamingCall<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest, Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse> {
+    return self.makeAsyncClientStreamingCall(
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.uploadMediaStream.path,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeUploadMediaStreamInterceptors() ?? []
+    )
+  }
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+extension Sinch_Chat_Sdk_V1alpha2_SdkServiceAsyncClientProtocol {
+  internal func getClient(
+    _ request: Sinch_Chat_Sdk_V1alpha2_GetClientRequest,
+    callOptions: CallOptions? = nil
+  ) async throws -> Sinch_Chat_Client_V1alpha2_Client {
+    return try await self.performAsyncUnaryCall(
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.getClient.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeGetClientInterceptors() ?? []
+    )
+  }
+
+  internal func issueAnonymousToken(
+    _ request: Sinch_Chat_Sdk_V1alpha2_IssueAnonymousTokenRequest,
+    callOptions: CallOptions? = nil
+  ) async throws -> Sinch_Chat_Sdk_V1alpha2_IssueAnonymousTokenResponse {
+    return try await self.performAsyncUnaryCall(
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.issueAnonymousToken.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeIssueAnonymousTokenInterceptors() ?? []
+    )
+  }
+
+  internal func issueTokenWithSignedUuid(
+    _ request: Sinch_Chat_Sdk_V1alpha2_IssueTokenWithSignedUuidRequest,
+    callOptions: CallOptions? = nil
+  ) async throws -> Sinch_Chat_Sdk_V1alpha2_IssueTokenWithSignedUuidResponse {
+    return try await self.performAsyncUnaryCall(
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.issueTokenWithSignedUuid.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeIssueTokenWithSignedUuidInterceptors() ?? []
+    )
+  }
+
+  internal func send(
+    _ request: Sinch_Chat_Sdk_V1alpha2_SendRequest,
+    callOptions: CallOptions? = nil
+  ) async throws -> Sinch_Chat_Sdk_V1alpha2_SendResponse {
+    return try await self.performAsyncUnaryCall(
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.send.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeSendInterceptors() ?? []
+    )
+  }
+
+  internal func getHistory(
+    _ request: Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest,
+    callOptions: CallOptions? = nil
+  ) async throws -> Sinch_Chat_Sdk_V1alpha2_GetHistoryResponse {
+    return try await self.performAsyncUnaryCall(
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.getHistory.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeGetHistoryInterceptors() ?? []
+    )
+  }
+
+  internal func subscribeToStream(
+    _ request: Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest,
+    callOptions: CallOptions? = nil
+  ) -> GRPCAsyncResponseStream<Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamResponse> {
+    return self.performAsyncServerStreamingCall(
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.subscribeToStream.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeSubscribeToStreamInterceptors() ?? []
+    )
+  }
+
+  internal func subscribeToPush(
+    _ request: Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest,
+    callOptions: CallOptions? = nil
+  ) async throws -> SwiftProtobuf.Google_Protobuf_Empty {
+    return try await self.performAsyncUnaryCall(
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.subscribeToPush.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeSubscribeToPushInterceptors() ?? []
+    )
+  }
+
+  internal func uploadMedia(
+    _ request: Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest,
+    callOptions: CallOptions? = nil
+  ) async throws -> Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse {
+    return try await self.performAsyncUnaryCall(
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.uploadMedia.path,
+      request: request,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeUploadMediaInterceptors() ?? []
+    )
+  }
+
+  internal func uploadMediaStream<RequestStream>(
+    _ requests: RequestStream,
+    callOptions: CallOptions? = nil
+  ) async throws -> Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse where RequestStream: Sequence, RequestStream.Element == Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest {
+    return try await self.performAsyncClientStreamingCall(
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.uploadMediaStream.path,
+      requests: requests,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeUploadMediaStreamInterceptors() ?? []
+    )
+  }
+
+  internal func uploadMediaStream<RequestStream>(
+    _ requests: RequestStream,
+    callOptions: CallOptions? = nil
+  ) async throws -> Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse where RequestStream: AsyncSequence & Sendable, RequestStream.Element == Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest {
+    return try await self.performAsyncClientStreamingCall(
+      path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.uploadMediaStream.path,
+      requests: requests,
+      callOptions: callOptions ?? self.defaultCallOptions,
+      interceptors: self.interceptors?.makeUploadMediaStreamInterceptors() ?? []
+    )
+  }
+}
+
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
+internal struct Sinch_Chat_Sdk_V1alpha2_SdkServiceAsyncClient: Sinch_Chat_Sdk_V1alpha2_SdkServiceAsyncClientProtocol {
+  internal var channel: GRPCChannel
+  internal var defaultCallOptions: CallOptions
+  internal var interceptors: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientInterceptorFactoryProtocol?
+
+  internal init(
+    channel: GRPCChannel,
+    defaultCallOptions: CallOptions = CallOptions(),
+    interceptors: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientInterceptorFactoryProtocol? = nil
+  ) {
+    self.channel = channel
+    self.defaultCallOptions = defaultCallOptions
+    self.interceptors = interceptors
+  }
+}
+
+#endif // compiler(>=5.6)
+
+internal protocol Sinch_Chat_Sdk_V1alpha2_SdkServiceClientInterceptorFactoryProtocol: GRPCSendable {
 
   /// - Returns: Interceptors to use when invoking 'getClient'.
   func makeGetClientInterceptors() -> [ClientInterceptor<Sinch_Chat_Sdk_V1alpha2_GetClientRequest, Sinch_Chat_Client_V1alpha2_Client>]
@@ -277,28 +647,86 @@ internal protocol Sinch_Chat_Sdk_V1alpha2_SdkServiceClientInterceptorFactoryProt
   func makeUploadMediaStreamInterceptors() -> [ClientInterceptor<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest, Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse>]
 }
 
-internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceClient: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientProtocol {
-  internal let channel: GRPCChannel
-  internal var defaultCallOptions: CallOptions
-  internal var interceptors: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientInterceptorFactoryProtocol?
+internal enum Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata {
+  internal static let serviceDescriptor = GRPCServiceDescriptor(
+    name: "SdkService",
+    fullName: "sinch.chat.sdk.v1alpha2.SdkService",
+    methods: [
+      Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.getClient,
+      Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.issueAnonymousToken,
+      Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.issueTokenWithSignedUuid,
+      Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.send,
+      Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.getHistory,
+      Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.subscribeToStream,
+      Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.subscribeToPush,
+      Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.uploadMedia,
+      Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.uploadMediaStream,
+    ]
+  )
 
-  /// Creates a client for the sinch.chat.sdk.v1alpha2.SdkService service.
-  ///
-  /// - Parameters:
-  ///   - channel: `GRPCChannel` to the service host.
-  ///   - defaultCallOptions: Options to use for each service call if the user doesn't provide them.
-  ///   - interceptors: A factory providing interceptors for each RPC.
-  internal init(
-    channel: GRPCChannel,
-    defaultCallOptions: CallOptions = CallOptions(),
-    interceptors: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientInterceptorFactoryProtocol? = nil
-  ) {
-    self.channel = channel
-    self.defaultCallOptions = defaultCallOptions
-    self.interceptors = interceptors
+  internal enum Methods {
+    internal static let getClient = GRPCMethodDescriptor(
+      name: "GetClient",
+      path: "/sinch.chat.sdk.v1alpha2.SdkService/GetClient",
+      type: GRPCCallType.unary
+    )
+
+    internal static let issueAnonymousToken = GRPCMethodDescriptor(
+      name: "IssueAnonymousToken",
+      path: "/sinch.chat.sdk.v1alpha2.SdkService/IssueAnonymousToken",
+      type: GRPCCallType.unary
+    )
+
+    internal static let issueTokenWithSignedUuid = GRPCMethodDescriptor(
+      name: "IssueTokenWithSignedUuid",
+      path: "/sinch.chat.sdk.v1alpha2.SdkService/IssueTokenWithSignedUuid",
+      type: GRPCCallType.unary
+    )
+
+    internal static let send = GRPCMethodDescriptor(
+      name: "Send",
+      path: "/sinch.chat.sdk.v1alpha2.SdkService/Send",
+      type: GRPCCallType.unary
+    )
+
+    internal static let getHistory = GRPCMethodDescriptor(
+      name: "GetHistory",
+      path: "/sinch.chat.sdk.v1alpha2.SdkService/GetHistory",
+      type: GRPCCallType.unary
+    )
+
+    internal static let subscribeToStream = GRPCMethodDescriptor(
+      name: "SubscribeToStream",
+      path: "/sinch.chat.sdk.v1alpha2.SdkService/SubscribeToStream",
+      type: GRPCCallType.serverStreaming
+    )
+
+    internal static let subscribeToPush = GRPCMethodDescriptor(
+      name: "SubscribeToPush",
+      path: "/sinch.chat.sdk.v1alpha2.SdkService/SubscribeToPush",
+      type: GRPCCallType.unary
+    )
+
+    internal static let uploadMedia = GRPCMethodDescriptor(
+      name: "UploadMedia",
+      path: "/sinch.chat.sdk.v1alpha2.SdkService/UploadMedia",
+      type: GRPCCallType.unary
+    )
+
+    internal static let uploadMediaStream = GRPCMethodDescriptor(
+      name: "UploadMediaStream",
+      path: "/sinch.chat.sdk.v1alpha2.SdkService/UploadMediaStream",
+      type: GRPCCallType.clientStreaming
+    )
   }
 }
 
+#if compiler(>=5.6)
+@available(swift, deprecated: 5.6)
+extension Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: @unchecked Sendable {}
+#endif // compiler(>=5.6)
+
+@available(swift, deprecated: 5.6, message: "Test clients are not Sendable but the 'GRPCClient' API requires clients to be Sendable. Using a localhost client and server is the recommended alternative.")
 internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientProtocol {
   private let fakeChannel: FakeChannel
   internal var defaultCallOptions: CallOptions
@@ -325,13 +753,13 @@ internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: Sinch_Chat_Sd
   internal func makeGetClientResponseStream(
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Sdk_V1alpha2_GetClientRequest>) -> () = { _ in }
   ) -> FakeUnaryResponse<Sinch_Chat_Sdk_V1alpha2_GetClientRequest, Sinch_Chat_Client_V1alpha2_Client> {
-    return self.fakeChannel.makeFakeUnaryResponse(path: "/sinch.chat.sdk.v1alpha2.SdkService/GetClient", requestHandler: requestHandler)
+    return self.fakeChannel.makeFakeUnaryResponse(path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.getClient.path, requestHandler: requestHandler)
   }
 
   internal func enqueueGetClientResponse(
     _ response: Sinch_Chat_Client_V1alpha2_Client,
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Sdk_V1alpha2_GetClientRequest>) -> () = { _ in }
-  )  {
+  ) {
     let stream = self.makeGetClientResponseStream(requestHandler)
     // This is the only operation on the stream; try! is fine.
     try! stream.sendMessage(response)
@@ -339,7 +767,7 @@ internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: Sinch_Chat_Sd
 
   /// Returns true if there are response streams enqueued for 'GetClient'
   internal var hasGetClientResponsesRemaining: Bool {
-    return self.fakeChannel.hasFakeResponseEnqueued(forPath: "/sinch.chat.sdk.v1alpha2.SdkService/GetClient")
+    return self.fakeChannel.hasFakeResponseEnqueued(forPath: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.getClient.path)
   }
 
   /// Make a unary response for the IssueAnonymousToken RPC. This must be called
@@ -349,13 +777,13 @@ internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: Sinch_Chat_Sd
   internal func makeIssueAnonymousTokenResponseStream(
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Sdk_V1alpha2_IssueAnonymousTokenRequest>) -> () = { _ in }
   ) -> FakeUnaryResponse<Sinch_Chat_Sdk_V1alpha2_IssueAnonymousTokenRequest, Sinch_Chat_Sdk_V1alpha2_IssueAnonymousTokenResponse> {
-    return self.fakeChannel.makeFakeUnaryResponse(path: "/sinch.chat.sdk.v1alpha2.SdkService/IssueAnonymousToken", requestHandler: requestHandler)
+    return self.fakeChannel.makeFakeUnaryResponse(path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.issueAnonymousToken.path, requestHandler: requestHandler)
   }
 
   internal func enqueueIssueAnonymousTokenResponse(
     _ response: Sinch_Chat_Sdk_V1alpha2_IssueAnonymousTokenResponse,
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Sdk_V1alpha2_IssueAnonymousTokenRequest>) -> () = { _ in }
-  )  {
+  ) {
     let stream = self.makeIssueAnonymousTokenResponseStream(requestHandler)
     // This is the only operation on the stream; try! is fine.
     try! stream.sendMessage(response)
@@ -363,7 +791,7 @@ internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: Sinch_Chat_Sd
 
   /// Returns true if there are response streams enqueued for 'IssueAnonymousToken'
   internal var hasIssueAnonymousTokenResponsesRemaining: Bool {
-    return self.fakeChannel.hasFakeResponseEnqueued(forPath: "/sinch.chat.sdk.v1alpha2.SdkService/IssueAnonymousToken")
+    return self.fakeChannel.hasFakeResponseEnqueued(forPath: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.issueAnonymousToken.path)
   }
 
   /// Make a unary response for the IssueTokenWithSignedUuid RPC. This must be called
@@ -373,13 +801,13 @@ internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: Sinch_Chat_Sd
   internal func makeIssueTokenWithSignedUuidResponseStream(
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Sdk_V1alpha2_IssueTokenWithSignedUuidRequest>) -> () = { _ in }
   ) -> FakeUnaryResponse<Sinch_Chat_Sdk_V1alpha2_IssueTokenWithSignedUuidRequest, Sinch_Chat_Sdk_V1alpha2_IssueTokenWithSignedUuidResponse> {
-    return self.fakeChannel.makeFakeUnaryResponse(path: "/sinch.chat.sdk.v1alpha2.SdkService/IssueTokenWithSignedUuid", requestHandler: requestHandler)
+    return self.fakeChannel.makeFakeUnaryResponse(path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.issueTokenWithSignedUuid.path, requestHandler: requestHandler)
   }
 
   internal func enqueueIssueTokenWithSignedUuidResponse(
     _ response: Sinch_Chat_Sdk_V1alpha2_IssueTokenWithSignedUuidResponse,
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Sdk_V1alpha2_IssueTokenWithSignedUuidRequest>) -> () = { _ in }
-  )  {
+  ) {
     let stream = self.makeIssueTokenWithSignedUuidResponseStream(requestHandler)
     // This is the only operation on the stream; try! is fine.
     try! stream.sendMessage(response)
@@ -387,7 +815,7 @@ internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: Sinch_Chat_Sd
 
   /// Returns true if there are response streams enqueued for 'IssueTokenWithSignedUuid'
   internal var hasIssueTokenWithSignedUuidResponsesRemaining: Bool {
-    return self.fakeChannel.hasFakeResponseEnqueued(forPath: "/sinch.chat.sdk.v1alpha2.SdkService/IssueTokenWithSignedUuid")
+    return self.fakeChannel.hasFakeResponseEnqueued(forPath: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.issueTokenWithSignedUuid.path)
   }
 
   /// Make a unary response for the Send RPC. This must be called
@@ -397,13 +825,13 @@ internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: Sinch_Chat_Sd
   internal func makeSendResponseStream(
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Sdk_V1alpha2_SendRequest>) -> () = { _ in }
   ) -> FakeUnaryResponse<Sinch_Chat_Sdk_V1alpha2_SendRequest, Sinch_Chat_Sdk_V1alpha2_SendResponse> {
-    return self.fakeChannel.makeFakeUnaryResponse(path: "/sinch.chat.sdk.v1alpha2.SdkService/Send", requestHandler: requestHandler)
+    return self.fakeChannel.makeFakeUnaryResponse(path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.send.path, requestHandler: requestHandler)
   }
 
   internal func enqueueSendResponse(
     _ response: Sinch_Chat_Sdk_V1alpha2_SendResponse,
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Sdk_V1alpha2_SendRequest>) -> () = { _ in }
-  )  {
+  ) {
     let stream = self.makeSendResponseStream(requestHandler)
     // This is the only operation on the stream; try! is fine.
     try! stream.sendMessage(response)
@@ -411,7 +839,7 @@ internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: Sinch_Chat_Sd
 
   /// Returns true if there are response streams enqueued for 'Send'
   internal var hasSendResponsesRemaining: Bool {
-    return self.fakeChannel.hasFakeResponseEnqueued(forPath: "/sinch.chat.sdk.v1alpha2.SdkService/Send")
+    return self.fakeChannel.hasFakeResponseEnqueued(forPath: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.send.path)
   }
 
   /// Make a unary response for the GetHistory RPC. This must be called
@@ -421,13 +849,13 @@ internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: Sinch_Chat_Sd
   internal func makeGetHistoryResponseStream(
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest>) -> () = { _ in }
   ) -> FakeUnaryResponse<Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest, Sinch_Chat_Sdk_V1alpha2_GetHistoryResponse> {
-    return self.fakeChannel.makeFakeUnaryResponse(path: "/sinch.chat.sdk.v1alpha2.SdkService/GetHistory", requestHandler: requestHandler)
+    return self.fakeChannel.makeFakeUnaryResponse(path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.getHistory.path, requestHandler: requestHandler)
   }
 
   internal func enqueueGetHistoryResponse(
     _ response: Sinch_Chat_Sdk_V1alpha2_GetHistoryResponse,
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest>) -> () = { _ in }
-  )  {
+  ) {
     let stream = self.makeGetHistoryResponseStream(requestHandler)
     // This is the only operation on the stream; try! is fine.
     try! stream.sendMessage(response)
@@ -435,7 +863,7 @@ internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: Sinch_Chat_Sd
 
   /// Returns true if there are response streams enqueued for 'GetHistory'
   internal var hasGetHistoryResponsesRemaining: Bool {
-    return self.fakeChannel.hasFakeResponseEnqueued(forPath: "/sinch.chat.sdk.v1alpha2.SdkService/GetHistory")
+    return self.fakeChannel.hasFakeResponseEnqueued(forPath: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.getHistory.path)
   }
 
   /// Make a streaming response for the SubscribeToStream RPC. This must be called
@@ -445,13 +873,13 @@ internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: Sinch_Chat_Sd
   internal func makeSubscribeToStreamResponseStream(
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest>) -> () = { _ in }
   ) -> FakeStreamingResponse<Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest, Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamResponse> {
-    return self.fakeChannel.makeFakeStreamingResponse(path: "/sinch.chat.sdk.v1alpha2.SdkService/SubscribeToStream", requestHandler: requestHandler)
+    return self.fakeChannel.makeFakeStreamingResponse(path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.subscribeToStream.path, requestHandler: requestHandler)
   }
 
   internal func enqueueSubscribeToStreamResponses(
     _ responses: [Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamResponse],
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest>) -> () = { _ in }
-  )  {
+  ) {
     let stream = self.makeSubscribeToStreamResponseStream(requestHandler)
     // These are the only operation on the stream; try! is fine.
     responses.forEach { try! stream.sendMessage($0) }
@@ -460,7 +888,7 @@ internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: Sinch_Chat_Sd
 
   /// Returns true if there are response streams enqueued for 'SubscribeToStream'
   internal var hasSubscribeToStreamResponsesRemaining: Bool {
-    return self.fakeChannel.hasFakeResponseEnqueued(forPath: "/sinch.chat.sdk.v1alpha2.SdkService/SubscribeToStream")
+    return self.fakeChannel.hasFakeResponseEnqueued(forPath: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.subscribeToStream.path)
   }
 
   /// Make a unary response for the SubscribeToPush RPC. This must be called
@@ -470,13 +898,13 @@ internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: Sinch_Chat_Sd
   internal func makeSubscribeToPushResponseStream(
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest>) -> () = { _ in }
   ) -> FakeUnaryResponse<Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest, SwiftProtobuf.Google_Protobuf_Empty> {
-    return self.fakeChannel.makeFakeUnaryResponse(path: "/sinch.chat.sdk.v1alpha2.SdkService/SubscribeToPush", requestHandler: requestHandler)
+    return self.fakeChannel.makeFakeUnaryResponse(path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.subscribeToPush.path, requestHandler: requestHandler)
   }
 
   internal func enqueueSubscribeToPushResponse(
     _ response: SwiftProtobuf.Google_Protobuf_Empty,
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest>) -> () = { _ in }
-  )  {
+  ) {
     let stream = self.makeSubscribeToPushResponseStream(requestHandler)
     // This is the only operation on the stream; try! is fine.
     try! stream.sendMessage(response)
@@ -484,7 +912,7 @@ internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: Sinch_Chat_Sd
 
   /// Returns true if there are response streams enqueued for 'SubscribeToPush'
   internal var hasSubscribeToPushResponsesRemaining: Bool {
-    return self.fakeChannel.hasFakeResponseEnqueued(forPath: "/sinch.chat.sdk.v1alpha2.SdkService/SubscribeToPush")
+    return self.fakeChannel.hasFakeResponseEnqueued(forPath: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.subscribeToPush.path)
   }
 
   /// Make a unary response for the UploadMedia RPC. This must be called
@@ -494,13 +922,13 @@ internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: Sinch_Chat_Sd
   internal func makeUploadMediaResponseStream(
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest>) -> () = { _ in }
   ) -> FakeUnaryResponse<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest, Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse> {
-    return self.fakeChannel.makeFakeUnaryResponse(path: "/sinch.chat.sdk.v1alpha2.SdkService/UploadMedia", requestHandler: requestHandler)
+    return self.fakeChannel.makeFakeUnaryResponse(path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.uploadMedia.path, requestHandler: requestHandler)
   }
 
   internal func enqueueUploadMediaResponse(
     _ response: Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse,
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest>) -> () = { _ in }
-  )  {
+  ) {
     let stream = self.makeUploadMediaResponseStream(requestHandler)
     // This is the only operation on the stream; try! is fine.
     try! stream.sendMessage(response)
@@ -508,7 +936,7 @@ internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: Sinch_Chat_Sd
 
   /// Returns true if there are response streams enqueued for 'UploadMedia'
   internal var hasUploadMediaResponsesRemaining: Bool {
-    return self.fakeChannel.hasFakeResponseEnqueued(forPath: "/sinch.chat.sdk.v1alpha2.SdkService/UploadMedia")
+    return self.fakeChannel.hasFakeResponseEnqueued(forPath: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.uploadMedia.path)
   }
 
   /// Make a unary response for the UploadMediaStream RPC. This must be called
@@ -518,13 +946,13 @@ internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: Sinch_Chat_Sd
   internal func makeUploadMediaStreamResponseStream(
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest>) -> () = { _ in }
   ) -> FakeUnaryResponse<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest, Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse> {
-    return self.fakeChannel.makeFakeUnaryResponse(path: "/sinch.chat.sdk.v1alpha2.SdkService/UploadMediaStream", requestHandler: requestHandler)
+    return self.fakeChannel.makeFakeUnaryResponse(path: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.uploadMediaStream.path, requestHandler: requestHandler)
   }
 
   internal func enqueueUploadMediaStreamResponse(
     _ response: Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse,
     _ requestHandler: @escaping (FakeRequestPart<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest>) -> () = { _ in }
-  )  {
+  ) {
     let stream = self.makeUploadMediaStreamResponseStream(requestHandler)
     // This is the only operation on the stream; try! is fine.
     try! stream.sendMessage(response)
@@ -532,7 +960,7 @@ internal final class Sinch_Chat_Sdk_V1alpha2_SdkServiceTestClient: Sinch_Chat_Sd
 
   /// Returns true if there are response streams enqueued for 'UploadMediaStream'
   internal var hasUploadMediaStreamResponsesRemaining: Bool {
-    return self.fakeChannel.hasFakeResponseEnqueued(forPath: "/sinch.chat.sdk.v1alpha2.SdkService/UploadMediaStream")
+    return self.fakeChannel.hasFakeResponseEnqueued(forPath: Sinch_Chat_Sdk_V1alpha2_SdkServiceClientMetadata.Methods.uploadMediaStream.path)
   }
 }
 

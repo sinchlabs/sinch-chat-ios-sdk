@@ -33,6 +33,10 @@ public extension SinchSDKConfig {
         public var locationAlertButtonTitleNotNow = NSLocalizedString("alert_button_title_not_now", bundle: Bundle.staticBundle, comment: "")
         public var locationAlertButtonTitleSettings = NSLocalizedString("alert_button_title_settings", bundle: Bundle.staticBundle, comment: "")
         
+        public var locationOpenActionSheetTitle = NSLocalizedString("location_action_sheet_title", bundle: Bundle.staticBundle, comment: "")
+        public var locationOpenAppleMaps = NSLocalizedString("location_action_sheet_apple_maps", bundle: Bundle.staticBundle, comment: "")
+        public var locationOpenGoogleMaps = NSLocalizedString("location_action_sheet_google_maps", bundle: Bundle.staticBundle, comment: "")
+        
         public var locationDeniedInAppAlertTitle = NSLocalizedString("alert_title_app_location_status_denied", bundle: Bundle.staticBundle, comment: "")
         public var outgoingLocationMessageTitle = NSLocalizedString("outgoing_location_message_title", bundle: Bundle.staticBundle, comment: "")
         

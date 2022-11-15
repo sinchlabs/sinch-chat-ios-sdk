@@ -345,6 +345,24 @@ struct Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse {
   init() {}
 }
 
+#if swift(>=5.5) && canImport(_Concurrency)
+extension Sinch_Chat_Sdk_V1alpha2_GetClientRequest: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_IssueAnonymousTokenRequest: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_IssueAnonymousTokenResponse: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_IssueTokenWithSignedUuidRequest: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_IssueTokenWithSignedUuidResponse: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_SendRequest: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_SendRequest.OneOf_Payload: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_SendResponse: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_GetHistoryResponse: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamResponse: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse: @unchecked Sendable {}
+#endif  // swift(>=5.5) && canImport(_Concurrency)
+
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "sinch.chat.sdk.v1alpha2"
