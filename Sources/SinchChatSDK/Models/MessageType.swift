@@ -3,9 +3,8 @@ import Foundation
 enum MessageType {
     case text(String)
     case choiceResponseMessage(postbackData: String, entryID: String)
-    case image(String)
+    case media(String)
     case location(latitude: Float, longitude: Float, localizationConfig: SinchSDKConfig.LocalizationConfig)
-    case voice(String)
 
     var convertToSinchMessage: Sinch_Chat_Sdk_V1alpha2_SendRequest? {
         var request = Sinch_Chat_Sdk_V1alpha2_SendRequest()
@@ -23,16 +22,11 @@ enum MessageType {
             messageChoice.postbackData = postbackData
             messageChoice.messageID = entryID
             contactMessage.choiceResponseMessage = messageChoice
-        case .image(let urlString):
+        case .media(let urlString):
             
-            var messageImage = Sinch_Conversationapi_Type_MediaMessage()
-            messageImage.url = urlString
-            contactMessage.message = .mediaMessage(messageImage)
-        case .voice(let urlString):
-            
-            var messageVoice = Sinch_Conversationapi_Type_MediaMessage()
-            messageVoice.url = urlString
-            contactMessage.message = .mediaMessage(messageVoice)
+            var messageMedia = Sinch_Conversationapi_Type_MediaMessage()
+            messageMedia.url = urlString
+            contactMessage.message = .mediaMessage(messageMedia)
             
         case let .location(latitude, longitude, localizationConfig):
         

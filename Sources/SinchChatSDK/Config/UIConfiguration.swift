@@ -54,6 +54,9 @@ public extension SinchSDKConfig {
         public var inputTextViewBorderColor: UIColor =  UIColor(named: "primaryBorderColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var inputTextColor = UIColor(named: "primaryTextColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var inputPlaceholderTextColor = UIColor(named: "primaryTextColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        
+        public var errorTextColor = UIColor(named: "redColor", in: Bundle.staticBundle, compatibleWith: nil)!
+
         // MARK: - Images
 
         public var photoImage = UIImage(named: "photoIcon", in: Bundle.staticBundle, compatibleWith: nil)
@@ -68,6 +71,8 @@ public extension SinchSDKConfig {
         public var menuButtonTextColor = UIColor(named: "primaryTextColor", in: Bundle.staticBundle, compatibleWith: nil)!
 
         public var shareLocationMenuImage = UIImage(named: "locationBlueIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var cameraMenuImage = UIImage(named: "cameraIcon", in: Bundle.staticBundle, compatibleWith: nil)
+
         public var pageControlSelectedColor = UIColor(named: "primaryPageControlColor", in: Bundle.staticBundle, compatibleWith: nil)
         public var pageControlUnselectedColor = UIColor(named: "secondaryPageControlColor", in: Bundle.staticBundle, compatibleWith: nil)
         
@@ -76,13 +81,14 @@ public extension SinchSDKConfig {
         public var primaryAudioBarBackgroundColor = UIColor(named: "primaryAudioBarBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var topAudioBarBackgroundColor = UIColor(named: "secondaryAudioBarBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var recordingRedColor = UIColor(named: "primaryRedColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        public var dateLabelMediaBackgroundColor = UIColor(named: "primaryDateMediaBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
         
+        public var playVideoImage = UIImage(named: "playVideoIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var recordButtonImage = UIImage(named: "recordIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var sendFilledImage = UIImage(named: "sendFilledIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var deleteImage = UIImage(named: "deleteIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var progressBarBackgroundColor = UIColor(named: "primaryProgressBarBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var scrollToBottomImage = UIImage(named: "scrollToBottomIcon", in: Bundle.staticBundle, compatibleWith: nil)
-
         // MARK: - InAppMessaging
         
         public var inAppMessageBackgroundColor = UIColor(named: "primaryInAppMessageBackground", in: Bundle.staticBundle, compatibleWith: nil)!

@@ -19,11 +19,13 @@
 "button_title_maybe_later" = "Maybe Later";
 
 "menu_button_title_share_location" = "Share Location";
+"menu_button_title_camera" = "Camera";
 "button_title_share_location" = "Share Location";
 "button_title_cancel" = "Cancel";
 
 "alert_title_location_disabled" = "Turn On Location Services to Allow this app to Determine Your Location";
 "alert_message_location_disabled" = "Enable Location Services in Settings > Privacy > Location Services to use this feature";
+"alert_message_camera_disabled" = "Please go to Settings and Allow access to Camera";
 
 "alert_title_app_location_status_denied" = "This app does not have access to your location. To enable access, tap Settings > Location";
 "alert_title_microphone_disabled" = "Turn On Microphone to Allow this app to record Voice message";
@@ -40,3 +42,4 @@
 "location_action_sheet_title" = "Choose app";
 "location_action_sheet_apple_maps" = "Apple Maps";
 "location_action_sheet_google_maps" = "Google Maps";
+"unsupported_message_explanation" = "Whoops! Sorry. We are not yet supporting this type of message...";

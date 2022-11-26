@@ -124,33 +124,35 @@ final class DefaultMessageDataSource: MessageDataSource {
                                 self.getMediaMessageTypeFromMessage(mediaMessage, completion: { messageBody in
                                     if let messageBody = messageBody {
                                         
-                                        message.body = messageBody
+                                        if messageBody.type != .unsupported {
+                                            message.body = messageBody
+                                            
+                                        } else {
+                                            message.body = MessageUnsupported(sendDate: messageBody.sendDate)
+                                        }
+                                        
                                         messages.append(message)
                                     }
                                     
                                     self.dispatchSemaphore.signal()
-                                    
                                 })
                                 
                                 self.dispatchSemaphore.wait()
-                                
                             } else {
-                                messages.append(message)
                                 
+                                messages.append(message)
                             }
                         }
                     }
                     
                     self.dispatchQueue.async {
                         completion(.success(messages))
-                        
                     }
                     
                 case .failure(let err):
                     completion(.failure(.unknown(err)))
                 }
             }
-            
         } catch {
             completion(.failure(.notLoggedIn))
         }
@@ -260,9 +262,9 @@ final class DefaultMessageDataSource: MessageDataSource {
                 guard let self = self else {
                     return
                 }
-
+                
                 let message = self.handleIncomingMessage(response.entry)
-
+                
                 guard var message = message else { return }
                 
                 self.dispatchQueue.async {
@@ -270,9 +272,16 @@ final class DefaultMessageDataSource: MessageDataSource {
                     if let mediaMessage = message.body as? MessageMedia {
                         
                         self.getMediaMessageTypeFromMessage(mediaMessage, completion: { messageBody in
+                            
                             if let messageBody = messageBody {
                                 
-                                message.body = messageBody
+                                if messageBody.type != .unsupported {
+                                    
+                                    message.body = messageBody
+                                    
+                                } else {
+                                    message.body = MessageUnsupported(sendDate: messageBody.sendDate)
+                                }
                                 self.dispatchSemaphore.signal()
                                 
                             }
@@ -380,26 +389,28 @@ final class DefaultMessageDataSource: MessageDataSource {
         var request = URLRequest(url: url)
         request.httpMethod = "HEAD"
         
-        let task = URLSession.shared.dataTask(with: request, completionHandler: {  _ , response, error in
+        let task = URLSession.shared.dataTask(with: request, completionHandler: {  _, response, error in
             
-            if let _ = error {
+            if error != nil {
                 completion(nil)
-                
             }
-       // https://developer.apple.com/library/archive/documentation/2DDrawing/Conceptual/DrawingPrintingiOS/LoadingImages/LoadingImages.html
-         
+            
+            //https://developer.apple.com/library/archive/documentation/2DDrawing/Conceptual/DrawingPrintingiOS/LoadingImages/LoadingImages.html
+            
             if let response = response as? HTTPURLResponse, let type = response.allHeaderFields["Content-Type"] as? String {
-
+                
                 switch type {
-                    
-                case "audio/mp4", "audio/mp3", "audio/m4a", "audio/wav":
+                case "video/mp4", "video/mov":
+                    mediaMessage.type = .video
+                case "audio/aac", "audio/adts", "audio/ac3","audio/aif","audio/aiff","audio/aifc", "audio/caf",
+                    "audio/mp4", "audio/mp3", "audio/m4a", "audio/snd", "audio/au", "audio/wav", "audio/sd2":
                     mediaMessage.type = .audio
                 case "image/jpg", "image/jpeg", "image/png", "image/tif", "image/tiff", "image/gif", "image/bmp",
                     "image/BMPf", "image/ico", "image/cur", "image/xbm" :
                     mediaMessage.type = .image
                     
                 default:
-                    break
+                    mediaMessage.type = .unsupported
                 }
             }
             
@@ -522,10 +533,7 @@ final class DefaultMessageDataSource: MessageDataSource {
             
             if !incomingCarouselMessage.cards.isEmpty {
                 
-                var carouselChoicesArray = DefaultMessageDataSource.createChoicesArray(incomingCarouselMessage.choices, entryID: entry.entryID)
-                //   carouselChoicesArray.append(.urlMessage(ChoiceUrl(url: "https://www.google.com", text: "Please go to google")))
-                //   carouselChoicesArray.append(.urlMessage(ChoiceUrl(url: "https://www.google.com", text: "Please go to text")))
-                //   carouselChoicesArray.append(.urlMessage(ChoiceUrl(url: "www.google.com", text: "Please go to rate")))
+                let carouselChoicesArray = DefaultMessageDataSource.createChoicesArray(incomingCarouselMessage.choices, entryID: entry.entryID)
                 
                 var cardsArray: [MessageCard] = []
                 
@@ -596,6 +604,8 @@ final class DefaultMessageDataSource: MessageDataSource {
                                                   sendDate: entry.deliveryTime.seconds))
                 
             }
+            
+            return Message(entryId: entry.entryID, owner: .incoming(nil), body: MessageUnsupported(sendDate: entry.deliveryTime.seconds))
         }
         
         return nil
@@ -603,7 +613,7 @@ final class DefaultMessageDataSource: MessageDataSource {
     
     private func convertSinchMetadataToMetadataJson(metadata: [SinchMetadata]) -> String? {
         var dictMetadata: [String: String] = [:]
-    
+        
         metadata.forEach({
             let tuple = $0.getKeyValue()
             dictMetadata[tuple.key] = tuple.value

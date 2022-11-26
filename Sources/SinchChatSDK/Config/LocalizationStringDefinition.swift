@@ -18,11 +18,14 @@ public extension SinchSDKConfig {
         public var alertMessageCouldNotLoadHistory = NSLocalizedString("alert_could_not_load_history", bundle: Bundle.staticBundle, comment: "")
         public var alertMessageNotSent = NSLocalizedString("alert_message_not_sent", bundle: Bundle.staticBundle, comment: "")
         public var alertTitleError = NSLocalizedString("alert_title_error", bundle: Bundle.staticBundle, comment: "")
+        public var alertTitleErrorCameraDisabled = NSLocalizedString("alert_message_camera_disabled", bundle: Bundle.staticBundle, comment: "")
+
         public var alertButtonTitleOk = NSLocalizedString("alert_button_title_ok", bundle: Bundle.staticBundle, comment: "")
         public var menuTitleOptions = NSLocalizedString("menu_title_options", bundle: Bundle.staticBundle, comment: "")
         public var menuButtonTitleCopy = NSLocalizedString("menu_button_title_copy", bundle: Bundle.staticBundle, comment: "")
         
         public var menuShareLocation = NSLocalizedString("menu_button_title_share_location", bundle: Bundle.staticBundle, comment: "")
+        public var menuCamera = NSLocalizedString("menu_button_title_camera", bundle: Bundle.staticBundle, comment: "")
         public var menuCancel = NSLocalizedString("button_title_cancel", bundle: Bundle.staticBundle, comment: "")
         public var locationShareCancel = NSLocalizedString("button_title_cancel", bundle: Bundle.staticBundle, comment: "")
         public var locationShare = NSLocalizedString("button_title_share_location", bundle: Bundle.staticBundle, comment: "")
@@ -48,6 +51,9 @@ public extension SinchSDKConfig {
         public var voiceMessageTitle = NSLocalizedString("voice_message_title", bundle: Bundle.staticBundle, comment: "")
         public var alertTitleHoldToRecord = NSLocalizedString("alert_message_hold_to_record", bundle: Bundle.staticBundle, comment: "")
 
+
+        public var unsupportedMessageExplanation = NSLocalizedString("unsupported_message_explanation", bundle: Bundle.staticBundle, comment: "")
+        
         // MARK: - InAppMessaging
         
         public var buttonTitleClose = NSLocalizedString("button_title_close", bundle: Bundle.staticBundle, comment: "")

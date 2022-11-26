@@ -13,6 +13,8 @@ public final class SinchChatSDK {
     let pushNotificationHandler: PushNotificationHandler = DefaultPushNotificationHandler()
     lazy var _chat = DefaultSinchChat(pushPermissionHandler: pushNotificationHandler)
     
+    var disabledFeatures: Set<SinchEnabledFeatures> = [.sendVideoMessageFromGallery]
+    
     var options: SinchInitializeOptions?
     private(set) var config: SinchSDKConfig.AppConfig?
     private var authDataSource: AuthDataSource? {
@@ -134,5 +136,13 @@ public enum SinchPushNotificationsMode {
     case prod
     case sandbox
     case off
+    
+}
+public enum SinchEnabledFeatures {
+    case sendImageMessageFromGallery
+    case sendVideoMessageFromGallery
+    case sendVoiceMessage
+    case sendLocationSharingMessage
+    case sendImageFromCamera
     
 }

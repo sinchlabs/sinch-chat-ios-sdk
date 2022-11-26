@@ -37,6 +37,12 @@ final class ComposeView: SinchView {
         
         return view
     }()
+    lazy var rightStackEmptyView: UIView = {
+        var view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        
+        return view
+    }()
     lazy var photoButton: UIButton = {
         var button = UIButton()
         button.setImage(uiConfig.photoImage, for: .normal)
@@ -128,7 +134,6 @@ final class ComposeView: SinchView {
     init(uiConfiguration: SinchSDKConfig.UIConfig, localizatioConfiguration: SinchSDKConfig.LocalizationConfig) {
         
         composeTextView = ComposeTextView(configuration: uiConfiguration)
-        
         super.init(uiConfiguration: uiConfiguration, localizationConfiguration: localizatioConfiguration)
     }
     
@@ -143,6 +148,7 @@ final class ComposeView: SinchView {
         addTextViewAndSendButtonContainer()
         setupPlaceholderLabel()
         setupScrollToBottomButton()
+        setupButtonVisibility()
     }
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
@@ -154,6 +160,10 @@ final class ComposeView: SinchView {
         return super.point(inside: point, with: event)
     }
     override func setupConstraints() {
+        var leftWidth = 0.0
+        if !(SinchChatSDK.shared.disabledFeatures.contains(.sendImageFromCamera) && SinchChatSDK.shared.disabledFeatures.contains(.sendLocationSharingMessage)) {
+            leftWidth = 48.0
+        }
         
         leftStackViewConstraint = leftStackView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 18)
         rightStackViewConstraint = rightStackView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -18)
@@ -172,7 +182,7 @@ final class ComposeView: SinchView {
             leftStackViewConstraint,
             leftStackView.trailingAnchor.constraint(equalTo: textButtonContainer.leadingAnchor, constant: -spacingBetweenButtonsAndText),
             leftStackView.centerYAnchor.constraint(equalTo: sendButton.centerYAnchor, constant: 0),
-            
+            leftStackView.widthAnchor.constraint(equalToConstant:leftWidth),
             rightStackViewConstraint,
             rightStackView.leadingAnchor.constraint(equalTo: textButtonContainer.trailingAnchor, constant: 9),
             rightStackView.centerYAnchor.constraint(equalTo: sendButton.centerYAnchor, constant: 0),
@@ -189,6 +199,9 @@ final class ComposeView: SinchView {
             
             plusButton.heightAnchor.constraint(equalToConstant: 40),
             plusButton.widthAnchor.constraint(equalToConstant: 38),
+            
+            rightStackEmptyView.heightAnchor.constraint(equalToConstant: 40),
+            rightStackEmptyView.widthAnchor.constraint(equalToConstant: 0),
             
             photoButton.heightAnchor.constraint(equalToConstant: 40),
             photoButton.widthAnchor.constraint(equalToConstant: 38),
@@ -219,6 +232,14 @@ final class ComposeView: SinchView {
             placeholderLabel.topAnchor.constraint(equalTo: composeTextView.topAnchor, constant: 0),
             placeholderLabel.bottomAnchor.constraint(equalTo: composeTextView.bottomAnchor, constant: 0)
         ])
+    }
+    
+    func setupButtonVisibility() {
+        
+            plusButton.isHidden = (SinchChatSDK.shared.disabledFeatures.contains(.sendImageFromCamera) && SinchChatSDK.shared.disabledFeatures.contains(.sendLocationSharingMessage))
+            photoButton.isHidden = (SinchChatSDK.shared.disabledFeatures.contains(.sendImageMessageFromGallery) && SinchChatSDK.shared.disabledFeatures.contains(.sendVideoMessageFromGallery))
+            voiceRecordingButton.isHidden = SinchChatSDK.shared.disabledFeatures.contains(.sendVoiceMessage)
+        
     }
     
     override func didMoveToWindow() {
@@ -295,7 +316,6 @@ final class ComposeView: SinchView {
         
         plusButton.imageEdgeInsets = UIEdgeInsets(top: 8, left: 7, bottom: 8, right: 7)
         plusButton.addTarget(self, action: #selector(plusButtonAction(_:)), for: .touchUpInside)
-        
         leftStackView.addArrangedSubview(plusButton)
         leftStackView.distribution = .fill
         leftStackView.alignment = .center
@@ -313,18 +333,20 @@ final class ComposeView: SinchView {
                                                        action: #selector(handleLongPress(gestureReconizer: )))
         
         voiceRecordingButton.addGestureRecognizer(longGesture)
-        let tapGesture = UITapGestureRecognizer (target: self,
-                                                 action: #selector(tapVoiceRecorder(gestureReconizer: )))
+        let tapGesture = UITapGestureRecognizer(target: self,
+                                                action: #selector(tapVoiceRecorder(gestureReconizer: )))
         
         voiceRecordingButton.addGestureRecognizer(tapGesture)
         photoButton.addTarget(self, action: #selector(photoAction(_:)), for: .touchUpInside)
         timeLabel.isHidden = true
         recordingLabel.isHidden = true
         emptyView.isHidden = true
+        rightStackEmptyView.isHidden = false
         rightStackView.addArrangedSubview(timeLabel)
         rightStackView.addArrangedSubview(emptyView)
         rightStackView.addArrangedSubview(recordingLabel)
         rightStackView.addArrangedSubview(photoButton)
+        rightStackView.addArrangedSubview(rightStackEmptyView)
         rightStackView.addArrangedSubview(voiceRecordingButton)
         
         rightStackView.distribution = .fill
@@ -465,7 +487,7 @@ final class ComposeView: SinchView {
         
         self.recordingLabel.isHidden = true
         self.timeLabel.isHidden = true
-        self.photoButton.isHidden = false
+        setupButtonVisibility() 
         self.emptyView.isHidden = true
         
         invalidateIntrinsicContentSize()
@@ -474,8 +496,12 @@ final class ComposeView: SinchView {
     private func expandTextView() {
         if !isInputTextViewExpanded {
             
+            let width = rightStackView.frame.width
             isInputTextViewExpanded = true
-            rightStackViewConstraint?.constant = rightStackView.frame.width
+            
+            if width != 0 {
+                rightStackViewConstraint?.constant = width
+            }
             rightStackViewLeadingConstraint?.constant = 25
             UIView.animate(withDuration: animationDuration, animations: {
                 self.layoutIfNeeded()
@@ -572,7 +598,7 @@ extension ComposeView: AudioComposeDelegate {
     func sendRecording(url: URL) {
         
         delegate?.sendVoiceMessage(url: url)
-        //TODO delete file if successful
+        // TODO delete file if successful
         voiceRecorder.duration = 0.0
         handleDeleteAndUpdateView()
     }

@@ -3,6 +3,7 @@ import SafariServices
 import GRPC
 import Connectivity
 import AVFoundation
+import AVKit
 
 // swiftlint:disable file_length
 
@@ -157,7 +158,6 @@ class StartViewController: SinchViewController<StartViewModel, StartView > {
         
         NotificationCenter.default.removeObserver(self, name: UIApplication.willEnterForegroundNotification, object: nil)
         NotificationCenter.default.removeObserver(self, name: UIApplication.didEnterBackgroundNotification, object: nil)
-        connectivity.stopNotifier()
         viewModel.onDisappear()
         player.stop()
         viewModel.closeChannel()
@@ -228,6 +228,23 @@ class StartViewController: SinchViewController<StartViewModel, StartView > {
 }
 
 extension StartViewController: ImagePickerDelegate {
+    func didSelect(video: URL?) {
+        if let video = video {
+            let videoProcessor = VideoProcessor(video)
+            videoProcessor.convertVideoToMP4(completion: { [weak self] url in
+                
+                guard let self = self else { return }
+              
+                if let url = url {
+                    self.viewModel.sendMedia(.video(url))
+                    
+                } else {
+                    debugPrint("Can not convert to mp4")
+                }
+            })
+        }
+    }
+    
     func didSelect(image: UIImage?) {
         
         if let image = image {
@@ -314,18 +331,54 @@ extension StartViewController: ComposeViewDelegate {
     func chooseAction() {
         
         let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
-        
-        let action  = UIAlertAction(title: mainView.localizationConfiguration.menuShareLocation, style: .default, handler: { _ in
-            self.cordinator?.presentLocation(viewController: self,
-                                             uiConfig: self.mainView.uiConfig,
-                                             localizationConfig: self.mainView.localizationConfiguration)
-        })
-        
-        action.setValue(self.mainView.uiConfig.shareLocationMenuImage?.withRenderingMode(.alwaysOriginal), forKey: "image")
-        action.setValue(CATextLayerAlignmentMode.left, forKey: "titleTextAlignment")
-        action.setValue(self.mainView.uiConfig.menuButtonTextColor, forKey:"titleTextColor")
-        
-        alert.addAction(action)
+
+        if !SinchChatSDK.shared.disabledFeatures.contains(.sendLocationSharingMessage) {
+            
+            let action  = UIAlertAction(title: mainView.localizationConfiguration.menuShareLocation, style: .default, handler: { _ in
+                self.cordinator?.presentLocation(viewController: self,
+                                                 uiConfig: self.mainView.uiConfig,
+                                                 localizationConfig: self.mainView.localizationConfiguration)
+            })
+            
+            action.setupActionWithImage(mainView.uiConfig.shareLocationMenuImage,
+                                        textColor:  mainView.uiConfig.menuButtonTextColor)
+            
+            alert.addAction(action)
+        }
+        if !SinchChatSDK.shared.disabledFeatures.contains(.sendImageFromCamera) {
+            
+            let cameraAction  = UIAlertAction(title: mainView.localizationConfiguration.menuCamera, style: .default, handler: { _ in
+                
+                self.imagePickerHelper.takePhoto { success in
+                    if !success {
+                        DispatchQueue.main.async {
+                            let alert = UIAlertController(title: self.mainView.localizationConfiguration.alertTitleError,
+                                                          message:self.mainView.localizationConfiguration.alertTitleErrorCameraDisabled,
+                                                          preferredStyle: .alert)
+                            let settingsAction = UIAlertAction(title: self.mainView.localizationConfiguration.locationAlertButtonTitleSettings, style: .default) { _ in
+                                if let url = URL(string: UIApplication.openSettingsURLString) {
+                                    if UIApplication.shared.canOpenURL(url) {
+                                        UIApplication.shared.open(url, options: [:], completionHandler: nil)
+                                    }
+                                }
+                            }
+                            alert.addAction(settingsAction)
+                            alert.addAction(UIAlertAction(title: self.mainView.localizationConfiguration.alertButtonTitleOk,
+                                                          style: .default,
+                                                          handler: nil))
+                            
+                            self.present(alert, animated: true, completion: nil)
+                        }
+                    }
+                }
+                
+            })
+            
+            cameraAction.setupActionWithImage(mainView.uiConfig.cameraMenuImage,
+                                              textColor: mainView.uiConfig.menuButtonTextColor)
+            
+            alert.addAction(cameraAction)
+        }
         
         alert.addAction(UIAlertAction(title: mainView.localizationConfiguration.menuCancel, style: .cancel, handler: { _ in
             debugPrint("User click cancel button")
@@ -334,10 +387,9 @@ extension StartViewController: ComposeViewDelegate {
         self.present(alert, animated: true, completion: nil)
         
     }
-    
     func choosePhoto() {
         
-        imagePickerHelper.pickPhoto()
+        self.imagePickerHelper.pickPhotoFromGallery()
         resignFirstResponderView()
     }
     
@@ -536,7 +588,10 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
         } else if let messageBody = message.body as? MessageMedia {
             
             switch messageBody.type {
-                
+            case .video:
+                let cell = collectionView.dequeueReusableCell(withReuseIdentifier:  VideoMessageCell.cellId, for: indexPath) as! VideoMessageCell
+                cell.configure(with: message, at: indexPath, and: mainView.collectionView)
+                return cell
             case .audio:
                 let cell = collectionView.dequeueReusableCell(withReuseIdentifier:  VoiceMessageCell.cellId, for: indexPath) as! VoiceMessageCell
                 cell.configure(with: message, at: indexPath, and: mainView.collectionView, player: player, playingItem: playingItem)
@@ -583,7 +638,12 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier:  CarouselMessageCell.cellId, for: indexPath) as! CarouselMessageCell
             cell.configure(with: message, at: indexPath, and: mainView.collectionView)
             return cell
+        } else if message.body is MessageUnsupported {
             
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier:  UnsupportedMessageCell.cellId, for: indexPath) as! UnsupportedMessageCell
+            cell.configure(with: message, at: indexPath, and: mainView.collectionView)
+            return cell
+                        
         } else {
             return MessageCollectionViewCell()
         }
@@ -738,12 +798,36 @@ extension StartViewController: MessageCellDelegate {
         }
     }
     func didTapMedia(with url:URL) {
-        
+
         cordinator?.presentMediaViewerController(viewController: self,
                                                  uiConfig: mainView.uiConfig,
                                                  localizationConfig: mainView.localizationConfiguration,
                                                  url: url)
         
+    }
+    func didTapOnVideo(with url: URL, message: Message) {
+        
+        if let playingItem = playingItem {
+            
+            switch playingItem {
+            case .localMedia(_):
+                player.stop()
+                mainView.messageComposeView.updateAudioComposeView(player: player)
+
+            case .mediaMessage(_):
+
+                stopAudioPlayer()
+            }
+            self.playingItem = nil
+        }
+        
+        let player = AVPlayer(url: url)
+        let playerVC = AVPlayerViewController()
+        playerVC.player = player
+
+        present(playerVC, animated: true) {
+            playerVC.player?.play()
+        }
     }
     
     func didTapOutsideOfContent(in cell: MessageCollectionViewCell) {

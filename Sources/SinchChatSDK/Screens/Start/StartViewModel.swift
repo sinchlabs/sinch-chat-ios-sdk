@@ -310,14 +310,8 @@ final class DefaultStartViewModel: StartViewModel {
                 
             case .success(let urlString):
                 
-                switch media {
-                case .image(_):
-                    self.sendMessage(.image(urlString))
-                case .voice(_):
-                    self.sendMessage(.voice(urlString))
-
-                }
-                
+                self.sendMessage(.media(urlString))
+             
             case .failure(let error):
                 Logger.verbose(error)
                 self.error = error

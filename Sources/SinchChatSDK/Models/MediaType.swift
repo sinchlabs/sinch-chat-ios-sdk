@@ -1,7 +1,9 @@
 import UIKit
+import AVFoundation
 
 enum MediaType {
     case image(UIImage)
+    case video(URL)
     case voice(URL)
     
     var convertToSinchMedia: Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest? {
@@ -21,6 +23,14 @@ enum MediaType {
             
             } catch {
                 mimeType = "audio/mp4"
+            }
+        case .video(let url):
+            do {
+                data =  try Data(contentsOf: url)
+                mimeType = "video/mp4"
+            
+            } catch {
+                mimeType = "video/mp4"
             }
         }
         guard let data = data else { return nil }

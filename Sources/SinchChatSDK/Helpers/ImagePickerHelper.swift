@@ -1,7 +1,12 @@
 import UIKit
+import AVFoundation
+import Photos
+import MobileCoreServices
 
 public protocol ImagePickerDelegate: AnyObject {
     func didSelect(image: UIImage?)
+    func didSelect(video: URL?)
+
 }
 
 final class ImagePickerHelper: NSObject {
@@ -19,19 +24,56 @@ final class ImagePickerHelper: NSObject {
         pickerController.delegate = self
         pickerController.allowsEditing = true
         pickerController.sourceType = .photoLibrary
-        pickerController.mediaTypes = ["public.image"]
+       
     }
     
-    func pickPhoto() {
+    func pickPhotoFromGallery() {
         if UIImagePickerController.isSourceTypeAvailable(.photoLibrary) {
-            presentationController?.present(self.pickerController, animated: true)
+            var mediaTypes: [String] = []
+            if !SinchChatSDK.shared.disabledFeatures.contains(.sendImageMessageFromGallery) {
+                mediaTypes.append(kUTTypeImage as String)
+            }
+            if !SinchChatSDK.shared.disabledFeatures.contains(.sendVideoMessageFromGallery) {
+                mediaTypes.append(contentsOf: [kUTTypeMovie as String, kUTTypeVideo as String, kUTTypeMPEG4 as String])
+            }
+            pickerController.mediaTypes = mediaTypes
+            self.pickerController.videoMaximumDuration = 15
+            self.pickerController.sourceType = .photoLibrary
+            self.presentationController?.present(self.pickerController, animated: true)
+        }
+    }
+    
+    func takePhoto(completion: @escaping (_ success:Bool) -> Void ) {
+        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+            
+            pickerController.sourceType = .camera
+            pickerController.cameraCaptureMode = .photo
+                pickerController.mediaTypes = [kUTTypeImage as String]
+            AVCaptureDevice.requestAccess(for: AVMediaType.video,
+                                          completionHandler: { (granted:Bool) -> Void in
+                if granted {
+                    
+                    DispatchQueue.main.async {
+                        self.presentationController?.present(self.pickerController, animated: true)
+                    }
+                    completion(true)
+                } else {
+                    completion(false)
+                }
+            })
+        } else {
+            completion(false)
         }
     }
     
     private func pickerController(_ controller: UIImagePickerController, didSelect image: UIImage?) {
         controller.dismiss(animated: true, completion: nil)
-        
         delegate?.didSelect(image: image)
+    }
+    private func pickerController(_ controller: UIImagePickerController, didSelectVideo video: URL) {
+        
+        controller.dismiss(animated: true, completion: nil)
+        delegate?.didSelect(video: video)
     }
 }
 extension ImagePickerHelper: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
@@ -42,10 +84,16 @@ extension ImagePickerHelper: UIImagePickerControllerDelegate, UINavigationContro
     
     public func imagePickerController(_ picker: UIImagePickerController,
                                       didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-        guard let image = info[.editedImage] as? UIImage else {
-            return pickerController(picker, didSelect: nil)
-        }
         
-        pickerController(picker, didSelect: image)
+        if let image = info[.editedImage] as? UIImage {
+            pickerController(picker, didSelect: image)
+
+        } else if let url = info[.mediaURL] as? URL {
+         
+            self.pickerController(picker, didSelectVideo: url)
+            
+        } else {
+                pickerController(picker, didSelect: nil)
+        }
     }
 }

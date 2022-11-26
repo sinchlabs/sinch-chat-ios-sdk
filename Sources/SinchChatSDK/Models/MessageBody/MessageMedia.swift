@@ -3,6 +3,8 @@ import UIKit
 enum TypeMessageMedia: Codable {
     case image
     case audio
+    case video
+    case unsupported
 }
 struct MessageMedia: MessageBody, MessageWithURL {
     

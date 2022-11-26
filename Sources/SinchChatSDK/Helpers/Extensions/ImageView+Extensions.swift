@@ -13,4 +13,11 @@ extension UIImageView {
             completion(result)
         }
     }
+    func setImage(provider: AVAssetImageDataProvider, completion: @escaping (Result<RetrieveImageResult, KingfisherError>) -> Void) {
+
+        kf.indicatorType = .none
+        kf.setImage(with: provider) { result in
+            completion(result)
+        }
+    }
 }

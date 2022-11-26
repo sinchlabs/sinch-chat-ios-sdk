@@ -1,10 +1,22 @@
 import UIKit
-
-final class ImageMessageCell: ImageBaseCell {
+import Kingfisher
+import AVFoundation
+final class VideoMessageCell: ImageBaseCell {
     
-    static let cellId = "imageMessageCell"
+    static let cellId = "videoMessageCell"
     var message: Message?
     var localizationConfig: SinchSDKConfig.LocalizationConfig?
+    
+    lazy var playImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFill
+        imageView.backgroundColor = .clear
+        imageView.clipsToBounds = true
+        imageView.isUserInteractionEnabled = true
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+    }()
+    
     // MARK: - Methods
     
     /// Responsible for setting up the constraints of the cell's subviews.
@@ -19,6 +31,11 @@ final class ImageMessageCell: ImageBaseCell {
             placeholderLabel.trailingAnchor.constraint(equalTo: messageContainerView.trailingAnchor, constant: -20),
             placeholderLabel.topAnchor.constraint(equalTo: placeholderImageView.bottomAnchor, constant: 13),
             placeholderLabel.heightAnchor.constraint(equalToConstant: 30.0),
+      
+            playImageView.centerXAnchor.constraint(equalTo: messageContainerView.centerXAnchor),
+            playImageView.centerYAnchor.constraint(equalTo: messageContainerView.centerYAnchor),
+            playImageView.widthAnchor.constraint(equalToConstant: 32.0),
+            playImageView.heightAnchor.constraint(equalToConstant: 32.0),
             
             errorImageView.widthAnchor.constraint(equalToConstant: 20.0),
             errorImageView.heightAnchor.constraint(equalToConstant: 20.0),
@@ -39,7 +56,8 @@ final class ImageMessageCell: ImageBaseCell {
         messageContainerView.addSubview(activityIndicator)
         
         imageView.addSubview(dateLabel)
-        
+        imageView.addSubview(playImageView)
+        playImageView.bringSubviewToFront(imageView)
         setupConstraints()
     }
     
@@ -54,13 +72,44 @@ final class ImageMessageCell: ImageBaseCell {
         }
     }
        
+     func setupTumbnailFromUrl(_ url: URL) {
+        let asset = AVAsset(url: url)
+        let imageGenerator = AVAssetImageGenerator(asset: asset)
+        imageGenerator.appliesPreferredTrackTransform = true
+        imageGenerator.maximumSize = CGSize(width: 900.0, height: 900.0)
+        let provider = AVAssetImageDataProvider(assetImageGenerator: imageGenerator, time: .zero)
+        activityIndicator.startAnimating()
+        placeholderLabel.text = ""
+        errorImageView.image = nil
+        
+        self.imageView.setImage(provider: provider) { [weak self] result in
+            guard let self = self else {
+                return
+            }
+            self.activityIndicator.stopAnimating()
+            
+            switch result {
+                
+            case .success(_):
+                self.errorImageView.image = nil
+                
+            case .failure(_):
+                self.errorImageView.image = UIImage(named: "errorIcon",
+                                                    in: Bundle.staticBundle, compatibleWith: nil)!
+            }
+        }
+    }
+    
     override func configure(with message: Message, at indexPath: IndexPath, and messagesCollectionView: MessageCollectionView) {
         super.configure(with: message, at: indexPath, and: messagesCollectionView)
         self.message = message
         self.localizationConfig =  messagesCollectionView.localizationConfig
         setupContainerView(messagesCollectionView, message)
         setupPlaceholderView(messagesCollectionView, message)
-        setupImageView(message: message, localizationConfig: messagesCollectionView.localizationConfig)
+
+        if let message = message.body as? MessageMedia, let url = URL(string: message.url) {
+            setupTumbnailFromUrl(url)
+        }
 
         dateLabel.configure {
             
@@ -69,7 +118,6 @@ final class ImageMessageCell: ImageBaseCell {
                 dateLabel.text =  Date(timeIntervalSince1970: TimeInterval(dateInSeconds)).getFormattedTime()
             }
         }
-        
         setupDateLabel(messagesCollectionView)
         
         if let dateFont = dateLabel.messageLabelFont {
@@ -77,10 +125,11 @@ final class ImageMessageCell: ImageBaseCell {
             
         }
     }
-    
+
     private func setupContainerView(_ messagesCollectionView: MessageCollectionView, _ message: Message) {
         delegate = messagesCollectionView.touchDelegate
-        
+        playImageView.image = messagesCollectionView.uiConfig.playVideoImage
+
         if message.isFromCurrentUser() {
             messageContainerView.backgroundColor = messagesCollectionView.uiConfig.outgoingMessageBackgroundColor
             
@@ -98,18 +147,10 @@ final class ImageMessageCell: ImageBaseCell {
             delegate?.didTapOutsideOfContent(in: self)
             return
         }
-        if !activityIndicator.isAnimating {
-            if  let error = error, let localizationConfiguration = localizationConfig, let message = message, error {
-
-                setupImageView(message: message, localizationConfig: localizationConfiguration)
-                
-            } else {
-                
-                if let message = message?.body as? MessageMedia, let url = URL(string: message.url) {
-                    delegate?.didTapMedia(with: url)
-                }
-                
-            }
+        
+        if let message = message, let mediaMessage = message.body as? MessageMedia,
+           let url = URL(string: mediaMessage.url) {
+            delegate?.didTapOnVideo(with: url, message: message)
         }
     }
 }

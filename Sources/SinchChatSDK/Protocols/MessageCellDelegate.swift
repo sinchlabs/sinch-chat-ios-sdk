@@ -3,6 +3,7 @@ import Foundation
  protocol MessageCellDelegate: MessageLabelDelegate {
 
     func didTapMedia(with url: URL)
+    func didTapOnVideo(with url: URL, message: Message)
     func didTapOutsideOfContent(in cell: MessageCollectionViewCell)
     func didTapOutsideOfContent()
     func didTapOnChoice(_ text: ChoiceMessageType, in cell: MessageCollectionViewCell)

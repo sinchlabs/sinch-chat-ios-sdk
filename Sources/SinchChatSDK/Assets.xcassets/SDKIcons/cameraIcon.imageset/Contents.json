@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "Frame 841.png",
+      "filename" : "fluent_camera-24-regular.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "Frame 841@2x.png",
+      "filename" : "fluent_camera-24-regular@2x.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "Frame 841@3x.png",
+      "filename" : "fluent_camera-24-regular@3x.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

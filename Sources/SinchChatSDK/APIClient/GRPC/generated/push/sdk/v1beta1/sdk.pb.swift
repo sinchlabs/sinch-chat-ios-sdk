@@ -25,8 +25,6 @@ struct Sinch_Push_Sdk_V1beta1_SubscribeRequest {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var subscription: String = String()
-
   var config: String = String()
 
   var token: String = String()
@@ -40,8 +38,6 @@ struct Sinch_Push_Sdk_V1beta1_UnsubscribeRequest {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
-
-  var subscription: String = String()
 
   var config: String = String()
 
@@ -64,9 +60,8 @@ fileprivate let _protobuf_package = "sinch.push.sdk.v1beta1"
 extension Sinch_Push_Sdk_V1beta1_SubscribeRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".SubscribeRequest"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "subscription"),
-    2: .same(proto: "config"),
-    3: .same(proto: "token"),
+    1: .same(proto: "config"),
+    2: .same(proto: "token"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -75,29 +70,24 @@ extension Sinch_Push_Sdk_V1beta1_SubscribeRequest: SwiftProtobuf.Message, SwiftP
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.subscription) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.config) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.token) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.config) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.token) }()
       default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.subscription.isEmpty {
-      try visitor.visitSingularStringField(value: self.subscription, fieldNumber: 1)
-    }
     if !self.config.isEmpty {
-      try visitor.visitSingularStringField(value: self.config, fieldNumber: 2)
+      try visitor.visitSingularStringField(value: self.config, fieldNumber: 1)
     }
     if !self.token.isEmpty {
-      try visitor.visitSingularStringField(value: self.token, fieldNumber: 3)
+      try visitor.visitSingularStringField(value: self.token, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Sinch_Push_Sdk_V1beta1_SubscribeRequest, rhs: Sinch_Push_Sdk_V1beta1_SubscribeRequest) -> Bool {
-    if lhs.subscription != rhs.subscription {return false}
     if lhs.config != rhs.config {return false}
     if lhs.token != rhs.token {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
@@ -108,9 +98,8 @@ extension Sinch_Push_Sdk_V1beta1_SubscribeRequest: SwiftProtobuf.Message, SwiftP
 extension Sinch_Push_Sdk_V1beta1_UnsubscribeRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".UnsubscribeRequest"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .same(proto: "subscription"),
-    2: .same(proto: "config"),
-    3: .same(proto: "token"),
+    1: .same(proto: "config"),
+    2: .same(proto: "token"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -119,29 +108,24 @@ extension Sinch_Push_Sdk_V1beta1_UnsubscribeRequest: SwiftProtobuf.Message, Swif
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.subscription) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.config) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.token) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.config) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.token) }()
       default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    if !self.subscription.isEmpty {
-      try visitor.visitSingularStringField(value: self.subscription, fieldNumber: 1)
-    }
     if !self.config.isEmpty {
-      try visitor.visitSingularStringField(value: self.config, fieldNumber: 2)
+      try visitor.visitSingularStringField(value: self.config, fieldNumber: 1)
     }
     if !self.token.isEmpty {
-      try visitor.visitSingularStringField(value: self.token, fieldNumber: 3)
+      try visitor.visitSingularStringField(value: self.token, fieldNumber: 2)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Sinch_Push_Sdk_V1beta1_UnsubscribeRequest, rhs: Sinch_Push_Sdk_V1beta1_UnsubscribeRequest) -> Bool {
-    if lhs.subscription != rhs.subscription {return false}
     if lhs.config != rhs.config {return false}
     if lhs.token != rhs.token {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}

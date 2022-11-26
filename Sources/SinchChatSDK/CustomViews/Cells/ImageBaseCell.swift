@@ -95,6 +95,12 @@ class ImageBaseCell: MessageContentCell {
             showErrorViewForImageDownload(localizationConfig: localizationConfig)
         }
     }
+    func setupDateLabel(_ messagesCollectionView: MessageCollectionView) {
+        dateLabel.textColor = .white
+        dateLabel.layer.cornerRadius = 10.0
+        dateLabel.layer.masksToBounds = true
+        dateLabel.backgroundColor = messagesCollectionView.uiConfig.dateLabelMediaBackgroundColor
+    }
     
     func setupImageView(message: Message, localizationConfig: SinchSDKConfig.LocalizationConfig) {
         
