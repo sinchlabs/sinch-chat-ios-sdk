@@ -26,6 +26,7 @@ public extension SinchSDKConfig {
         
         public var menuShareLocation = NSLocalizedString("menu_button_title_share_location", bundle: Bundle.staticBundle, comment: "")
         public var menuCamera = NSLocalizedString("menu_button_title_camera", bundle: Bundle.staticBundle, comment: "")
+        public var menuImageGallery = NSLocalizedString("menu_button_title_gallery", bundle: Bundle.staticBundle, comment: "")
         public var menuCancel = NSLocalizedString("button_title_cancel", bundle: Bundle.staticBundle, comment: "")
         public var locationShareCancel = NSLocalizedString("button_title_cancel", bundle: Bundle.staticBundle, comment: "")
         public var locationShare = NSLocalizedString("button_title_share_location", bundle: Bundle.staticBundle, comment: "")

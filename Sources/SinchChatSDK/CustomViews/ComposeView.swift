@@ -15,6 +15,7 @@ protocol ComposeViewDelegate: AnyObject {
     func scrollToBottomMessage()
     
 }
+
 final class ComposeView: SinchView {
     
     private let maxHeight: CGFloat = 125.0
@@ -31,18 +32,21 @@ final class ComposeView: SinchView {
         
         return button
     }()
+    
     lazy var emptyView: UIView = {
         var view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         
         return view
     }()
+    
     lazy var rightStackEmptyView: UIView = {
         var view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         
         return view
     }()
+    
     lazy var photoButton: UIButton = {
         var button = UIButton()
         button.setImage(uiConfig.photoImage, for: .normal)
@@ -50,6 +54,7 @@ final class ComposeView: SinchView {
         
         return button
     }()
+    
     lazy var sendButton: UIButton = {
         var button = UIButton()
         button.setImage(uiConfig.sendImage, for: .normal)
@@ -57,6 +62,7 @@ final class ComposeView: SinchView {
         
         return button
     }()
+    
     lazy var plusButton: UIButton = {
         var button = UIButton()
         button.setImage(uiConfig.plusImage, for: .normal)
@@ -235,10 +241,14 @@ final class ComposeView: SinchView {
     }
     
     func setupButtonVisibility() {
+        let isPlusButtonAvailable = SinchChatSDK.shared.disabledFeatures.contains(.sendLocationSharingMessage)
+        plusButton.isHidden = isPlusButtonAvailable
         
-            plusButton.isHidden = (SinchChatSDK.shared.disabledFeatures.contains(.sendImageFromCamera) && SinchChatSDK.shared.disabledFeatures.contains(.sendLocationSharingMessage))
-            photoButton.isHidden = (SinchChatSDK.shared.disabledFeatures.contains(.sendImageMessageFromGallery) && SinchChatSDK.shared.disabledFeatures.contains(.sendVideoMessageFromGallery))
-            voiceRecordingButton.isHidden = SinchChatSDK.shared.disabledFeatures.contains(.sendVoiceMessage)
+        let isPhotoAvailable = (SinchChatSDK.shared.disabledFeatures.contains(.sendImageMessageFromGallery) &&
+                                SinchChatSDK.shared.disabledFeatures.contains(.sendVideoMessageFromGallery) &&
+                                SinchChatSDK.shared.disabledFeatures.contains(.sendImageFromCamera))
+        photoButton.isHidden = isPhotoAvailable
+        voiceRecordingButton.isHidden = SinchChatSDK.shared.disabledFeatures.contains(.sendVoiceMessage)
         
     }
     

@@ -72,7 +72,8 @@ public extension SinchSDKConfig {
 
         public var shareLocationMenuImage = UIImage(named: "locationBlueIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var cameraMenuImage = UIImage(named: "cameraIcon", in: Bundle.staticBundle, compatibleWith: nil)
-
+        public var galleryMenuImage = UIImage(named: "galleryIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        
         public var pageControlSelectedColor = UIColor(named: "primaryPageControlColor", in: Bundle.staticBundle, compatibleWith: nil)
         public var pageControlUnselectedColor = UIColor(named: "secondaryPageControlColor", in: Bundle.staticBundle, compatibleWith: nil)
         

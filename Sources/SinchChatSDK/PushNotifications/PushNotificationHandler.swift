@@ -72,7 +72,11 @@ final class DefaultPushNotificationHandler: PushNotificationHandler {
     }
     
     func unsubscribe(_ completion: @escaping (Result<Void, Error>) -> Void) {
-        pushRepository?.unsubscribe(completion)
+        guard let token = pushDeviceTokenCoordinator.getTokenToSend() else {
+            completion(.success(()))
+            return
+        }
+        pushRepository?.unsubscribe(token, completion)
     }
 
     func askForPermissions(completion: ((SinchSDKNotificationStatus) -> Void)?) {

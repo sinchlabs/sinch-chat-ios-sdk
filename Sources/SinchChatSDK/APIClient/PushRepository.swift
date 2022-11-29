@@ -7,7 +7,7 @@ enum PushRepositoryError: Error {
 
 protocol PushRepository {
     func sendDeviceToken(token: String, completion: @escaping (Result<Void, Error>) -> Void)
-    func unsubscribe(_ completion: @escaping (Result<Void, Error>) -> Void)
+    func unsubscribe(_ currentDeviceToken: String, _ completion: @escaping (Result<Void, Error>) -> Void)
     func replyToMessageWithTextChoice(choice: ChoiceText, completion: @escaping (Result<Void, Error>) -> Void) 
 }
 
@@ -48,7 +48,7 @@ final class DefaultPushRepository: PushRepository {
         }
     }
     
-    func unsubscribe(_ completion: @escaping (Result<Void, Error>) -> Void) {
+    func unsubscribe(_ currentDeviceToken: String, _ completion: @escaping (Result<Void, Error>) -> Void) {
         do {
             guard let client = DefaultPushAPIClient(region: region) else {
                 completion(.failure(PushRepositoryError.internalError))
@@ -59,6 +59,7 @@ final class DefaultPushRepository: PushRepository {
             var request = Sinch_Push_Sdk_V1beta1_UnsubscribeRequest()
             
             request.config = authDataSource.currentConfigID
+            request.token = currentDeviceToken
             
             _ = service.unsubscribe(request).response.always { result in
                 client.closeChannel()

@@ -345,6 +345,59 @@ extension StartViewController: ComposeViewDelegate {
             
             alert.addAction(action)
         }
+        
+        alert.addAction(UIAlertAction(title: mainView.localizationConfiguration.menuCancel, style: .cancel, handler: { _ in
+            debugPrint("User click cancel button")
+        }))
+        
+        self.present(alert, animated: true, completion: nil)
+        
+    }
+    
+    func choosePhoto() {
+        
+        showChoiceBetweenGalleryAndCamera()
+        resignFirstResponderView()
+    }
+    
+    func sendMessage(text: String) {
+        
+        viewModel.sendMessage(.text(text))
+    }
+    
+    func sendChoiceResponseMessage(postbackData: String, entryID: String) {
+        
+        viewModel.sendMessage(.choiceResponseMessage(postbackData: postbackData, entryID: entryID))
+    }
+    
+    func stopAudioPlayerIfPlaying(isRecording: Bool) {
+        
+        if let playingItem = playingItem {
+            switch playingItem {
+            case .localMedia(url: _):
+                player.stop()
+                self.playingItem = nil
+                
+                // todo when adding recording
+            case .mediaMessage(message: _):
+                
+                if isRecording {
+                    player.stop()
+                    updateAcivePlayerView()
+                    self.playingItem = nil
+
+                } else {
+                    updateAcivePlayerView()
+
+                }
+            }
+        }
+    }
+    
+    private func showChoiceBetweenGalleryAndCamera() {
+
+        let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        
         if !SinchChatSDK.shared.disabledFeatures.contains(.sendImageFromCamera) {
             
             let cameraAction  = UIAlertAction(title: mainView.localizationConfiguration.menuCamera, style: .default, handler: { _ in
@@ -380,53 +433,27 @@ extension StartViewController: ComposeViewDelegate {
             alert.addAction(cameraAction)
         }
         
+        if !SinchChatSDK.shared.disabledFeatures.contains(.sendImageFromCamera) {
+            
+            let cameraAction  = UIAlertAction(title: mainView.localizationConfiguration.menuImageGallery, style: .default, handler: { _ in
+                self.imagePickerHelper.pickPhotoFromGallery()
+            })
+            
+            cameraAction.setupActionWithImage(mainView.uiConfig.galleryMenuImage,
+                                              textColor: mainView.uiConfig.menuButtonTextColor)
+            
+            alert.addAction(cameraAction)
+        }
+        
         alert.addAction(UIAlertAction(title: mainView.localizationConfiguration.menuCancel, style: .cancel, handler: { _ in
             debugPrint("User click cancel button")
         }))
         
         self.present(alert, animated: true, completion: nil)
-        
-    }
-    func choosePhoto() {
-        
-        self.imagePickerHelper.pickPhotoFromGallery()
-        resignFirstResponderView()
-    }
-    
-    func sendMessage(text: String) {
-        
-        viewModel.sendMessage(.text(text))
-    }
-    
-    func sendChoiceResponseMessage(postbackData: String, entryID: String) {
-        
-        viewModel.sendMessage(.choiceResponseMessage(postbackData: postbackData, entryID: entryID))
-    }
-    func stopAudioPlayerIfPlaying(isRecording: Bool) {
-        
-        if let playingItem = playingItem {
-            switch playingItem {
-            case .localMedia(url: _):
-                player.stop()
-                self.playingItem = nil
-                
-                // todo when adding recording
-            case .mediaMessage(message: _):
-                
-                if isRecording {
-                    player.stop()
-                    updateAcivePlayerView()
-                    self.playingItem = nil
-
-                } else {
-                    updateAcivePlayerView()
-
-                }
-            }
-        }
     }
     
 }
+
 extension StartViewController: StartViewModelDelegate {
     func setVisibleRefreshActivityIndicator(_ isVisible: Bool) {
         if isVisible {

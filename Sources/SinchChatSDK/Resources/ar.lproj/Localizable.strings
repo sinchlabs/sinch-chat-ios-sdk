@@ -20,6 +20,7 @@
 
 "menu_button_title_share_location" = "Share Location";
 "menu_button_title_camera" = "Camera";
+"menu_button_title_gallery" = "Image Gallery";
 "button_title_share_location" = "Share Location";
 "button_title_cancel" = "Cancel";
 
@@ -32,7 +33,7 @@
 
 "alert_button_title_not_now" = "Not Now";
 "alert_button_title_settings" = "Settings";
-"Please go to Settings and allow access to Camera"
+"Please go to Settings and allow access to Camera";
 "outgoing_location_message_title" = "My location";
 "outgoing_location_message_button_title" = "See my location";
 "recording_title" = "Recording";

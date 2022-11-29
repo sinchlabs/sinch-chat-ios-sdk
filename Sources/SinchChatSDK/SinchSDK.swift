@@ -68,6 +68,7 @@ public final class SinchChatSDK {
     /// Removes identity of the user.
     /// This method is logging out user. It removes token and other user data from the app.
     public func removeIdentity(_ completion: ((Result<Void, Error>) -> Void)? = nil ) {
+        
         pushNotificationHandler.unsubscribe { [weak self] result in
             switch result {
             case .success:
