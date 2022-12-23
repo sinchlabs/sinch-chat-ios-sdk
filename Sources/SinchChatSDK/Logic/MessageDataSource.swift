@@ -23,7 +23,7 @@ protocol MessageDataSource {
     
     func uploadMedia(_ media: MediaType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void)
     func uploadMediaViaStream(_ media: MediaType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void)
-    func sendMessage(_ message: MessageType, completion: @escaping (Result<Void, MessageDataSourceError>) -> Void)
+    func sendMessage(_ message: MessageType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void)
     func subscribeForMessages(completion: @escaping (Result<Message, MessageDataSourceError>) -> Void)
     func getMessageHistory(completion: @escaping (Result<[Message], MessageDataSourceError>) -> Void)
     func sendConversationMetadata(_ metadata: [SinchMetadata]) -> Result<Void, MessageDataSourceError>
@@ -37,7 +37,7 @@ protocol MessageDataSource {
 }
 
 final class DefaultMessageDataSource: MessageDataSource {
-    
+       
     var authDataSource: AuthDataSource
     var client: APIClient
     var historyCall: UnaryCall<Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest, Sinch_Chat_Sdk_V1alpha2_GetHistoryResponse>?
@@ -55,16 +55,18 @@ final class DefaultMessageDataSource: MessageDataSource {
     
     private let topicModel: TopicModel?
     private let metadata: [SinchMetadata]
+    private let shouldInitializeConversation: Bool
     
     private let jsonEncoder = JSONEncoder()
     
-    init(apiClient: APIClient, authDataSource: AuthDataSource, topicModel: TopicModel? = nil, metadata: [SinchMetadata] = []) {
+    init(apiClient: APIClient, authDataSource: AuthDataSource, topicModel: TopicModel? = nil, metadata: [SinchMetadata] = [], shouldInitializeConversation: Bool = false) {
         self.client = apiClient
         self.authDataSource = authDataSource
         
         // Optional mode
         self.topicModel = topicModel
         self.metadata = metadata
+        self.shouldInitializeConversation = shouldInitializeConversation
         
         let metadataToSend = metadata.filter({ $0.getKeyValue().mode == .withEachMessage })
         
@@ -158,7 +160,7 @@ final class DefaultMessageDataSource: MessageDataSource {
         }
     }
     
-    func sendMessage(_ message: MessageType, completion: @escaping (Result<Void, MessageDataSourceError>) -> Void) {
+    func sendMessage(_ message: MessageType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void) {
         do {
             let service = try getService()
             
@@ -173,14 +175,19 @@ final class DefaultMessageDataSource: MessageDataSource {
                 message.metadata = metadata
             }
             
+//            let test = Sinch_Chat_Sdk_V1alpha2_SendRequest()
+//            test.message = .init()
+//            test.message.fallbackMessage
+            
+
             sendMessageCall = service.send(message)
             
             _ = sendMessageCall?.response.always { result in
                 
                 switch result {
-                case .success(_):
+                case .success(let response):
                     
-                    completion(.success(()))
+                    completion(.success(response.messageID))
                     
                 case .failure(let err):
                     completion(.failure(.unknown(err)))
@@ -246,6 +253,7 @@ final class DefaultMessageDataSource: MessageDataSource {
             completion(.failure(.notLoggedIn))
         }
     }
+    
     func subscribeForMessages(completion: @escaping (Result<Message, MessageDataSourceError>) -> Void) {
         guard subscription == nil else {
             completion(.failure(.subscriptionIsAlreadyStarted))
@@ -300,6 +308,10 @@ final class DefaultMessageDataSource: MessageDataSource {
             }
             
             self.subscription = subscription
+            
+            if shouldInitializeConversation {
+                self.sendMessage(.fallbackMessage("conversation_start")) { _ in }
+            }
             
             self.subscription?.status.whenComplete({ [weak self] response in
                 
@@ -406,7 +418,7 @@ final class DefaultMessageDataSource: MessageDataSource {
                     "audio/mp4", "audio/mp3", "audio/m4a", "audio/snd", "audio/au", "audio/wav", "audio/sd2":
                     mediaMessage.type = .audio
                 case "image/jpg", "image/jpeg", "image/png", "image/tif", "image/tiff", "image/gif", "image/bmp",
-                    "image/BMPf", "image/ico", "image/cur", "image/xbm" :
+                    "image/BMPf", "image/ico", "image/cur", "image/xbm":
                     mediaMessage.type = .image
                     
                 default:
@@ -603,6 +615,12 @@ final class DefaultMessageDataSource: MessageDataSource {
                                                                       pictureUrl: agentThatJoined.pictureURL)),
                                                   sendDate: entry.deliveryTime.seconds))
                 
+            }
+            
+            // TODO: NEEDs attenchion - Skipping clicks on buttons on christmas BOT.
+            if entry.contactMessage.choiceResponseMessage.postbackData != ""
+                || entry.contactMessage.fallbackMessage.rawMessage.isEmpty == false {
+                return nil
             }
             
             return Message(entryId: entry.entryID, owner: .incoming(nil), body: MessageUnsupported(sendDate: entry.deliveryTime.seconds))

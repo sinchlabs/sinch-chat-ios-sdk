@@ -1,6 +1,6 @@
 import UIKit
 
-final class ImageMessageCell: ImageBaseCell {
+final class ImageMessageCell: ImageBaseCell, MessageStatusDelegate  {
     
     static let cellId = "imageMessageCell"
     var message: Message?
@@ -37,7 +37,8 @@ final class ImageMessageCell: ImageBaseCell {
         messageContainerView.addSubview(errorImageView)
         messageContainerView.addSubview(imageView)
         messageContainerView.addSubview(activityIndicator)
-        
+        statusView.delegate = self
+
         imageView.addSubview(dateLabel)
         
         setupConstraints()
@@ -83,8 +84,10 @@ final class ImageMessageCell: ImageBaseCell {
         
         if message.isFromCurrentUser() {
             messageContainerView.backgroundColor = messagesCollectionView.uiConfig.outgoingMessageBackgroundColor
-            
+            statusView.isHidden = false
+            statusView.setupStatusView(message.status, in: messagesCollectionView)
         } else {
+            statusView.isHidden = true
             messageContainerView.backgroundColor = messagesCollectionView.uiConfig.incomingMessageBackgroundColor
             avatarView.updateWithModel(message, uiConfig: messagesCollectionView.uiConfig)
         }
@@ -110,6 +113,11 @@ final class ImageMessageCell: ImageBaseCell {
                 }
                 
             }
+        }
+    }
+    func retryTapped() {
+        if let message = message {
+            delegate?.didTapOnResend(message: message, in: self)
         }
     }
 }

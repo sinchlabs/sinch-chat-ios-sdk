@@ -106,10 +106,12 @@ final class DefaultSinchChat: SinchChat {
             topicModel = TopicModel(topicID: topicID)
         }
         
-        let messageDataSource = DefaultMessageDataSource(apiClient: apiClient!,
-                                                         authDataSource: authDataSource,
-                                                         topicModel: topicModel,
-                                                         metadata: options?.metadata ?? [])
+        let messageDataSource = DefaultMessageDataSource(
+            apiClient: apiClient!,
+            authDataSource: authDataSource,
+            topicModel: topicModel,
+            metadata: options?.metadata ?? [],
+            shouldInitializeConversation: options?.shouldInitializeConversation ?? false)
         let rootCordinator = RootCoordinator(messageDataSource: messageDataSource,
                                              authDataSource: authDataSource,
                                              pushPermissionHandler: pushPermissionHandler)
@@ -166,10 +168,12 @@ public enum SinchMetadataMode {
 public struct GetChatViewControllerOptions {
     let topicID: String?
     let metadata: [SinchMetadata]
+    let shouldInitializeConversation: Bool
     
-    public init(topicID: String? = nil, metadata: [SinchMetadata]) {
+    public init(topicID: String? = nil, metadata: [SinchMetadata], shouldInitializeConversation: Bool = false) {
         self.topicID = topicID
         self.metadata = metadata
+        self.shouldInitializeConversation = shouldInitializeConversation
     }
 }
 

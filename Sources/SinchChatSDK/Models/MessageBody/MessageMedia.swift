@@ -15,7 +15,7 @@ struct MessageMedia: MessageBody, MessageWithURL {
     init(url: String, sendDate: Int64?, placeholderImage: UIImage? = nil, type: TypeMessageMedia? = nil) {
         self.url = url
         self.sendDate = sendDate
-
+        self.type = type
     }
     func convertStringToImage(strBase64: String) -> UIImage? {
         

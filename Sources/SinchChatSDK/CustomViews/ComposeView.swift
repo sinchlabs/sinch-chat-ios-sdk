@@ -3,7 +3,7 @@ import UIKit
 
 protocol ComposeViewDelegate: AnyObject {
     
-    func sendMessage(text: String)
+    func sendMessage(_ messageType: MessageType)
     func sendVoiceMessage(url: URL)
     func sendChoiceResponseMessage(postbackData: String, entryID: String)
     func choosePhoto()
@@ -452,7 +452,7 @@ final class ComposeView: SinchView {
             return
         }
         composeTextView.text = nil
-        delegate?.sendMessage(text: text)
+        delegate?.sendMessage(.text(text))
         updateUI(composeTextView)
     }
     

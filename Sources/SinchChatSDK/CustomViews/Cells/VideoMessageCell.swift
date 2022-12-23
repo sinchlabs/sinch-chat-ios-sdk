@@ -1,7 +1,7 @@
 import UIKit
 import Kingfisher
 import AVFoundation
-final class VideoMessageCell: ImageBaseCell {
+final class VideoMessageCell: ImageBaseCell, MessageStatusDelegate  {
     
     static let cellId = "videoMessageCell"
     var message: Message?
@@ -54,7 +54,8 @@ final class VideoMessageCell: ImageBaseCell {
         messageContainerView.addSubview(errorImageView)
         messageContainerView.addSubview(imageView)
         messageContainerView.addSubview(activityIndicator)
-        
+        statusView.delegate = self
+
         imageView.addSubview(dateLabel)
         imageView.addSubview(playImageView)
         playImageView.bringSubviewToFront(imageView)
@@ -130,10 +131,14 @@ final class VideoMessageCell: ImageBaseCell {
         delegate = messagesCollectionView.touchDelegate
         playImageView.image = messagesCollectionView.uiConfig.playVideoImage
 
+        
         if message.isFromCurrentUser() {
-            messageContainerView.backgroundColor = messagesCollectionView.uiConfig.outgoingMessageBackgroundColor
+                statusView.isHidden = false
+                statusView.setupStatusView(message.status, in: messagesCollectionView)
+                messageContainerView.backgroundColor = messagesCollectionView.uiConfig.outgoingMessageBackgroundColor
             
         } else {
+            statusView.isHidden = true
             messageContainerView.backgroundColor = messagesCollectionView.uiConfig.incomingMessageBackgroundColor
             avatarView.updateWithModel(message, uiConfig: messagesCollectionView.uiConfig)
         }
@@ -151,6 +156,11 @@ final class VideoMessageCell: ImageBaseCell {
         if let message = message, let mediaMessage = message.body as? MessageMedia,
            let url = URL(string: mediaMessage.url) {
             delegate?.didTapOnVideo(with: url, message: message)
+        }
+    }
+    func retryTapped() {
+        if let message = message {
+            delegate?.didTapOnResend(message: message, in: self)
         }
     }
 }

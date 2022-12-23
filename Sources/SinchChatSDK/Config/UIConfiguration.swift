@@ -90,6 +90,10 @@ public extension SinchSDKConfig {
         public var deleteImage = UIImage(named: "deleteIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var progressBarBackgroundColor = UIColor(named: "primaryProgressBarBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var scrollToBottomImage = UIImage(named: "scrollToBottomIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var sentStatusImage = UIImage(named: "sentIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var deliveredStatusImage = UIImage(named: "deliveredIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var seenStatusImage = UIImage(named: "seenIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var refreshStatusImage = UIImage(named: "refreshIcon", in: Bundle.staticBundle, compatibleWith: nil)
         // MARK: - InAppMessaging
         
         public var inAppMessageBackgroundColor = UIColor(named: "primaryInAppMessageBackground", in: Bundle.staticBundle, compatibleWith: nil)!

@@ -1,21 +1,65 @@
 import Foundation
+import UIKit
 import GRPC
 import Swift
 
 enum MessageError: Error {
     case notSupported
 }
+enum MessageStatus: Int, Codable {
+    case notSent
+    case sending
+    case sent
+    case delivered
+    case seen
+    
+    func localizedDescription(localizedConfig: SinchSDKConfig.LocalizationConfig) -> String {
+        switch self {
+        case .notSent:
+            return localizedConfig.notSentStatus
+        case .sending:
+            return localizedConfig.sendingStatus
+        case .sent:
+            return localizedConfig.sentStatus
+        case .delivered:
+            return localizedConfig.deliveredStatus
+        case .seen:
+            return localizedConfig.seenStatus
+            
+        }
+    }
+    
+    func localizedImage(uiConfig: SinchSDKConfig.UIConfig) -> UIImage? {
+        switch self {
+        case .notSent:
+            return nil
+        case .sending:
+            return nil
+        case .sent:
+            return uiConfig.sentStatusImage
+        case .delivered:
+            return uiConfig.deliveredStatusImage
+        case .seen:
+            return uiConfig.seenStatusImage
+            
+        }
+    }
+    
+}
 
 struct Message: Encodable {
     var entryId : String
     let owner: Owner
     var body: MessageBody
+    var status: MessageStatus
     
     enum CodingKeys: String, CodingKey {
         case entryId
         case owner
         case body
+        case status
     }
+    
     func encode(to encoder: Encoder) throws {
         var cod = encoder.container(keyedBy: CodingKeys.self)
         try cod.encode(owner, forKey: .owner)
@@ -29,10 +73,12 @@ struct Message: Encodable {
         }
     }
     
-    init(entryId: String, owner: Owner, body: MessageBody) {
+    init(entryId: String, owner: Owner, body: MessageBody, status: MessageStatus = .sent) {
         self.entryId = entryId
         self.owner = owner
         self.body = body
+        self.status = status
+        
     }
     
     func isFromCurrentUser() -> Bool {
@@ -53,7 +99,7 @@ extension Message: Decodable {
         let dec = try decoder.container(keyedBy: CodingKeys.self)
         owner = try dec.decode(Owner.self, forKey: .owner)
         entryId = try dec.decode(String.self, forKey: .entryId)
-
+        status = try dec.decode(MessageStatus.self, forKey: .status)
         if case .system = owner {
             if let messageEvent = try? dec.decode(MessageEvent.self, forKey: .body) {
                 body = messageEvent
@@ -81,7 +127,7 @@ extension Message {
             var messageText = Sinch_Conversationapi_Type_TextMessage()
             messageText.text = text.text
             contactMessage.message = .textMessage(messageText)
-
+            
         default:
             return nil
         }

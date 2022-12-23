@@ -33,6 +33,7 @@ struct CardAttributes: Equatable {
     public var buttonsFrame: [CGRect] = [.zero]
     public var buttonInsets: UIEdgeInsets = .zero
     public var mediaFrame: CGRect = .zero
+    public var statusViewSize: CGSize = .zero
     public var pageControlFrame: CGRect = .zero
     public var carouselCardFrames: [CardAttributes] = []
     public var avatarPosition = AvatarPosition(horizontal: .notSet)
@@ -63,7 +64,8 @@ struct CardAttributes: Equatable {
         copy.buttonInsets = buttonInsets
         copy.mediaFrame = mediaFrame
         copy.carouselCardFrames = carouselCardFrames
-   
+        copy.statusViewSize = statusViewSize
+
         return copy
         // swiftlint:enable force_cast
     }
@@ -91,6 +93,7 @@ struct CardAttributes: Equatable {
             && attributes.titleLabelTextInsets == titleLabelTextInsets
             && attributes.carouselCardFrames == carouselCardFrames
             && attributes.pageControlFrame == pageControlFrame
+            && attributes.statusViewSize == statusViewSize
 
         } else {
             return false

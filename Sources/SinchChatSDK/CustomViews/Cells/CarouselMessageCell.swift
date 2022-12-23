@@ -103,6 +103,7 @@ final class CarouselMessageCell: MessageContentCell, UIScrollViewDelegate {
         messageContainerView.addSubview(pageControl)
         messageContainerView.addSubview(dateLabel)
         scrollView.delegate = self
+        statusView.isHidden = true
 
     }
    

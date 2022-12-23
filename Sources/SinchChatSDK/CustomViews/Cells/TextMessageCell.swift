@@ -39,15 +39,20 @@ final class TextMessageCell: MessageContentCell {
         delegate = messagesCollectionView.touchDelegate
 
         if message.isFromCurrentUser() {
+            
             messageContainerView.backgroundColor = messagesCollectionView.uiConfig.outgoingMessageBackgroundColor
+            statusView.isHidden = false
+            statusView.setupStatusView(message.status, in: messagesCollectionView)
             messageLabel.textColor = messagesCollectionView.uiConfig.outgoingMessageTextColor
         } else {
+            statusView.isHidden = true
             messageContainerView.backgroundColor = messagesCollectionView.uiConfig.incomingMessageBackgroundColor
             messageLabel.textColor = messagesCollectionView.uiConfig.incomingMessageTextColor
             avatarView.updateWithModel(message, uiConfig: messagesCollectionView.uiConfig)
         }
         dateLabel.textColor = messagesCollectionView.uiConfig.dateMessageLabelTextColor
     }
+   
     
     override func configure(with message: Message, at indexPath: IndexPath, and messagesCollectionView: MessageCollectionView) {
         super.configure(with: message, at: indexPath, and: messagesCollectionView)

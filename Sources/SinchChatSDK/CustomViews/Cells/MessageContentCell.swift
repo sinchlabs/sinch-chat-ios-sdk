@@ -5,6 +5,7 @@ class MessageContentCell: MessageCollectionViewCell {
 
     /// The image view displaying the avatar.
     var avatarView = AvatarView()
+    lazy var statusView = MessageStatusView()
     weak var delegate: MessageCellDelegate?
     /// The container used for styling and holding the message's content view.
     var messageContainerView: UIView = {
@@ -31,6 +32,8 @@ class MessageContentCell: MessageCollectionViewCell {
     
         contentView.addSubview(messageContainerView)
         contentView.addSubview(avatarView)
+        contentView.addSubview(statusView)
+
     }
 
     override func prepareForReuse() {
@@ -46,7 +49,8 @@ class MessageContentCell: MessageCollectionViewCell {
 
         layoutMessageContainerView(with: attributes)
         layoutAvatarView(with: attributes)
-   
+        layoutStatusView(with: attributes)
+
     }
 
     func configureContainerViewCornerRadius(message: Message) {
@@ -80,7 +84,17 @@ class MessageContentCell: MessageCollectionViewCell {
 
         }
     }
-    
+    func configureStatus(message: Message) {
+      
+        switch message.owner {
+            
+        case .outgoing:
+            statusView.isHidden = false
+        default:
+            statusView.isHidden = true
+
+        }
+    }
     /// Used to configure the cell.
     ///
     /// - Parameters:
@@ -91,7 +105,7 @@ class MessageContentCell: MessageCollectionViewCell {
         
         configureContainerViewCornerRadius(message: message)
         configureAvatarView(message: message, messagesCollectionView: messagesCollectionView)
-    
+        configureStatus(message: message)
     }
 
     /// Handle long press gesture, return true when gestureRecognizer's touch point in `messageContainerView`'s frame
@@ -148,4 +162,15 @@ class MessageContentCell: MessageCollectionViewCell {
             
         messageContainerView.frame = CGRect(origin: origin, size: attributes.messageContainerSize)
     }
+    /// Positions the cell's `StatusView`.
+    /// - attributes: The `MessagesCollectionViewLayoutAttributes` for the cell.
+     func layoutStatusView(with attributes: ChatFlowLayoutAttributes) {
+        
+         statusView.frame = CGRect(x: messageContainerView.frame.maxX - attributes.statusViewSize.width,
+                                   y: messageContainerView.frame.maxY,
+                                   width: attributes.statusViewSize.width,
+                                   height: attributes.statusViewSize.height)
+      
+    }
+    
 }

@@ -106,8 +106,8 @@ final class LocationViewController: SinchViewController<LocationViewModel, Locat
     private func showLocationNotAllowedForAppAlert() {
         DispatchQueue.main.async {
             let alert = UIAlertController(title: self.mainView.localizationConfiguration.locationDeniedInAppAlertTitle, message: nil, preferredStyle: .alert)
-            let notNowButton = UIAlertAction(title: self.mainView.localizationConfiguration.locationAlertButtonTitleNotNow, style: .default) { _ in
-                
+            let notNowButton = UIAlertAction(title: self.mainView.localizationConfiguration.locationAlertButtonTitleNotNow, style: .default) { [weak self] _ in
+                self?.closeAction()
             }
             let settingsButton = UIAlertAction(title: self.mainView.localizationConfiguration.locationAlertButtonTitleSettings, style: .default) { _ in
                 if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -129,8 +129,8 @@ final class LocationViewController: SinchViewController<LocationViewModel, Locat
             let alert = UIAlertController(title: self.mainView.localizationConfiguration.locationDisabledAlertTitle,
                                           message: self.mainView.localizationConfiguration.locationDisabledAlertMessage,
                                           preferredStyle: .alert)
-            let okButton = UIAlertAction(title: self.mainView.localizationConfiguration.locationAlertButtonTitleOk, style: .default) { _ in
-
+            let okButton = UIAlertAction(title: self.mainView.localizationConfiguration.locationAlertButtonTitleOk, style: .default) { [weak self] _ in
+                self?.closeAction()
             }
             let settingsButton = UIAlertAction(title: self.mainView.localizationConfiguration.locationAlertButtonTitleSettings, style: .default) { _ in
                 if let url = URL(string: UIApplication.openSettingsURLString) {

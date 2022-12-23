@@ -236,7 +236,7 @@ extension StartViewController: ImagePickerDelegate {
                 guard let self = self else { return }
               
                 if let url = url {
-                    self.viewModel.sendMedia(.video(url))
+                    self.sendMedia(.video(url))
                     
                 } else {
                     debugPrint("Can not convert to mp4")
@@ -244,12 +244,26 @@ extension StartViewController: ImagePickerDelegate {
             })
         }
     }
+    func sendMedia(_ media: MediaType) {
+        
+        self.viewModel.sendMedia(media) { [weak self] result in
+            guard let self = self else { return }
+            switch result {
+            case .success(let message):
+                self.messageSent(message)
+                self.sendMessage(.media(message:message))
+                
+            case .failure(let error):
+                self.errorSendingMessage(error: error as! MessageDataSourceError)
+            }
+        }
+    }
     
     func didSelect(image: UIImage?) {
         
         if let image = image {
             
-            self.viewModel.sendMedia(.image(image))
+            sendMedia(.image(image))
         }
     }
 }
@@ -299,9 +313,46 @@ extension StartViewController: ComposeViewDelegate {
     }
     
     func sendVoiceMessage(url: URL) {
-        viewModel.sendMedia(.voice(url))
+        sendMedia(.audio(url))
+        
+    }
+    func sendMessage(_ messageType: MessageType) {
+        
+        viewModel.sendMessage(messageType) { [weak self] result in
+            
+            guard let self = self else { return }
+            
+            switch result {
+            case .success(let message):
+                if let message = message {
+                    if let _ = message.body as? MessageMedia {
+                        self.didReceiveMessages([message])
+                    } else {
+                        self.messageSent(message)
+                    }
+                }
+            case .failure(let error):
+                switch messageType {
+                    
+                case .media(var message):
+                    message.status = .notSent
+                    self.didReceiveMessages([message])
+                default:
+                    self.errorSendingMessage(error: error as! MessageDataSourceError)
+                }
+            }
+        }
     }
     
+    func sendChoiceResponseMessage(postbackData: String, entryID: String) {
+        
+            viewModel.sendMessage(.choiceResponseMessage(postbackData: postbackData, entryID: entryID), completion: { [weak self] result in
+                // todo
+                debugPrint("successful")
+                    
+            })
+            
+    }
     func startPlayingRecordedMessage(url: URL) {
         try? audioSessionController.set(category: .playback)
 
@@ -327,7 +378,29 @@ extension StartViewController: ComposeViewDelegate {
             
         }
     }
-    
+    func stopAudioPlayerIfPlaying(isRecording: Bool) {
+        
+        if let playingItem = playingItem {
+            switch playingItem {
+            case .localMedia(url: _):
+                player.stop()
+                self.playingItem = nil
+                
+                // todo when adding recording
+            case .mediaMessage(message: _):
+                
+                if isRecording {
+                    player.stop()
+                    updateAcivePlayerView()
+                    self.playingItem = nil
+
+                } else {
+                    updateAcivePlayerView()
+
+                }
+            }
+        }
+    }
     func chooseAction() {
         
         let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
@@ -360,40 +433,7 @@ extension StartViewController: ComposeViewDelegate {
         resignFirstResponderView()
     }
     
-    func sendMessage(text: String) {
-        
-        viewModel.sendMessage(.text(text))
-    }
-    
-    func sendChoiceResponseMessage(postbackData: String, entryID: String) {
-        
-        viewModel.sendMessage(.choiceResponseMessage(postbackData: postbackData, entryID: entryID))
-    }
-    
-    func stopAudioPlayerIfPlaying(isRecording: Bool) {
-        
-        if let playingItem = playingItem {
-            switch playingItem {
-            case .localMedia(url: _):
-                player.stop()
-                self.playingItem = nil
-                
-                // todo when adding recording
-            case .mediaMessage(message: _):
-                
-                if isRecording {
-                    player.stop()
-                    updateAcivePlayerView()
-                    self.playingItem = nil
-
-                } else {
-                    updateAcivePlayerView()
-
-                }
-            }
-        }
-    }
-    
+       
     private func showChoiceBetweenGalleryAndCamera() {
 
         let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
@@ -451,7 +491,7 @@ extension StartViewController: ComposeViewDelegate {
         
         self.present(alert, animated: true, completion: nil)
     }
-    
+
 }
 
 extension StartViewController: StartViewModelDelegate {
@@ -565,10 +605,51 @@ extension StartViewController: StartViewModelDelegate {
         
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            self.insertMessages(messages)
+            
+            for streamMessage in messages {
+                var isFounded = false
+                for (index, message) in self.messages.reversed().enumerated() {
+                    var  entryId = message.entryId
+                    if streamMessage.entryId == message.entryId {
+                        self.messages[self.messages.count - 1 - index] = streamMessage
+                        isFounded = true
+                        UIView.performWithoutAnimation {
+                            
+                            self.mainView.collectionView.reloadSections([self.messages.count - 1 - index])
+                        }
+                    break
+                    } else if let newMessage = streamMessage.body as? MessageMedia, let listMessage = message.body as? MessageMedia, entryId == "-1", newMessage.url == listMessage.url {
+                        self.messages[self.messages.count - 1 - index] = streamMessage
+                        isFounded = true
 
+                        UIView.performWithoutAnimation {
+                            
+                            self.mainView.collectionView.reloadSections([self.messages.count - 1 - index])
+                        }
+                        break
+                    }
+                }
+                
+                if !isFounded {
+                    self.insertMessages([streamMessage])
+                }
+            }
         }
     }
+    func messageSent(_ message: Message) {
+        
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            self.insertMessages(self.viewModel.processNewMessages(message))
+            
+            if !self.isLastItemVisible() {
+                self.mainView.messageComposeView.scrollToBottomButton.alpha = 1.0
+                self.mainView.messageComposeView.scrollToBottomButton.isHidden = false
+            }
+        }
+    }
+    
     func insertMessages(_ newMessages: [Message]) {
 
         self.mainView.collectionView.performBatchUpdates({
@@ -817,6 +898,11 @@ extension StartViewController: ChatDataSource {
 
 extension StartViewController: MessageCellDelegate {
     
+    func didTapOnResend(message: Message, in cell: MessageCollectionViewCell) {
+              
+        sendMessage(MessageType.media(message: message))
+    }
+    
     func didSelectURL(_ url: URL) {
         // htpps is recognized as link so we need to check if link contains http or https so SFSafariViewController dont crash
         if ["http", "https"].contains(url.scheme?.lowercased() ?? "") {
@@ -888,10 +974,10 @@ extension StartViewController: MessageCellDelegate {
 }
 extension StartViewController: LocationDelegate {
     func didShareLocation(latitude: Float, longitude: Float) {
+        sendMessage(.location(latitude: latitude,
+                              longitude: longitude,
+                              localizationConfig: mainView.localizationConfiguration))
         
-        viewModel.sendMessage(.location(latitude: latitude,
-                                        longitude: longitude,
-                                        localizationConfig: mainView.localizationConfiguration))
     }
 }
 

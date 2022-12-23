@@ -5,8 +5,8 @@ protocol StartViewModel: MessageDataSourceDelegate {
     var delegate: StartViewModelDelegate? { get }
 
     func setInternetConnectionState(_ state: InternetConnectionState)
-    func sendMedia(_ media: MediaType)
-    func sendMessage(_ message: MessageType)
+    func sendMedia(_ media: MediaType, completion: @escaping (Result<Message, Error>) -> Void)
+    func sendMessage(_ message: MessageType, completion: @escaping (Result<Message?, Error>) -> Void)
     func loadHistory()
     func onLoad()
     func onDisappear()
@@ -15,7 +15,8 @@ protocol StartViewModel: MessageDataSourceDelegate {
     func onInternetLost()
     func onInternetOn()
     func closeChannel()
-    
+    func processNewMessages(_ message: Message) -> [Message]
+
 }
 
 protocol StartViewModelDelegate: AnyObject {
@@ -26,11 +27,11 @@ protocol StartViewModelDelegate: AnyObject {
     func errorSendingMessage(error: MessageDataSourceError)
     func didChangeInternetState(_ state: InternetConnectionState)
     func setVisibleRefreshActivityIndicator(_ isVisible: Bool)
-
+    
 }
 
 final class DefaultStartViewModel: StartViewModel {
-      
+    
     private var dataSource: MessageDataSource
     private let notificationPermission: PushNofiticationPermissionHandler
     
@@ -43,14 +44,14 @@ final class DefaultStartViewModel: StartViewModel {
             if state != newValue {
                 
                 delegate?.didChangeInternetState(newValue)
-
+                
             }
         }
     }
-
+    
     init(messageDataSource: MessageDataSource, notificationPermission: PushNofiticationPermissionHandler) {
         dataSource = messageDataSource
-
+        
         self.notificationPermission = notificationPermission
     }
     // MARK: - Private methods
@@ -81,13 +82,13 @@ final class DefaultStartViewModel: StartViewModel {
     func closeChannel() {
         dataSource.closeChannel()
     }
-
+    
     private func setIdleState() {
         dataSource.cancelSubscription()
-
+        
         messagesArrays = []
         self.delegate?.didReceiveHistoryFirstMessages([])
-
+        
         error = nil
         isMessageSent = false
         SinchChatSDK.shared._chat.state = .idle
@@ -98,11 +99,11 @@ final class DefaultStartViewModel: StartViewModel {
         SinchChatSDK.shared._chat.state = .running
         loadHistory()
         subscribeForMessages()
-
+        
     }
     
     // MARK: - Public methods
-
+    
     func setInternetConnectionState(_ state: InternetConnectionState) {
         self.state = state
     }
@@ -127,17 +128,17 @@ final class DefaultStartViewModel: StartViewModel {
                             array.append([message])
                         } else {
                             array[0].insert(message, at: 0)
-
+                            
                         }
                         
                     } else {
                         messagesArrays.insert([message], at: 0)
-
+                        
                         if array.isEmpty {
                             array.append([message])
                         } else {
                             array.insert([message], at: 0)
-
+                            
                         }
                     }
                 }
@@ -146,7 +147,7 @@ final class DefaultStartViewModel: StartViewModel {
         
         return createArrayWithDateMessage(array)
     }
-
+    
     func processNewMessages(_ message: Message) -> [Message] {
         
         let startCount = messagesArrays.count
@@ -176,14 +177,14 @@ final class DefaultStartViewModel: StartViewModel {
             
         }
     }
-        
+    
     func onLoad() {
-
+        
         dataSource.cancelCalls()
         setRunningState()
-
-    }
         
+    }
+    
     func onDisappear() {
         setIdleState()
     }
@@ -196,7 +197,7 @@ final class DefaultStartViewModel: StartViewModel {
         
         dataSource.cancelCalls()
         setRunningState()
-
+        
     }
     func onInternetLost() {
         dataSource.cancelSubscription()
@@ -209,14 +210,14 @@ final class DefaultStartViewModel: StartViewModel {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: {
             self.dataSource.startChannel()
             self.setRunningState()
-
+            
         })
     }
-                                      
+    
     func onDidEnterBackground() {
         setIdleState()
         dataSource.closeChannel()
-
+        
     }
     func subscribeForMessages() {
         dataSource.subscribeForMessages { [weak self] result in
@@ -247,7 +248,7 @@ final class DefaultStartViewModel: StartViewModel {
                 
             case .success(let messages):
                 let processedMessages = self.processHistoryMessages(messages)
-
+                
                 if self.dataSource.isFirstPage() {
                     self.delegate?.didReceiveHistoryFirstMessages(processedMessages)
                     
@@ -263,8 +264,8 @@ final class DefaultStartViewModel: StartViewModel {
         }
     }
     
-    func sendMessage(_ message: MessageType) {
-      
+    func sendMessage(_ message: MessageType, completion: @escaping (Result<Message?, Error>) -> Void) {
+        
         if state == .isOff {
             self.delegate?.errorSendingMessage(error: .noInternetConnection)
             return
@@ -275,26 +276,58 @@ final class DefaultStartViewModel: StartViewModel {
         error = nil
         
         dataSource.sendMessage(message) { [weak self] result in
-            
             guard let self = self else {
                 return
             }
             
             switch result {
                 
-            case .success():
+            case .success(let entryId):
                 self.isMessageSent = true
-
+                completion(.success(self.createMessage(entryId: entryId, messageType: message)))
             case .failure(let error):
                 Logger.verbose(error)
-                
                 self.error = error
-                self.delegate?.errorSendingMessage(error: error)
+                completion(.failure(error))
             }
         }
     }
+    func createMessage(entryId: String, messageType: MessageType) -> Message? {
+        
+        var messageBody: MessageBody
+        let date = Int64(Date().timeIntervalSince1970)
+        switch messageType {
+        case .text(let text):
+            messageBody = MessageText(text: text, sendDate: date)
+            
+        case .choiceResponseMessage(postbackData: let postbackData, entryID: _):
+            return nil
+            
+        case .media(let message):
+            
+            if let messageContent = message.body as? MessageMedia {
+                messageBody = messageContent
+
+            } else {
+                messageBody = MessageMedia(url: "", sendDate: date)
+
+            }
+        
+        case .location(let latitude, let longitude, let localizationConfig):
+            messageBody = MessageLocation(label: localizationConfig.outgoingLocationMessageButtonTitle,
+                                          title: localizationConfig.outgoingLocationMessageTitle,
+                                          latitude: Double(latitude),
+                                          longitude: Double(longitude), sendDate: date)
+            
+        case .fallbackMessage(_):
+            return nil
+            
+        }
+        
+        return Message(entryId: entryId, owner: .outgoing, body: messageBody, status: .sending)
+    }
     
-    func sendMedia(_ media: MediaType) {
+    func sendMedia(_ media: MediaType, completion: @escaping (Result<Message, Error>) -> Void) {
         
         if state == .isOff {
             self.delegate?.errorSendingMessage(error: .noInternetConnection)
@@ -310,15 +343,34 @@ final class DefaultStartViewModel: StartViewModel {
                 
             case .success(let urlString):
                 
-                self.sendMessage(.media(urlString))
-             
+                completion(.success(self.createMediaMessage(urlString: urlString, mediaType: media)))
+                
             case .failure(let error):
                 Logger.verbose(error)
                 self.error = error
-                self.delegate?.errorSendingMessage(error: error)
+                completion(.failure(error))
                 
             }
         }
+    }
+    
+    func createMediaMessage(urlString: String, mediaType: MediaType) -> Message {
+        
+        var messageBody: MessageBody
+        
+        switch mediaType {
+        case .audio(_):
+            messageBody = MessageMedia(url: urlString, sendDate: Int64(Date().timeIntervalSince1970),
+                                       placeholderImage: nil, type: .audio)
+        case .image(_):
+            messageBody = MessageMedia(url: urlString, sendDate: Int64(Date().timeIntervalSince1970),
+                                       placeholderImage: nil, type: .image)
+        case .video(_):
+            messageBody = MessageMedia(url: urlString, sendDate: Int64(Date().timeIntervalSince1970),
+                                       placeholderImage: nil, type: .video)
+            
+        }
+        return Message(entryId: "-1", owner: .outgoing, body: messageBody, status: .sending)
     }
 }
 extension DefaultStartViewModel: MessageDataSourceDelegate {

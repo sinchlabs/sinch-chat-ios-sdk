@@ -81,7 +81,8 @@ final class CardMessageCell: ImageBaseCell {
         messageContainerView.addSubview(titleLabel)
         messageContainerView.addSubview(messageLabel)
         messageContainerView.addSubview(dateLabel)
-        
+        statusView.isHidden = true
+
         setupConstraints()
     }
     

@@ -3,9 +3,12 @@ import Foundation
 enum MessageType {
     case text(String)
     case choiceResponseMessage(postbackData: String, entryID: String)
-    case media(String)
+    case media(message: Message)
     case location(latitude: Float, longitude: Float, localizationConfig: SinchSDKConfig.LocalizationConfig)
-
+    
+    // Custom message type, usually sent on conversation started.
+    case fallbackMessage(String)
+    
     var convertToSinchMessage: Sinch_Chat_Sdk_V1alpha2_SendRequest? {
         var request = Sinch_Chat_Sdk_V1alpha2_SendRequest()
         var contactMessage = Sinch_Conversationapi_Type_ContactMessage()
@@ -14,7 +17,7 @@ enum MessageType {
         case .text(let text):
             
             var messageText = Sinch_Conversationapi_Type_TextMessage()
-                messageText.text = text
+            messageText.text = text
             contactMessage.message = .textMessage(messageText)
         case let .choiceResponseMessage(postbackData, entryID):
             
@@ -22,24 +25,34 @@ enum MessageType {
             messageChoice.postbackData = postbackData
             messageChoice.messageID = entryID
             contactMessage.choiceResponseMessage = messageChoice
-        case .media(let urlString):
+        case .media(let message):
             
             var messageMedia = Sinch_Conversationapi_Type_MediaMessage()
-            messageMedia.url = urlString
+            if let media = message.body as? MessageMedia {
+                messageMedia.url = media.url
+            }
             contactMessage.message = .mediaMessage(messageMedia)
             
         case let .location(latitude, longitude, localizationConfig):
-        
-        var locationMessage = Sinch_Conversationapi_Type_LocationMessage()
+            
+            var locationMessage = Sinch_Conversationapi_Type_LocationMessage()
             locationMessage.title = localizationConfig.outgoingLocationMessageTitle
-        locationMessage.label = localizationConfig.outgoingLocationMessageButtonTitle
-
-        var coordinates = Sinch_Conversationapi_Type_Coordinates()
-        coordinates.latitude = latitude
-        coordinates.longitude = longitude
-        locationMessage.coordinates = coordinates
-        contactMessage.message = .locationMessage(locationMessage)
-    }
+            locationMessage.label = localizationConfig.outgoingLocationMessageButtonTitle
+            
+            var coordinates = Sinch_Conversationapi_Type_Coordinates()
+            coordinates.latitude = latitude
+            coordinates.longitude = longitude
+            locationMessage.coordinates = coordinates
+            contactMessage.message = .locationMessage(locationMessage)
+            
+        case .fallbackMessage(let message):
+            
+            var fallbackMessage = Sinch_Conversationapi_Type_FallbackMessage()
+            fallbackMessage.rawMessage = message
+            
+            contactMessage.fallbackMessage = fallbackMessage
+        }
+        
         request.message = contactMessage
         return request
        

@@ -1,6 +1,6 @@
 import UIKit
 
-final class MediaTextMessageCell: ImageBaseCell {
+final class MediaTextMessageCell: ImageBaseCell, MessageStatusDelegate {
     
     static let cellId = "mediaTextMessageCell"
     
@@ -48,7 +48,8 @@ final class MediaTextMessageCell: ImageBaseCell {
         messageContainerView.addSubview(activityIndicator)
         messageContainerView.addSubview(messageLabel)
         messageContainerView.addSubview(dateLabel)
-        
+        statusView.delegate = self
+
         setupConstraints()
     }
     
@@ -114,9 +115,12 @@ final class MediaTextMessageCell: ImageBaseCell {
 
         if message.isFromCurrentUser() {
             messageContainerView.backgroundColor = messagesCollectionView.uiConfig.outgoingMessageBackgroundColor
+            statusView.isHidden = false
+            statusView.setupStatusView(message.status, in: messagesCollectionView)
             messageLabel.textColor = messagesCollectionView.uiConfig.outgoingMessageTextColor
         } else {
             messageContainerView.backgroundColor = messagesCollectionView.uiConfig.incomingMessageBackgroundColor
+            statusView.isHidden = true
             messageLabel.textColor = messagesCollectionView.uiConfig.incomingMessageTextColor
             avatarView.updateWithModel(message, uiConfig: messagesCollectionView.uiConfig)
         }
@@ -144,6 +148,11 @@ final class MediaTextMessageCell: ImageBaseCell {
         } else {
             delegate?.didTapOutsideOfContent(in: self)
 
+        }
+    }
+    func retryTapped() {
+        if let message = message {
+            delegate?.didTapOnResend(message: message, in: self)
         }
     }
 }

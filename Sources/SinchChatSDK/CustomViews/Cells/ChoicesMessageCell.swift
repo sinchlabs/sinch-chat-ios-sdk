@@ -45,7 +45,8 @@ class ChoicesMessageCell: MessageContentCell {
     
     override func setupSubviews() {
         super.setupSubviews()
-        
+        statusView.isHidden = true
+
         messageContainerView.addSubview(messageLabel)
         messageContainerView.addSubview(dateLabel)
     }

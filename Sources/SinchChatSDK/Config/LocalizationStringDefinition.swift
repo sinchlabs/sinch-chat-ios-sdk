@@ -51,14 +51,18 @@ public extension SinchSDKConfig {
         public var recordingTitle = NSLocalizedString("recording_title", bundle: Bundle.staticBundle, comment: "")
         public var voiceMessageTitle = NSLocalizedString("voice_message_title", bundle: Bundle.staticBundle, comment: "")
         public var alertTitleHoldToRecord = NSLocalizedString("alert_message_hold_to_record", bundle: Bundle.staticBundle, comment: "")
-
-
         public var unsupportedMessageExplanation = NSLocalizedString("unsupported_message_explanation", bundle: Bundle.staticBundle, comment: "")
         
         // MARK: - InAppMessaging
         
         public var buttonTitleClose = NSLocalizedString("button_title_close", bundle: Bundle.staticBundle, comment: "")
         public var buttonTitleMaybeLater = NSLocalizedString("button_title_maybe_later", bundle: Bundle.staticBundle, comment: "")
+
+        public var notSentStatus = NSLocalizedString("not_sent_status", bundle: Bundle.staticBundle, comment: "")
+        public var sendingStatus = NSLocalizedString("sending_status", bundle: Bundle.staticBundle, comment: "")
+        public var sentStatus = NSLocalizedString("sent_status", bundle: Bundle.staticBundle, comment: "")
+        public var deliveredStatus = NSLocalizedString("delivered_status", bundle: Bundle.staticBundle, comment: "")
+        public var seenStatus = NSLocalizedString("seen_status", bundle: Bundle.staticBundle, comment: "")
 
     }
 }

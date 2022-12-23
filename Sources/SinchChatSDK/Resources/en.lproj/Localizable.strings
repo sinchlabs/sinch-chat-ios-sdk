@@ -25,11 +25,11 @@
 "button_title_cancel" = "Cancel";
 
 "alert_title_location_disabled" = "Turn On Location Services to Allow this app to Determine Your Location";
-"alert_message_location_disabled" = "Enable Location Services in Settings > Privacy > Location Services to use this feature";
-"alert_message_camera_disabled" = "Please go to Settings and Allow access to Camera";
+"alert_message_location_disabled" = "We need Location Services to be able to send your location on the chat. Please go to Settings > Privacy > Location Services to use this feature.";
+"alert_title_microphone_disabled" = "We need access to Microphone to Allow this app to record Voice message. Please go to Settings and Allow access to Camera.";
+"alert_message_camera_disabled" = "We need access to Camera to be able to make photo and send it as a message. Please go to Settings and Allow access to Camera.";
 
-"alert_title_app_location_status_denied" = "This app does not have access to your location. To enable access, tap Settings > Location";
-"alert_title_microphone_disabled" = "Turn On Microphone to Allow this app to record Voice message";
+"alert_title_app_location_status_denied" = "We need access to your location to be able to send message with your current position. To enable access, tap Settings > Location";
 
 "alert_button_title_not_now" = "Not Now";
 "alert_button_title_settings" = "Settings";
@@ -43,4 +43,8 @@
 "location_action_sheet_title" = "Choose app";
 "location_action_sheet_apple_maps" = "Apple Maps";
 "location_action_sheet_google_maps" = "Google Maps";
-"unsupported_message_explanation" = "Whoops! Sorry. We are not yet supporting this type of message...";
+"not_sent_status" = "Sending failed - Try again";
+"sending_status" = "Sending";
+"sent_status" = "Sent";
+"delivered_status" = "Delivered";
+"seen_status" = "Seen";

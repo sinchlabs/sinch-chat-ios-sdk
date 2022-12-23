@@ -6,7 +6,7 @@ protocol AudioDelegate : AnyObject {
 
 }
 /// A subclass of `MessageContentCell` used to display text messages.
-final class VoiceMessageCell: MessageContentCell, PlayAudioDelegate {
+final class VoiceMessageCell: MessageContentCell, PlayAudioDelegate, MessageStatusDelegate {
     
     static let cellId = "voiceMessageCell"
     var message: Message?
@@ -43,7 +43,7 @@ final class VoiceMessageCell: MessageContentCell, PlayAudioDelegate {
     
     override func setupSubviews() {
         super.setupSubviews()
-        
+        statusView.delegate = self
         messageContainerView.addSubview(messageLabel)
         messageContainerView.addSubview(dateLabel)
     }
@@ -51,9 +51,13 @@ final class VoiceMessageCell: MessageContentCell, PlayAudioDelegate {
         delegate = messagesCollectionView.touchDelegate
 
         if message.isFromCurrentUser() {
+           
             messageContainerView.backgroundColor = messagesCollectionView.uiConfig.outgoingMessageBackgroundColor
+            statusView.isHidden = false
+            statusView.setupStatusView(message.status, in: messagesCollectionView)
             messageLabel.textColor = messagesCollectionView.uiConfig.outgoingMessageTextColor
         } else {
+            statusView.isHidden = true
             messageContainerView.backgroundColor = messagesCollectionView.uiConfig.incomingMessageBackgroundColor
             messageLabel.textColor = messagesCollectionView.uiConfig.incomingMessageTextColor
             avatarView.updateWithModel(message, uiConfig: messagesCollectionView.uiConfig)
@@ -153,6 +157,11 @@ final class VoiceMessageCell: MessageContentCell, PlayAudioDelegate {
     func playPauseButtonAction() {
         if let message = message {
             audioDelegate?.startPlaying(model: message)
+        }
+    }
+    func retryTapped() {
+        if let message = message {
+            delegate?.didTapOnResend(message: message, in: self)
         }
     }
 }

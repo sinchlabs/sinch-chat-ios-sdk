@@ -99,8 +99,11 @@ class LocationMessageCell: MessageContentCell {
         
         if message.isFromCurrentUser() {
             messageContainerView.backgroundColor = messagesCollectionView.uiConfig.outgoingMessageBackgroundColor
+            statusView.isHidden = false
+            statusView.setupStatusView(message.status, in: messagesCollectionView)
             messageLabel.textColor = messagesCollectionView.uiConfig.outgoingMessageTextColor
         } else {
+            statusView.isHidden = true
             messageContainerView.backgroundColor = messagesCollectionView.uiConfig.incomingMessageBackgroundColor
             messageLabel.textColor = messagesCollectionView.uiConfig.incomingMessageTextColor
             avatarView.updateWithModel(message, uiConfig: messagesCollectionView.uiConfig)

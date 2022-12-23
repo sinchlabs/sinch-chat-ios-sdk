@@ -1,12 +1,15 @@
 import UIKit
 
 class MessageSizeCalculator: ChatCellSizeCalculator {
-
+    
     public var dateLabelFont = UIFont.preferredFont(forTextStyle: .caption2)
     public var dateLabelInsets = UIEdgeInsets(top: 5, left: 8, bottom: 8, right: 8)
     public var dateLabelTextInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
     public var buttonHeight = 36.0
-
+    public var statusLabelFont = UIFont.preferredFont(forTextStyle: .caption2)
+    public var statusImageWidth = 12.0
+    public var statusSpacing = 4.0
+    
     init(layout: ChatFlowLayout? = nil) {
         super.init()
         
@@ -33,6 +36,7 @@ class MessageSizeCalculator: ChatCellSizeCalculator {
         attributes.avatarPosition = avatarPosition(for: message)
         attributes.messageContainerPadding = messageContainerPadding(for: message)
         attributes.messageContainerSize = messageContainerSize(for: message)
+        attributes.statusViewSize = statusSize(message: message, in: messagesLayout.messagesCollectionView)
         
     }
     
@@ -41,6 +45,8 @@ class MessageSizeCalculator: ChatCellSizeCalculator {
         let message = dataSource.messageForItem(at: indexPath, in: messagesLayout.messagesCollectionView)
         var itemHeight = cellContentHeight(for: message, at: indexPath)
         let padding = messageContainerPadding(for: message)
+        let status = statusSize(message: message, in: messagesLayout.messagesCollectionView)
+        itemHeight += status.height
         itemHeight += (padding.top + padding.bottom)
         return CGSize(width: messagesLayout.itemWidth, height: itemHeight)
     }
@@ -54,6 +60,22 @@ class MessageSizeCalculator: ChatCellSizeCalculator {
         let cellHeight = max(avatarHeight, totalLabelHeight)
         return cellHeight
     }
+    func statusSize(message: Message, in messagesCollectionView: MessageCollectionView) -> CGSize {
+
+        if message.isFromCurrentUser() {
+            
+            let attributedText = NSAttributedString(string: message.status.localizedDescription(localizedConfig: messagesCollectionView.localizationConfig),
+                                                    attributes: [.font: statusLabelFont])
+            let labelSize = labelSize(for: attributedText, considering: messageContainerMaxWidth(for: message))
+            let imagesWidth = (statusImageWidth + statusSpacing)
+        
+            return CGSize(width:labelSize.width + imagesWidth, height: labelSize.height)
+            
+        } else {
+            return .zero
+        }
+    }
+    
     // MARK: - Avatar
     
     func avatarPosition(for message: Message) -> AvatarPosition {
