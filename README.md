@@ -8,7 +8,7 @@ This is documentation how to easily implement our SDK for chat and for push feat
 # Requirements
 
 - Xcode 13+
-- Swift package manager (****iOS 11+****) ****OR**** Cocoapods (****iOS 12+****)
+- Swift package manager (****iOS 11+****)
 
 # Installation
 
