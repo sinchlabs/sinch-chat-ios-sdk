@@ -28,6 +28,7 @@
 "alert_message_location_disabled" = "We need Location Services to be able to send your location on the chat. Please go to Settings > Privacy > Location Services to use this feature.";
 "alert_title_microphone_disabled" = "We need access to Microphone to Allow this app to record Voice message. Please go to Settings and Allow access to Camera.";
 "alert_message_camera_disabled" = "We need access to Camera to be able to make photo and send it as a message. Please go to Settings and Allow access to Camera.";
+"unsupported_message_explanation" = "Whoops! Sorry. We are not yet supporting this type of message...";
 
 "alert_title_app_location_status_denied" = "We need access to your location to be able to send message with your current position. To enable access, tap Settings > Location";
 

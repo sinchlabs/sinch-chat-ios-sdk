@@ -72,7 +72,7 @@ final class DefaultPushNotificationHandler: PushNotificationHandler {
     }
     
     func unsubscribe(_ completion: @escaping (Result<Void, Error>) -> Void) {
-        guard let token = pushDeviceTokenCoordinator.getTokenToSend() else {
+        guard let token = pushDeviceTokenCoordinator.getLastToken() else {
             completion(.success(()))
             return
         }

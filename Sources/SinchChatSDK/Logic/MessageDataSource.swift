@@ -623,6 +623,10 @@ final class DefaultMessageDataSource: MessageDataSource {
                 return nil
             }
             
+            if entry.appEvent.event != nil {
+                return nil
+            }
+            
             return Message(entryId: entry.entryID, owner: .incoming(nil), body: MessageUnsupported(sendDate: entry.deliveryTime.seconds))
         }
         

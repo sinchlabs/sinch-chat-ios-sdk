@@ -31,6 +31,14 @@ final class PushDeviceTokenCoordinator {
         tokenToSend = deviceToken.hexEncodedString()
     }
     
+    func getLastToken() -> String? {
+        guard let token = tokenToSend else {
+            return nil
+        }
+        
+        return token
+    }
+    
     func getTokenToSend() -> String? {
         guard let token = tokenToSend, let identityHash = authDataSource?.identityHashValue else {
             return nil
