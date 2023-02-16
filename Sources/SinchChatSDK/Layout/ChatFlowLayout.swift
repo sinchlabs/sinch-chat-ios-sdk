@@ -18,6 +18,7 @@ final class ChatFlowLayout: UICollectionViewFlowLayout {
     lazy public var cardCellSizeCalculator = CardMessageSizeCalculator(layout: self)
     lazy public var carouselCellSizeCalculator = CarouselMessageSizeCalculator(layout: self)
     lazy public var unsupportedCellSizeCalculator = UnsupportedMessageSizeCalculator(layout: self)
+    lazy public var typingIndicatorSizeCalculator = TypeIndicatorCellSizeCalculator(layout: self)
 
     /// The `MessageCollectionView` that owns this layout object.
     public var messagesCollectionView: MessageCollectionView {
@@ -71,7 +72,10 @@ final class ChatFlowLayout: UICollectionViewFlowLayout {
     /// - If you are using the typing indicator be sure to return the `typingIndicatorSizeCalculator`
     /// when the section is reserved for it, indicated by `isSectionReservedForTypingIndicator`
     func cellSizeCalculator(at indexPath: IndexPath) -> ChatCellSizeCalculator {
-
+        if isSectionReservedForTypingIndicator(indexPath.section) {
+            return typingIndicatorSizeCalculator
+        }
+        
         let message =  chatDataSource.messageForItem(at: indexPath, in: messagesCollectionView)
         if message.body is MessageText {
             return textMessageSizeCalculator
@@ -156,6 +160,6 @@ final class ChatFlowLayout: UICollectionViewFlowLayout {
         let collectionViewWidth = messagesCollectionView.bounds.width
         let contentInset = messagesCollectionView.contentInset
         let inset = sectionInset.left + sectionInset.right + contentInset.left + contentInset.right
-        return CGSize(width: collectionViewWidth - inset, height: 62)
+        return CGSize(width: collectionViewWidth - inset, height: 54)
     }
 }

@@ -10,6 +10,7 @@ enum MessageDataSourceError: Error {
     case unknown(Error)
     case notLoggedIn
     case unknownTypeOfMessage
+    case unknownTypeOfEvent
     case messageIDIsEmpty
     case subscriptionIsAlreadyStarted
     case noMoreMessages
@@ -24,6 +25,7 @@ protocol MessageDataSource {
     func uploadMedia(_ media: MediaType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void)
     func uploadMediaViaStream(_ media: MediaType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void)
     func sendMessage(_ message: MessageType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void)
+    func sendEvent(_ event: EventType, completion: @escaping (Result<Void, MessageDataSourceError>) -> Void)
     func subscribeForMessages(completion: @escaping (Result<Message, MessageDataSourceError>) -> Void)
     func getMessageHistory(completion: @escaping (Result<[Message], MessageDataSourceError>) -> Void)
     func sendConversationMetadata(_ metadata: [SinchMetadata]) -> Result<Void, MessageDataSourceError>
@@ -37,11 +39,11 @@ protocol MessageDataSource {
 }
 
 final class DefaultMessageDataSource: MessageDataSource {
-       
+
     var authDataSource: AuthDataSource
     var client: APIClient
     var historyCall: UnaryCall<Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest, Sinch_Chat_Sdk_V1alpha2_GetHistoryResponse>?
-    var sendMessageCall: UnaryCall<Sinch_Chat_Sdk_V1alpha2_SendRequest, Sinch_Chat_Sdk_V1alpha2_SendResponse>?
+    var sendMessageAndEventCall: UnaryCall<Sinch_Chat_Sdk_V1alpha2_SendRequest, Sinch_Chat_Sdk_V1alpha2_SendResponse>?
     var uploadStreamMediaCall: ClientStreamingCall<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest, Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse>?
     var uploadMediaCall: ClientStreamingCall<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest, Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse>?
     weak var delegate: MessageDataSourceDelegate?
@@ -119,6 +121,16 @@ final class DefaultMessageDataSource: MessageDataSource {
                         for entry in result.entries {
                             let message = self.handleIncomingMessage(entry)
                             
+                            if let body = message?.body, let event = body as? MessageEvent {
+
+                                switch event.type {
+                                case .composeEnd, .composeStarted :
+                                    continue
+                                default:
+                                    break
+                                }
+                            }
+
                             guard var message = message else { continue }
                             
                             if let mediaMessage = message.body as? MessageMedia {
@@ -159,8 +171,8 @@ final class DefaultMessageDataSource: MessageDataSource {
             completion(.failure(.notLoggedIn))
         }
     }
-    
     func sendMessage(_ message: MessageType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void) {
+
         do {
             let service = try getService()
             
@@ -175,14 +187,9 @@ final class DefaultMessageDataSource: MessageDataSource {
                 message.metadata = metadata
             }
             
-//            let test = Sinch_Chat_Sdk_V1alpha2_SendRequest()
-//            test.message = .init()
-//            test.message.fallbackMessage
+            sendMessageAndEventCall = service.send(message)
             
-
-            sendMessageCall = service.send(message)
-            
-            _ = sendMessageCall?.response.always { result in
+            _ = sendMessageAndEventCall?.response.always { result in
                 
                 switch result {
                 case .success(let response):
@@ -198,6 +205,40 @@ final class DefaultMessageDataSource: MessageDataSource {
             completion(.failure(.notLoggedIn))
         }
     }
+    func sendEvent(_ event: EventType, completion: @escaping (Result<Void, MessageDataSourceError>) -> Void) {
+        do {
+            let service = try getService()
+
+            guard var request = event.convertToSinchEvent else {
+                completion(.failure(.unknownTypeOfEvent))
+                return
+            }
+            if let topicModel = topicModel {
+                request.topicID = topicModel.topicID
+            }
+            if let metadata = convertSinchMetadataToMetadataJson(metadata: metadata.filter({ $0.getKeyValue().mode == .withEachMessage })) {
+                request.metadata = metadata
+            }
+
+            sendMessageAndEventCall = service.send(request)
+
+            _ = sendMessageAndEventCall?.response.always { result in
+
+                switch result {
+                case .success(_):
+
+                    completion(.success(()))
+
+                case .failure(let err):
+                    completion(.failure(.unknown(err)))
+                }
+            }
+
+        } catch {
+            completion(.failure(.notLoggedIn))
+        }
+    }
+
     func uploadMediaViaStream(_ media: MediaType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void) {
         do {
             
@@ -368,7 +409,7 @@ final class DefaultMessageDataSource: MessageDataSource {
     
     func cancelCalls() {
         historyCall?.cancel(promise: nil)
-        sendMessageCall?.cancel(promise: nil)
+        sendMessageAndEventCall?.cancel(promise: nil)
         uploadStreamMediaCall?.cancel(promise: nil)
     }
     
@@ -622,11 +663,32 @@ final class DefaultMessageDataSource: MessageDataSource {
                 || entry.contactMessage.fallbackMessage.rawMessage.isEmpty == false {
                 return nil
             }
-            
+
+            if case .composingEvent(_)? =  entry.appEvent.event {
+                return Message(entryId: entry.entryID, owner: .system,
+                               body: MessageEvent(type: .composeStarted,
+                                                  sendDate: entry.deliveryTime.seconds))
+
+            }
+
+            if case .composingEndEvent(_)? =  entry.appEvent.event {
+                return Message(entryId: entry.entryID, owner: .system,
+                               body: MessageEvent(type: .composeEnd,
+                                                  sendDate: entry.deliveryTime.seconds))
+
+            }
+
+            if entry.contactEvent.event != nil {
+                return nil
+
+            }
             if entry.appEvent.event != nil {
                 return nil
             }
-            
+
+            if entry.appEvent.event != nil {
+                return nil
+            }
             return Message(entryId: entry.entryID, owner: .incoming(nil), body: MessageUnsupported(sendDate: entry.deliveryTime.seconds))
         }
         

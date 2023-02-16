@@ -27,6 +27,10 @@ class StartViewController: SinchViewController<StartViewModel, StartView > {
     var messages: [Message] = []
     var playingItem: PlayingItem?
     
+    public var isTypingIndicatorHidden: Bool {
+        return mainView.collectionView.isTypingIndicatorHidden
+    }
+
     var additionalBottomInset: CGFloat = 5 {
         didSet {
             let delta = additionalBottomInset - oldValue
@@ -126,7 +130,6 @@ class StartViewController: SinchViewController<StartViewModel, StartView > {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         isMessagesControllerBeingDismissed = false
-        
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -224,7 +227,59 @@ class StartViewController: SinchViewController<StartViewModel, StartView > {
     @objc func loadMoreMessages() {
         viewModel.loadHistory()
     }
-   
+    
+    // MARK: - Typing Indicator API
+
+    /// Sets the typing indicator sate by inserting/deleting the `TypingBubbleCell`
+    ///
+    /// - Parameters:
+    ///   - isHidden: A Boolean value that is to be the new state of the typing indicator
+    ///   - animated: A Boolean value determining if the insertion is to be animated
+    ///   - updates: A block of code that will be executed during `performBatchUpdates`
+    ///              when `animated` is `TRUE` or before the `completion` block executes
+    ///              when `animated` is `FALSE`
+    ///   - completion: A completion block to execute after the insertion/deletion
+    func setTypingIndicatorViewHidden(_ isHidden: Bool, animated: Bool, whilePerforming updates: (() -> Void)? = nil, completion: ((Bool) -> Void)? = nil) {
+
+        guard isTypingIndicatorHidden != isHidden else {
+            completion?(false)
+            return
+        }
+
+        let section = mainView.collectionView.numberOfSections
+        mainView.collectionView.setTypingIndicatorViewHidden(isHidden)
+
+        if animated {
+            mainView.collectionView.performBatchUpdates({ [weak self] in
+                self?.performUpdatesForTypingIndicatorVisability(at: section)
+                updates?()
+                }, completion: completion)
+        } else {
+            performUpdatesForTypingIndicatorVisability(at: section)
+            updates?()
+            completion?(true)
+        }
+    }
+    
+    /// Performs a delete or insert on the `MessagesCollectionView` on the provided section
+    ///
+    /// - Parameter section: The index to modify
+    private func performUpdatesForTypingIndicatorVisability(at section: Int) {
+        if isTypingIndicatorHidden {
+            mainView.collectionView.deleteSections([section - 1])
+        } else {
+            mainView.collectionView.insertSections([section])
+        }
+    }
+    /// A method that by default checks if the section is the last in the
+    /// `messagesCollectionView` and that `isTypingIndicatorViewHidden`
+    /// is FALSE
+    ///
+    /// - Parameter section
+    /// - Returns: A Boolean indicating if the TypingIndicator should be presented at the given section
+    public func isSectionReservedForTypingIndicator(_ section: Int) -> Bool {
+        return !mainView.collectionView.isTypingIndicatorHidden && section == self.numberOfSections(in: mainView.collectionView) - 1
+    }
 }
 
 extension StartViewController: ImagePickerDelegate {
@@ -269,6 +324,15 @@ extension StartViewController: ImagePickerDelegate {
 }
 
 extension StartViewController: ComposeViewDelegate {
+    func composeMessageStarted() {
+        viewModel.sendEvent(.composeStarted)
+    }
+    func composeMessageEnded() {
+
+        viewModel.sendEvent(.composeEnd)
+
+    }
+        
     func scrollToBottomMessage() {
         mainView.collectionView.scrollToLastItem(at: .bottom, animated: true)
         
@@ -346,7 +410,7 @@ extension StartViewController: ComposeViewDelegate {
     
     func sendChoiceResponseMessage(postbackData: String, entryID: String) {
         
-            viewModel.sendMessage(.choiceResponseMessage(postbackData: postbackData, entryID: entryID), completion: { [weak self] result in
+        viewModel.sendMessage(.choiceResponseMessage(postbackData: postbackData, entryID: entryID), completion: { _ in 
                 // todo
                 debugPrint("successful")
                     
@@ -428,12 +492,11 @@ extension StartViewController: ComposeViewDelegate {
     }
     
     func choosePhoto() {
-        
-        showChoiceBetweenGalleryAndCamera()
         resignFirstResponderView()
+
+        showChoiceBetweenGalleryAndCamera()
     }
     
-       
     private func showChoiceBetweenGalleryAndCamera() {
 
         let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
@@ -495,6 +558,29 @@ extension StartViewController: ComposeViewDelegate {
 }
 
 extension StartViewController: StartViewModelDelegate {
+    func setVisibleTypingIndicator(_ isVisible: Bool, animated: Bool) {
+        if isVisible {
+            DispatchQueue.main.async {
+                self.setTypingIndicatorViewHidden(false, animated: animated) { [weak self] success in
+                    if success, self?.isLastCellVisible == true {
+                        self?.mainView.collectionView.scrollToLastItem(animated: true)
+                    }
+                }
+            }
+        } else {
+            
+            DispatchQueue.main.async {
+                
+                self.setTypingIndicatorViewHidden(true, animated: animated) { [weak self] success in
+                    if success, self?.isLastCellVisible == true {
+                        self?.mainView.collectionView.scrollToLastItem(animated: true)
+                    }
+                }
+    
+            }
+        }
+    }
+    
     func setVisibleRefreshActivityIndicator(_ isVisible: Bool) {
         if isVisible {
             if !refreshControl.isRefreshing {
@@ -618,7 +704,8 @@ extension StartViewController: StartViewModelDelegate {
                             self.mainView.collectionView.reloadSections([self.messages.count - 1 - index])
                         }
                     break
-                    } else if let newMessage = streamMessage.body as? MessageMedia, let listMessage = message.body as? MessageMedia, entryId == "-1", newMessage.url == listMessage.url {
+                    } else if let newMessage = streamMessage.body as? MessageMedia,
+                              let listMessage = message.body as? MessageMedia, entryId == "-1", newMessage.url == listMessage.url {
                         self.messages[self.messages.count - 1 - index] = streamMessage
                         isFounded = true
 
@@ -631,7 +718,7 @@ extension StartViewController: StartViewModelDelegate {
                 }
                 
                 if !isFounded {
-                    self.insertMessages([streamMessage])
+                    self.insertMessages([streamMessage], shouldHideTyping: true)
                 }
             }
         }
@@ -650,9 +737,12 @@ extension StartViewController: StartViewModelDelegate {
         }
     }
     
-    func insertMessages(_ newMessages: [Message]) {
+    func insertMessages(_ newMessages: [Message], shouldHideTyping: Bool = false) {
 
         self.mainView.collectionView.performBatchUpdates({
+            if shouldHideTyping {
+                self.setTypingIndicatorViewHidden(true, animated: false)
+            }
             debugPrint(messages.count)
             if newMessages.count == 1 {
                 self.messages.append(newMessages[0])
@@ -677,7 +767,15 @@ extension StartViewController: StartViewModelDelegate {
 extension StartViewController: UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
     
     func numberOfSections(in collectionView: UICollectionView) -> Int {
-        messages.count
+        var sections = messages.count
+
+        guard let collectionView = collectionView as? MessageCollectionView else {
+
+            return sections
+        }
+        
+        return collectionView.isTypingIndicatorHidden ? sections : sections + 1
+
     }
     
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
@@ -685,7 +783,14 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-
+        
+        if isSectionReservedForTypingIndicator(indexPath.section) {
+            
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier:  TypingIndicatorCell.cellId, for: indexPath) as! TypingIndicatorCell
+            cell.configure(with: mainView.collectionView)
+            return cell
+        }
+        
         let message = messages[indexPath.section]
         
         if message.body is MessageText {
@@ -756,6 +861,12 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
             return MessageCollectionViewCell()
         }
     }
+    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        handleBottomButtonVisibility()
+        guard let cell = cell as? TypingIndicatorCell else { return }
+        cell.typingView.startAnimating()
+    }
+  
     open func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         guard let chatFlowLayout = collectionViewLayout as? ChatFlowLayout else { return .zero }
         return chatFlowLayout.sizeForItem(at: indexPath)
@@ -766,6 +877,10 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
     
     @available(iOS 13.0, *)
     func collectionView(_ collectionView: UICollectionView, contextMenuConfigurationForItemAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
+        if isSectionReservedForTypingIndicator(indexPath.section) {
+            return nil
+
+        }
         
         let message = self.messages[indexPath.section]
         if message.body is MessageText || message.body is MessageMediaText ||
@@ -861,10 +976,6 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
             }
         }
     }
-    
-    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
-        handleBottomButtonVisibility()
-    }
 
     func handleIsScrolledToBottom(_ scrollView: UIScrollView) {
         let height = scrollView.frame.size.height
@@ -888,7 +999,9 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
 extension StartViewController: ChatDataSource {
     
     func numberOfSections(in messagesCollectionView: MessageCollectionView) -> Int {
-        messages.count
+        let sections = messages.count
+
+        return messagesCollectionView.isTypingIndicatorHidden ? sections : sections + 1
     }
     
     func messageForItem(at indexPath: IndexPath, in messagesCollectionView: MessageCollectionView) -> Message {

@@ -23,6 +23,21 @@ final class ChatNotificationHandler: PushNotificationAddressee {
         case .none, .idle:
             return [.badge, .alert]
         case .running:
+            guard let topicID = payload["topic_id"] as? String else {
+                return []
+            }
+            if SinchChatSDK.shared._chat.lastChatOptions?.topicID != topicID {
+                return [.badge, .alert]
+            }
+            guard let senderID = payload["sender_id"] as? String,
+                  let uuid = payload["uuid"] as? String else {
+                return []
+            }
+            let addressee = SinchChatSDK.shared._chat.lastChatOptions?.metadata.first(where: { $0.getKeyValue().key == "addressee" })?.getKeyValue().value
+            if addressee != senderID, addressee != uuid {
+                return [.badge, .alert]
+            }
+
             return []
         }
     }
