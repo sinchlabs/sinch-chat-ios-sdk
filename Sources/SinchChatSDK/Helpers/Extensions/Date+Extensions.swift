@@ -16,10 +16,16 @@ extension Date {
             return  localizationConfiguration.today
         } else if Calendar.current.isDateInYesterday(self) {
             return  localizationConfiguration.yesterday
-
+            
         } else {
-
+            
             return  DateFormatter.localizedString(from: self, dateStyle: .medium, timeStyle: .none)
         }
+    }
+    
+    static func - (lhs: Date, rhs: Date) -> TimeInterval {
+        return lhs.timeIntervalSinceReferenceDate - rhs.timeIntervalSinceReferenceDate
+        
+        
     }
 }

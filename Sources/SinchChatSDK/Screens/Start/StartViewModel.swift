@@ -16,6 +16,7 @@ protocol StartViewModel: MessageDataSourceDelegate {
     func onInternetOn()
     func closeChannel()
     func processNewMessages(_ message: Message) -> [Message]
+    func sendEvent(_ event: EventType )
 
 }
 
@@ -27,7 +28,8 @@ protocol StartViewModelDelegate: AnyObject {
     func errorSendingMessage(error: MessageDataSourceError)
     func didChangeInternetState(_ state: InternetConnectionState)
     func setVisibleRefreshActivityIndicator(_ isVisible: Bool)
-    
+    func setVisibleTypingIndicator(_ isVisible: Bool, animated: Bool)
+
 }
 
 final class DefaultStartViewModel: StartViewModel {
@@ -48,11 +50,18 @@ final class DefaultStartViewModel: StartViewModel {
             }
         }
     }
-    
+    var timeOfLastReceivedMessage: Date?
+    var timer: Timer?
+
     init(messageDataSource: MessageDataSource, notificationPermission: PushNofiticationPermissionHandler) {
         dataSource = messageDataSource
         
         self.notificationPermission = notificationPermission
+    }
+    
+    deinit {
+        timer?.invalidate()
+        timer = nil
     }
     // MARK: - Private methods
     
@@ -219,6 +228,17 @@ final class DefaultStartViewModel: StartViewModel {
         dataSource.closeChannel()
         
     }
+    
+    func shouldHandleTypingIndicator() -> Bool {
+        
+        if let timeOfLastReceivedMessage = timeOfLastReceivedMessage {
+            let delta = Double(Date() - timeOfLastReceivedMessage)
+            if delta < 1 {
+                return false
+            }
+        }
+        return true
+    }
     func subscribeForMessages() {
         dataSource.subscribeForMessages { [weak self] result in
             
@@ -228,8 +248,40 @@ final class DefaultStartViewModel: StartViewModel {
             
             switch result {
             case .success(let message):
+                if let event = message.body as? MessageEvent {
+                    
+                    switch event.type {
+                    case .composeStarted:
+                        if self.shouldHandleTypingIndicator() {
+                            self.delegate?.setVisibleTypingIndicator(true, animated: true)
+                            DispatchQueue.main.async {
+                                
+                                self.timer?.invalidate()
+                                self.timer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: false) { [weak self] _ in
+                                    
+                                    guard let self = self else { return }
+                                    
+                                    self.delegate?.setVisibleTypingIndicator(false, animated: true)
+                                    
+                                }
+                            }
+                        }
+                        return
+                    case .composeEnd :
+                        self.timer?.invalidate()
+                        self.delegate?.setVisibleTypingIndicator(false, animated: true)
+                        
+                        return
+                    default:
+                        break
+                    }
+                }
                 let messages = self.processNewMessages(message)
-                self.delegate?.didReceiveMessages(messages)
+                if !messages.isEmpty {
+                    self.timeOfLastReceivedMessage = Date()
+                    self.delegate?.didReceiveMessages(messages)
+                }
+
             case .failure(let error):
                 Logger.verbose(error)
                 self.error = error
@@ -300,7 +352,7 @@ final class DefaultStartViewModel: StartViewModel {
         case .text(let text):
             messageBody = MessageText(text: text, sendDate: date)
             
-        case .choiceResponseMessage(postbackData: let postbackData, entryID: _):
+        case .choiceResponseMessage(postbackData: _, entryID: _):
             return nil
             
         case .media(let message):
@@ -327,6 +379,24 @@ final class DefaultStartViewModel: StartViewModel {
         return Message(entryId: entryId, owner: .outgoing, body: messageBody, status: .sending)
     }
     
+        func sendEvent(_ event: EventType ) {
+              
+        dataSource.sendEvent(event) { [weak self] result in
+
+            guard let self = self else {
+                return
+            }
+
+            switch result {
+
+            case .success(): break
+
+            case .failure(let error):
+                Logger.verbose(error)
+
+            }
+        }
+    }
     func sendMedia(_ media: MediaType, completion: @escaping (Result<Message, Error>) -> Void) {
         
         if state == .isOff {

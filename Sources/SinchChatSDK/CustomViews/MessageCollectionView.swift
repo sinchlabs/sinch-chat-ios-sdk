@@ -7,7 +7,10 @@ final class MessageCollectionView: UICollectionView {
     var localizationConfig: SinchSDKConfig.LocalizationConfig!
 
     weak var touchDelegate: MessageCellDelegate?
-
+    public var isTypingIndicatorHidden: Bool {
+        return chatCollectionViewFlowLayout.isTypingIndicatorViewHidden
+    }
+    
     private var indexPathForLastItem: IndexPath? {
         let lastSection = numberOfSections - 1
         guard lastSection >= 0, numberOfItems(inSection: lastSection) > 0 else { return nil }
@@ -61,7 +64,12 @@ final class MessageCollectionView: UICollectionView {
         let indexPath = IndexPath(row: 0, section: lastSection)
         scrollToItem(at: indexPath, at: pos, animated: animated)
     }
-    
+    public var chatCollectionViewFlowLayout: ChatFlowLayout {
+        guard let layout = collectionViewLayout as? ChatFlowLayout else {
+            fatalError()
+        }
+        return layout
+    }
     func reloadDataAndKeepOffset() {
         // stop scrolling
         setContentOffset(contentOffset, animated: false)
@@ -77,5 +85,25 @@ final class MessageCollectionView: UICollectionView {
             x: contentOffset.x + (afterContentSize.width - beforeContentSize.width),
             y: contentOffset.y + (afterContentSize.height - beforeContentSize.height))
         setContentOffset(newOffset, animated: false)
+    }
+    
+    // MARK: - Typing Indicator API
+
+    /// Notifies the layout that the typing indicator will change state
+    ///
+    /// - Parameters:
+    ///   - isHidden: A Boolean value that is to be the new state of the typing indicator
+    internal func setTypingIndicatorViewHidden(_ isHidden: Bool) {
+        chatCollectionViewFlowLayout.isTypingIndicatorViewHidden = isHidden
+    }
+
+    /// A method that by default checks if the section is the last in the
+    /// `messagesCollectionView` and that `isTypingIndicatorViewHidden`
+    /// is FALSE
+    ///
+    /// - Parameter section
+    /// - Returns: A Boolean indicating if the TypingIndicator should be presented at the given section
+    public func isSectionReservedForTypingIndicator(_ section: Int) -> Bool {
+        return !chatCollectionViewFlowLayout.isTypingIndicatorViewHidden && section == numberOfSections - 1
     }
 }

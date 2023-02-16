@@ -30,6 +30,7 @@ final class StartView: SinchView {
         collectionView.register(VoiceMessageCell.self, forCellWithReuseIdentifier: VoiceMessageCell.cellId)
         collectionView.register(UnsupportedMessageCell.self, forCellWithReuseIdentifier: UnsupportedMessageCell.cellId)
         collectionView.register(VideoMessageCell.self, forCellWithReuseIdentifier: VideoMessageCell.cellId)
+        collectionView.register(TypingIndicatorCell.self, forCellWithReuseIdentifier: TypingIndicatorCell.cellId)
 
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(collectionView)

@@ -61,6 +61,8 @@ final class DefaultSinchChat: SinchChat {
     
     var state: SinchChatState = .idle
     
+    var lastChatOptions: GetChatViewControllerOptions?
+    
     private var authDataSource: AuthDataSource?
     private let pushPermissionHandler: PushNofiticationPermissionHandler
     private let chatNotificationHandler = ChatNotificationHandler()
@@ -120,6 +122,7 @@ final class DefaultSinchChat: SinchChat {
         let uiConfig = uiConfig ?? SinchSDKConfig.UIConfig.defaultValue
         let locConfig = localizationConfig ?? SinchSDKConfig.LocalizationConfig.defaultValue
 
+        lastChatOptions = options
         return rootCordinator.getRootViewController(uiConfig: uiConfig, localizationConfig: locConfig )
     }
     

@@ -13,7 +13,9 @@ protocol ComposeViewDelegate: AnyObject {
     func disabledMicrophoneAccess()
     func showHoldToRecordAudioMessage()
     func scrollToBottomMessage()
-    
+    func composeMessageStarted()
+    func composeMessageEnded()
+
 }
 
 final class ComposeView: SinchView {
@@ -23,7 +25,9 @@ final class ComposeView: SinchView {
     private let paddingTop: CGFloat = 10.0
     private let paddingBottom: CGFloat = 10.0
     private let animationDuration: Double = 0.2
+    private let recordingAnimationDuration: Double = 0.1
     private let spacingBetweenButtonsAndText: Double = 9.0
+    private var composeStartEventSentTime: Date?
     
     lazy var voiceRecordingButton: UIButton = {
         var button = UIButton()
@@ -113,7 +117,7 @@ final class ComposeView: SinchView {
         scrollToBottomButton.translatesAutoresizingMaskIntoConstraints = false
         return scrollToBottomButton
     }()
-    
+
     var audioBackgroundView: AudioComposeView?
     var backgroundView: UIView = UIView()
     var shouldExpandTextViewToRight = true
@@ -136,6 +140,7 @@ final class ComposeView: SinchView {
             timeLabel.text = duration.getTimeFromSeconds()
         }
     }
+    private var timer: Timer?
     
     init(uiConfiguration: SinchSDKConfig.UIConfig, localizatioConfiguration: SinchSDKConfig.LocalizationConfig) {
         
@@ -425,15 +430,23 @@ final class ComposeView: SinchView {
     }
     
     @objc func handleLongPress(gestureReconizer: UILongPressGestureRecognizer) {
-        
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+
         if gestureReconizer.state == .began {
+            
+            if !composeTextView.text.isEmpty {
+                composeTextView.text = nil
+                updateUI(composeTextView)
+            }
             delegate?.stopAudioPlayerIfPlaying(isRecording: true)
             voiceRecorder.startRecordingSession()
-            
+                generator.prepare()
+                generator.impactOccurred()
         } else if gestureReconizer.state == .ended {
             voiceRecorder.shouldRecord = false
             voiceRecorder.finishRecording()
-            
+                generator.prepare()
+                generator.impactOccurred()
         }
     }
     @objc func tapVoiceRecorder(gestureReconizer: UITapGestureRecognizer) {
@@ -451,6 +464,8 @@ final class ComposeView: SinchView {
         guard let text = composeTextView.text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
             return
         }
+        self.delegate?.composeMessageEnded()
+
         composeTextView.text = nil
         delegate?.sendMessage(.text(text))
         updateUI(composeTextView)
@@ -463,7 +478,7 @@ final class ComposeView: SinchView {
         rightStackViewLeadingConstraint = rightStackView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 9)
         rightStackViewLeadingConstraint.isActive = true
         
-        UIView.animate(withDuration: animationDuration, animations: {
+        UIView.animate(withDuration: recordingAnimationDuration, animations: {
             self.recordingLabel.isHidden = false
             self.timeLabel.isHidden = false
             self.photoButton.isHidden = true
@@ -538,10 +553,10 @@ final class ComposeView: SinchView {
         
         if shouldExpandTextViewToRight {
             if textView.text.isEmpty {
-                
+
                 collapseTextView()
             } else {
-                
+
                 expandTextView()
             }
         }
@@ -571,21 +586,53 @@ extension ComposeView: UITextViewDelegate {
     func textViewDidBeginEditing(_ textView: UITextView) {
         
         textView.selectedRange = NSRange(location: textView.text.count, length: 0)
+
     }
     
     func textViewDidEndEditing(_ textView: UITextView) {
         
         updateUI(textView)
+
     }
     
     func textView(_ textView: UITextView, shouldChangeTextIn range: NSRange, replacementText text: String) -> Bool {
-        
-        true
+        !voiceRecorder.isRecording
+    
     }
     
     func textViewDidChange(_ textView: UITextView) {
         
         updateUI(textView)
+        sendComposeMessageEvents()
+        
+    }
+    func scheduleComposeMessageEnd() {
+        timer?.invalidate()
+        self.timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { [weak self] _ in
+            
+            guard let self = self else { return }
+            
+            self.delegate?.composeMessageEnded()
+
+        }
+    }
+    
+    func sendComposeMessageEvents() {
+        
+        if let composeStartEventSentTime = composeStartEventSentTime {
+            let now =  Date()
+            let delta = now - composeStartEventSentTime
+            if Double(delta) > 2.0 {
+                self.composeStartEventSentTime = now
+                delegate?.composeMessageStarted()
+                scheduleComposeMessageEnd()
+            }
+        } else {
+            
+            composeStartEventSentTime = Date()
+            delegate?.composeMessageStarted()
+            scheduleComposeMessageEnd()
+        }
     }
 }
 extension ComposeView: AudioComposeDelegate {
