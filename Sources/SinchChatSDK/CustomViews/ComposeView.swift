@@ -18,6 +18,7 @@ protocol ComposeViewDelegate: AnyObject {
 
 }
 
+// swiftlink:disable:next type_body_length
 final class ComposeView: SinchView {
     
     private let maxHeight: CGFloat = 125.0
@@ -149,6 +150,7 @@ final class ComposeView: SinchView {
     }
     
     override func setupSubviews() {
+
         
         translatesAutoresizingMaskIntoConstraints = false
         backgroundView.backgroundColor = uiConfig.inputBarBackgroundColor
@@ -228,18 +230,18 @@ final class ComposeView: SinchView {
             textButtonContainer.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 10),
             textContainerBottomAnchor,
             
-            composeTextView.leadingAnchor.constraint(equalTo: textButtonContainer.leadingAnchor, constant: 10),
-            composeTextView.trailingAnchor.constraint(equalTo: textButtonContainer.trailingAnchor, constant: -45),
+            composeTextView.leftAnchor.constraint(equalTo: textButtonContainer.leftAnchor, constant: 10),
+            composeTextView.rightAnchor.constraint(equalTo: textButtonContainer.rightAnchor, constant: -45),
             composeTextView.topAnchor.constraint(equalTo: textButtonContainer.topAnchor, constant: 0),
             composeTextView.bottomAnchor.constraint(equalTo: textButtonContainer.bottomAnchor, constant: 0),
             
-            sendButton.trailingAnchor.constraint(equalTo: textButtonContainer.trailingAnchor, constant: -10),
+            sendButton.rightAnchor.constraint(equalTo: textButtonContainer.rightAnchor, constant: -10),
             sendButton.heightAnchor.constraint(equalToConstant: 30),
             sendButton.widthAnchor.constraint(equalToConstant: 30),
             sendButtonBottomConstraint,
             
-            placeholderLabel.leadingAnchor.constraint(equalTo: composeTextView.leadingAnchor, constant: 8),
-            placeholderLabel.trailingAnchor.constraint(equalTo: composeTextView.trailingAnchor, constant: 0),
+            placeholderLabel.leftAnchor.constraint(equalTo: composeTextView.leftAnchor, constant: 8),
+            placeholderLabel.rightAnchor.constraint(equalTo: composeTextView.rightAnchor, constant: 0),
             placeholderLabel.topAnchor.constraint(equalTo: composeTextView.topAnchor, constant: 0),
             placeholderLabel.bottomAnchor.constraint(equalTo: composeTextView.bottomAnchor, constant: 0)
         ])
