@@ -7,6 +7,8 @@ public extension SinchSDKConfig {
         public static let defaultValue = LocalizationConfig()
         
         public var inputPlaceholderText = NSLocalizedString("label_input_placeholder", bundle: Bundle.staticBundle, comment: "")
+        public var disabledChatMessageText = NSLocalizedString("label_disabled_chat_messages", bundle: Bundle.staticBundle, comment: "")
+        
         public var navigationBarText = "Sinch chat"
         public var navigationBarImageViewText = NSLocalizedString("label_image", bundle: Bundle.staticBundle, comment: "")
         public var today = NSLocalizedString("label_today", bundle: Bundle.staticBundle, comment: "")

@@ -12,7 +12,13 @@ enum PlayingItem {
     case mediaMessage(message: Message)
 }
 
-class StartViewController: SinchViewController<StartViewModel, StartView > {
+class StartViewController: SinchViewController<StartViewModel, StartView >, SinchChatViewController {
+    
+    var isSendingMessagesEnabled: Bool = true {
+        didSet {
+            mainView.messageComposeView.isSendingMessagesEnabled = isSendingMessagesEnabled
+        }
+    }
     
     var imagePickerHelper: ImagePickerHelper!
     weak var cordinator: RootCoordinator?
@@ -112,6 +118,7 @@ class StartViewController: SinchViewController<StartViewModel, StartView > {
         addObservers()
         addNoInternetObservers()
         
+        mainView.messageComposeView.isSendingMessagesEnabled = isSendingMessagesEnabled
     }
     
     override func viewWillAppear(_ animated: Bool) {

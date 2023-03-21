@@ -16,7 +16,7 @@ public protocol SinchChat {
     /// - Throws: SinchChatSDKError enum with specific error.
     func getChatViewController(uiConfig: SinchSDKConfig.UIConfig?,
                                localizationConfig: SinchSDKConfig.LocalizationConfig?,
-                               options: GetChatViewControllerOptions?) throws -> UIViewController
+                               options: GetChatViewControllerOptions?) throws -> SinchChatViewController
     
     /// Sets metadata for single conversation. This methods overrides previous metadata.
     /// - Parameters:
@@ -24,11 +24,16 @@ public protocol SinchChat {
     func setConversationMetadata(_ metadata: [SinchMetadata]) throws
 }
 
+public protocol SinchChatViewController: UIViewController {
+    
+    var isSendingMessagesEnabled: Bool { get set }
+}
+
 public extension SinchChat {
     
     func getChatViewController(uiConfig: SinchSDKConfig.UIConfig? = nil,
                                localizationConfig: SinchSDKConfig.LocalizationConfig? = nil,
-                               options: GetChatViewControllerOptions? = nil) throws -> UIViewController {
+                               options: GetChatViewControllerOptions? = nil) throws -> SinchChatViewController {
         try getChatViewController(uiConfig: uiConfig, localizationConfig: localizationConfig, options: options)
     }
 }
@@ -92,7 +97,7 @@ final class DefaultSinchChat: SinchChat {
     
     public func getChatViewController(uiConfig: SinchSDKConfig.UIConfig? = nil,
                                       localizationConfig: SinchSDKConfig.LocalizationConfig? = nil,
-                                      options: GetChatViewControllerOptions? = nil) throws -> UIViewController {
+                                      options: GetChatViewControllerOptions? = nil) throws -> SinchChatViewController {
         
         guard isChatAvailable() == .available, let authDataSource = authDataSource, let region = region else {
             throw SinchChatSDKError.unavailable

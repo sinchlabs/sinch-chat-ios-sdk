@@ -6,6 +6,7 @@
 "label_trying_download" = "Trying to download...";
 "label_connected" = "Connected";
 "label_no_internet_connection" = "No internet connection";
+"label_disabled_chat_messages" = "Sending messages is disabled";
 
 "alert_could_not_load_history" = "Conversation history loading failed. Please try again!";
 "alert_message_not_sent" = "Message not sent. Please try again later!";

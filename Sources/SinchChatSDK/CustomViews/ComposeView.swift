@@ -21,6 +21,16 @@ protocol ComposeViewDelegate: AnyObject {
 // swiftlink:disable:next type_body_length
 final class ComposeView: SinchView {
     
+    var isSendingMessagesEnabled: Bool = true {
+        didSet {
+            if isSendingMessagesEnabled {
+                enableSendingMessages()
+            } else {
+                disableSendingMessages()
+            }
+        }
+    }
+    
     private let maxHeight: CGFloat = 125.0
     private let minHeight: CGFloat = 60.0
     private let paddingTop: CGFloat = 10.0
@@ -74,6 +84,14 @@ final class ComposeView: SinchView {
         button.translatesAutoresizingMaskIntoConstraints = false
         
         return button
+    }()
+    
+    lazy var disabledTextLabel: UILabel = {
+        let label = UILabel()
+        label.text = localizationConfiguration.disabledChatMessageText
+        label.translatesAutoresizingMaskIntoConstraints = false
+        
+        return label
     }()
     
     var placeholderLabel: UILabel = UILabel()
@@ -151,7 +169,6 @@ final class ComposeView: SinchView {
     
     override func setupSubviews() {
 
-        
         translatesAutoresizingMaskIntoConstraints = false
         backgroundView.backgroundColor = uiConfig.inputBarBackgroundColor
         backgroundView.translatesAutoresizingMaskIntoConstraints = false
@@ -580,6 +597,30 @@ final class ComposeView: SinchView {
     private func updateTextViewConstraints() {
         invalidateIntrinsicContentSize()
         updateConstraints()
+    }
+    
+    private func enableSendingMessages() {
+        disabledTextLabel.isHidden = true
+        
+        leftStackView.isHidden = false
+        rightStackView.isHidden = false
+        textButtonContainer.isHidden = false
+    }
+    
+    private func disableSendingMessages() {
+        leftStackView.isHidden = true
+        rightStackView.isHidden = true
+        textButtonContainer.isHidden = true
+        
+        disabledTextLabel.isHidden = false
+        if disabledTextLabel.superview == nil {
+            addSubview(disabledTextLabel)
+            
+            NSLayoutConstraint.activate([
+                disabledTextLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
+                disabledTextLabel.topAnchor.constraint(equalTo: topAnchor, constant: paddingTop)
+            ])
+        }
     }
 }
 

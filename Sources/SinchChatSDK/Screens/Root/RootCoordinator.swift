@@ -26,7 +26,7 @@ final class RootCoordinator: BaseCoordinator {
         
     }
     
-    func getRootViewController(uiConfig: SinchSDKConfig.UIConfig, localizationConfig: SinchSDKConfig.LocalizationConfig) -> StartViewController {
+    func getRootViewController(uiConfig: SinchSDKConfig.UIConfig, localizationConfig: SinchSDKConfig.LocalizationConfig) -> SinchChatViewController {
         let startViewModel: StartViewModel = DefaultStartViewModel(messageDataSource: messageDataSource, notificationPermission: pushPermissionHandler)
         messageDataSource.delegate = startViewModel
         let startViewController = StartViewController(viewModel: startViewModel, view: .init(uiConfiguration: uiConfig, localizationConfiguration: localizationConfig))
