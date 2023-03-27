@@ -14,12 +14,6 @@ enum PlayingItem {
 
 class StartViewController: SinchViewController<StartViewModel, StartView >, SinchChatViewController {
     
-    var isSendingMessagesEnabled: Bool = true {
-        didSet {
-            mainView.messageComposeView.isSendingMessagesEnabled = isSendingMessagesEnabled
-        }
-    }
-    
     var imagePickerHelper: ImagePickerHelper!
     weak var cordinator: RootCoordinator?
     var connectivity = Connectivity()
@@ -118,7 +112,13 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
         addObservers()
         addNoInternetObservers()
         
-        mainView.messageComposeView.isSendingMessagesEnabled = isSendingMessagesEnabled
+        mainView.messageComposeView.isSendingMessagesEnabled = SinchChatSDK.shared.chat.advanced._isSendingMessagesEnabled
+        SinchChatSDK.shared.chat.advanced.enableSendingMessagesHandler = { [weak self] in
+            self?.mainView.messageComposeView.isSendingMessagesEnabled = SinchChatSDK.shared.chat.advanced._isSendingMessagesEnabled
+        }
+        SinchChatSDK.shared.chat.advanced.disableSendingMessagesHandler = { [weak self] in
+            self?.mainView.messageComposeView.isSendingMessagesEnabled = SinchChatSDK.shared.chat.advanced._isSendingMessagesEnabled
+        }
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -148,6 +148,9 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         isMessagesControllerBeingDismissed = false
+        
+        SinchChatSDK.shared.chat.advanced.enableSendingMessagesHandler = nil
+        SinchChatSDK.shared.chat.advanced.disableSendingMessagesHandler = nil
     }
     
     override func viewDidLayoutSubviews() {

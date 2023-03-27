@@ -2,6 +2,9 @@ import UIKit
 
 public protocol SinchChat {
     
+    /// Advanced settings and method of Sinch Chat.
+    var advanced: SinchChatAdvanced { get }
+    
     /// Checks if chat can be opened.
     /// - Returns: Current Chat availability.
     func isChatAvailable() -> SinchSDKChatAvailability
@@ -22,11 +25,12 @@ public protocol SinchChat {
     /// - Parameters:
     ///    - metadata: Keys with values.
     func setConversationMetadata(_ metadata: [SinchMetadata]) throws
+    
+    
+    
 }
 
 public protocol SinchChatViewController: UIViewController {
-    
-    var isSendingMessagesEnabled: Bool { get set }
 }
 
 public extension SinchChat {
@@ -67,6 +71,8 @@ final class DefaultSinchChat: SinchChat {
     var state: SinchChatState = .idle
     
     var lastChatOptions: GetChatViewControllerOptions?
+    
+    var advanced: SinchChatAdvanced = .init()
     
     private var authDataSource: AuthDataSource?
     private let pushPermissionHandler: PushNofiticationPermissionHandler
@@ -165,6 +171,7 @@ extension DefaultSinchChat: ChatNotificationHandlerDelegate {
 }
 
 public protocol SinchMetadata {
+    // swiftlint:disable:next large_tuple
     func getKeyValue() -> (key: String, value: String, mode: SinchMetadataMode)
 }
 
@@ -199,4 +206,31 @@ public struct SinchMetadataCustom: SinchMetadata {
     public func getKeyValue() -> (key: String, value: String, mode: SinchMetadataMode) {
         return (key, value, mode)
     }
+}
+
+public class SinchChatAdvanced {
+    
+    internal init() {}
+    
+    internal var _isSendingMessagesEnabled: Bool = true
+    internal var enableSendingMessagesHandler: (() -> Void)?
+    internal var disableSendingMessagesHandler: (() -> Void)?
+    
+    /// Provides information if sending messages feature is enabled.
+    public var isSendingMessagesEnabled: Bool {
+        _isSendingMessagesEnabled
+    }
+    
+    /// Enables possibility to sending messages.
+    public func enableSendingMessages() {
+        _isSendingMessagesEnabled = true
+        self.enableSendingMessagesHandler?()
+    }
+    
+    /// Disables possibility to sending messages.
+    public func disableSendingMessages() {
+        _isSendingMessagesEnabled = false
+        self.disableSendingMessagesHandler?()
+    }
+    
 }
