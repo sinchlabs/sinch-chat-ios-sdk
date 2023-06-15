@@ -82,7 +82,6 @@ public final class SinchChatSDK {
             switch result {
             case .success:
                 currentAuthDataSource.deleteToken()
-                SinchChatSDK.shared.eventListenerSubject.send(.didRemoveIdentity)
 
                 completion?(.success(()))
             case .failure(let error):
