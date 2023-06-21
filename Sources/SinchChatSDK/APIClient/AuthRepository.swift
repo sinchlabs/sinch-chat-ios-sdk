@@ -24,17 +24,6 @@ public struct AuthModel: Codable {
         }
         return data.base64EncodedString()
     }
-    
-    public func getUserID() -> String? {
-        do {
-            let payload = try JWTDecoder.decode(jwtToken: accessToken)
-            return payload["uuid"] as? String
-
-        } catch {
-            return nil
-
-        }
-    }
 }
 
 protocol AuthRepository {
