@@ -1,26 +1,39 @@
 import Foundation
+import GRPC
 
 enum AuthRepositoryError: Error {
     case unknown(Error)
     // Cannot create api client, report it to us, thank you!
-    case internalError
+    case internalError(tracingID: String)
+    case cannotEstablishConnection
 }
 
-typealias AccessToken = String
+public typealias AccessToken = String
 
-struct AuthModel: Codable {
-    let accessToken: AccessToken
-    let sinchIdentity: SinchSDKIdentity
-    let clientID: String
-    let projectID: String
-    let configID: String
-    let region: Region
+public struct AuthModel: Codable {
+    public let accessToken: AccessToken
+    public let sinchIdentity: SinchSDKIdentity
+    public let clientID: String
+    public let projectID: String
+    public let configID: String
+    public let region: Region
 
-    var identityHash: String? {
+    public var identityHash: String? {
         guard let data = try? JSONEncoder().encode(self) else {
             return nil
         }
         return data.base64EncodedString()
+    }
+    
+    public func getUserID() -> String? {
+        do {
+            let payload = try JWTDecoder.decode(jwtToken: accessToken)
+            return payload["uuid"] as? String
+
+        } catch {
+            return nil
+
+        }
     }
 }
 
@@ -44,7 +57,7 @@ final class DefaultAuthRepository: AuthRepository {
 
     func createAnonymouseToken(completion: @escaping (Result<AuthModel, AuthRepositoryError>) -> Void) {
         guard let client = DefaultAPIClient(region: config.region) else {
-            completion(.failure(.internalError))
+            completion(.failure(.cannotEstablishConnection))
             return
         }
         let service = getService(client: client)
@@ -62,7 +75,7 @@ final class DefaultAuthRepository: AuthRepository {
                                           sinchIdentity: .anonymous,
                                           clientID: self.config.clientID,
                                           projectID: self.config.projectID,
-                                          configID: "test-config-id",
+                                          configID: self.config.configID,
                                           region: self.config.region)))
             case .failure(let err):
                 completion(.failure(.unknown(err)))
@@ -72,7 +85,7 @@ final class DefaultAuthRepository: AuthRepository {
 
     func createSignedToken(userId: String, secret: String, completion: @escaping (Result<AuthModel, AuthRepositoryError>) -> Void) {
         guard let client = DefaultAPIClient(region: config.region) else {
-            completion(.failure(.internalError))
+            completion(.failure(.cannotEstablishConnection))
             return
         }
         let service = getService(client: client)
@@ -94,16 +107,20 @@ final class DefaultAuthRepository: AuthRepository {
                                           sinchIdentity:.selfSigned(userId: userId, secret: secret),
                                           clientID: self.config.clientID,
                                           projectID: self.config.projectID,
-                                          configID: "test-protoc",
+                                          configID: self.config.configID,
                                           region: self.config.region)))
             case .failure(let err):
-                completion(.failure(.unknown(err)))
+                if let status = err as? GRPC.GRPCStatus {
+                    completion(.failure(.internalError(tracingID: status.message ?? "")))
+                } else {
+                    completion(.failure(.unknown(err)))
+                }
             }
         }
     }
 
-    private func getService(client: APIClient) -> Sinch_Chat_Sdk_V1alpha2_SdkServiceClient {
-            Sinch_Chat_Sdk_V1alpha2_SdkServiceClient(channel: client.getChannel())
+    private func getService(client: APIClient) -> Sinch_Chat_Sdk_V1alpha2_SdkServiceNIOClient {
+        Sinch_Chat_Sdk_V1alpha2_SdkServiceNIOClient(channel: client.getChannel())
     }
 }
 
