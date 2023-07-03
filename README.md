@@ -123,15 +123,11 @@ We need to have configuration for chat which we’re providing to you it means y
 
 - Region
 
-  
-
-- Project ID
-
-  
+- Project ID  
 
 - Client ID
 
-  
+- Config ID (leave "" if you don't have it)
 
 - _*___(Optional)__* Token secret
 
@@ -160,10 +156,15 @@ Example:
   
 
 ```swift
-
+let config = SinchSDKConfig.AppConfig(
+        clientID: {{ client_id }}, 
+        projectID: {{ project_id }}, 
+        configID: {{ config_id }}, // If you don't have it, leave empty string "" 
+        region: .EU1
+)
   
 
-SinchChatSDK.shared.setIdentity(with: currentEnvironment.toSinchConfig, identity: currentIdentityType) { result in
+SinchChatSDK.shared.setIdentity(with: config, identity: currentIdentityType) { result in
 
 switch result {
 
@@ -184,7 +185,7 @@ case .failure(let error):
 ### Signing custom user ID
 In case of anonymous session we're generating unique User Identifier to have unique identifier of user in scope of your projectID and clientID.
 
-In case of signed user id **you** can specify user id so we will use it in scope of projectID and clientID.
+In case of signed user id **you** can specify user id so we will use it in scope of projectID, clientID and configID
 What does it mean? You can send push notification or start live chat which identifier which is assigned in your database.
 
 Example:
