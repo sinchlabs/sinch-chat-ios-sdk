@@ -1,27 +1,28 @@
 import UIKit
+//TODO
 
-class SinchViewController<T, V: SinchView>: UIViewController {
+open class SinchViewController<T, V: SinchView>: UIViewController {
 
-    let viewModel: T
-    let mainView: V
+    public let viewModel: T
+    public let mainView: V
     
-    init(viewModel: T, view: V) {
+    public init(viewModel: T, view: V) {
         self.mainView = view
         self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
         commonInit()
     }
 
-    override func loadView() {
+    public override func loadView() {
         self.view = mainView
     }
 
     @available(*, unavailable, message: "Use init(_:_:)")
-    required init?(coder: NSCoder) {
+    public required init?(coder: NSCoder) {
         fatalError()
     }
 
-    func commonInit() {
+    public func commonInit() {
 
     }
     
@@ -45,5 +46,18 @@ class SinchViewController<T, V: SinchView>: UIViewController {
             navigationController?.navigationBar.tintColor = uiConfig.navigationBarTitleColor
             navigationController?.navigationBar.titleTextAttributes = textAttributes
         }
+    }
+    func addCloseButton() {
+        let closeImage = UIImage(named: "backArrowIcon",
+                                 in: Bundle.staticBundle,
+                                 compatibleWith: nil)?.withRenderingMode(.alwaysOriginal)
+        navigationItem.leftBarButtonItem = UIBarButtonItem(image: closeImage,
+                                                           style: .plain,
+                                                           target: self,
+                                                           action: #selector(closeAction))
+    }
+    
+    @objc func closeAction() {
+        self.dismiss(animated: true, completion: nil)
     }
 }

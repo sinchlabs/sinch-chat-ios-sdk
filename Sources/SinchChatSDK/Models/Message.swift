@@ -3,10 +3,10 @@ import UIKit
 import GRPC
 import Swift
 
-enum MessageError: Error {
+public enum MessageError: Error {
     case notSupported
 }
-enum MessageStatus: Int, Codable {
+public enum MessageStatus: Int, Codable {
     case notSent
     case sending
     case sent
@@ -47,11 +47,11 @@ enum MessageStatus: Int, Codable {
     
 }
 
-struct Message: Encodable {
-    var entryId : String
-    let owner: Owner
-    var body: MessageBody
-    var status: MessageStatus
+public struct Message: Encodable {
+    public var entryId : String
+    public let owner: Owner
+    public var body: MessageBody
+    public var status: MessageStatus
     
     enum CodingKeys: String, CodingKey {
         case entryId
@@ -60,7 +60,7 @@ struct Message: Encodable {
         case status
     }
     
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var cod = encoder.container(keyedBy: CodingKeys.self)
         try cod.encode(owner, forKey: .owner)
         
@@ -73,12 +73,11 @@ struct Message: Encodable {
         }
     }
     
-    init(entryId: String, owner: Owner, body: MessageBody, status: MessageStatus = .sent) {
+    public init(entryId: String, owner: Owner, body: MessageBody, status: MessageStatus = .sent) {
         self.entryId = entryId
         self.owner = owner
         self.body = body
         self.status = status
-        
     }
     
     func isFromCurrentUser() -> Bool {
@@ -95,7 +94,7 @@ struct Message: Encodable {
 }
 
 extension Message: Decodable {
-    init(from decoder: Swift.Decoder) throws {
+    public init(from decoder: Swift.Decoder) throws {
         let dec = try decoder.container(keyedBy: CodingKeys.self)
         owner = try dec.decode(Owner.self, forKey: .owner)
         entryId = try dec.decode(String.self, forKey: .entryId)

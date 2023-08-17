@@ -4,7 +4,8 @@ import GRPC
 import Connectivity
 import AVFoundation
 import AVKit
-
+import QuickLook
+import MobileCoreServices
 // swiftlint:disable file_length
 
 enum PlayingItem {
@@ -45,7 +46,7 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
     internal var messageCollectionViewBottomInset: CGFloat = 0 {
         didSet {
             mainView.collectionView.contentInset.bottom = messageCollectionViewBottomInset
-            mainView.collectionView.scrollIndicatorInsets.bottom = messageCollectionViewBottomInset
+            mainView.collectionView.verticalScrollIndicatorInsets.bottom = messageCollectionViewBottomInset
         }
     }
     var isLastCellVisible: Bool {
@@ -74,7 +75,8 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
         
         return false
     }
-  
+    var fileURLs: [String] = []
+    
     let audioSessionController = AudioSessionController()
     lazy var player = AVPlayerWrapper()
     
@@ -95,7 +97,7 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
             mainView.collectionView.automaticallyAdjustsScrollIndicatorInsets = false
         }
         mainView.collectionView.showsHorizontalScrollIndicator = false
-        
+      
         (viewModel as? DefaultStartViewModel)?.delegate = self
         imagePickerHelper = ImagePickerHelper(presentationController: self, delegate: self)
         player.delegate = self
@@ -106,6 +108,8 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        SinchChatSDK.shared.eventListenerSubject.send(.didStartChat(chatViewController: self, chatOptions: viewModel.getChatOptions()))
         
         self.title = mainView.localizationConfiguration.navigationBarText
         refreshControl.beginRefreshing()
@@ -137,6 +141,7 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         isMessagesControllerBeingDismissed = false
+        
     }
     
     override func viewWillDisappear(_ animated: Bool) {
@@ -166,7 +171,7 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
         super.viewSafeAreaInsetsDidChange()
         messageCollectionViewBottomInset = requiredInitialScrollViewBottomInset()
     }
-    
+
     deinit {
         
         NotificationCenter.default.removeObserver(self, name: UIApplication.willEnterForegroundNotification, object: nil)
@@ -174,6 +179,8 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
         viewModel.onDisappear()
         player.stop()
         viewModel.closeChannel()
+        SinchChatSDK.shared.eventListenerSubject.send(.didCloseChat)
+        clearAllFiles()
 
     }
     
@@ -216,24 +223,11 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
     }
     
     func resignFirstResponderView() {
-        _ = mainView.messageComposeView.composeTextView.resignFirstResponder()
+        if mainView.messageComposeView.composeTextView.isFirstResponder {
+            _ = mainView.messageComposeView.composeTextView.resignFirstResponder()
+        }
     }
-    
-    private func addCloseButton() {
-        let closeImage = UIImage(named: "closeIcon",
-                                 in: Bundle.staticBundle,
-                                 compatibleWith: nil)?.withRenderingMode(.alwaysOriginal)
-        navigationItem.rightBarButtonItems = [UIBarButtonItem(image: closeImage,
-                                                              style: .plain,
-                                                              target: self,
-                                                              action: #selector(closeAction))
-        ]
-    }
-    
-    @objc private func closeAction() {
-        self.dismiss(animated: true, completion: nil)
-    }
-    
+        
     @objc func loadMoreMessages() {
         viewModel.loadHistory()
     }
@@ -294,6 +288,7 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
 
 extension StartViewController: ImagePickerDelegate {
     func didSelect(video: URL?) {
+        addKeyboardObservers()
         if let video = video {
             let videoProcessor = VideoProcessor(video)
             videoProcessor.convertVideoToMP4(completion: { [weak self] url in
@@ -325,7 +320,9 @@ extension StartViewController: ImagePickerDelegate {
     }
     
     func didSelect(image: UIImage?) {
-        
+        self.becomeFirstResponder()
+        addKeyboardObservers()
+
         if let image = image {
             
             sendMedia(.image(image))
@@ -476,7 +473,8 @@ extension StartViewController: ComposeViewDelegate {
         }
     }
     func chooseAction() {
-        
+        resignFirstResponderView()
+
         let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
 
         if !SinchChatSDK.shared.disabledFeatures.contains(.sendLocationSharingMessage) {
@@ -493,17 +491,48 @@ extension StartViewController: ComposeViewDelegate {
             alert.addAction(action)
         }
         
+        if !SinchChatSDK.shared.disabledFeatures.contains(.sendDocuments) {
+            
+            let action  = UIAlertAction(title: mainView.localizationConfiguration.menuDocument, style: .default, handler: { _ in
+
+                let docsTypes = [         "com.adobe.pdf",
+                                          "com.compuserve.gif",
+                                          "com.microsoft.word.doc",
+                                          "com.microsoft.excel.xls",
+                                          "com.microsoft.powerpoint.​ppt",
+                                          "org.openxmlformats.wordprocessingml.document",
+                                          "com.microsoft.powerpoint.​ppt",
+                                          "org.openxmlformats.presentationml.presentation",
+                                          "org.openxmlformats.spreadsheetml.sheet",
+                                         
+                  ]
+                
+         //   https://stackoverflow.com/questions/37296929/implement-document-picker-in-swift-ios?rq=4
+                    let documentPicker = UIDocumentPickerViewController(documentTypes: docsTypes, in: UIDocumentPickerMode.import)
+                    documentPicker.delegate = self
+                    documentPicker.modalPresentationStyle = .fullScreen
+                self.present(documentPicker, animated: true) {
+                    self.removeKeyboardObservers()
+                    
+                }
+            })
+            
+            action.setupActionWithImage(mainView.uiConfig.shareLocationMenuImage,
+                                        textColor:  mainView.uiConfig.menuButtonTextColor)
+            
+            alert.addAction(action)
+        }
+     
         alert.addAction(UIAlertAction(title: mainView.localizationConfiguration.menuCancel, style: .cancel, handler: { _ in
             debugPrint("User click cancel button")
         }))
         
-        self.present(alert, animated: true, completion: nil)
+      self.present(alert, animated: true, completion: nil)
         
     }
     
     func choosePhoto() {
         resignFirstResponderView()
-
         showChoiceBetweenGalleryAndCamera()
     }
     
@@ -511,7 +540,7 @@ extension StartViewController: ComposeViewDelegate {
 
         let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
         
-        if !SinchChatSDK.shared.disabledFeatures.contains(.sendImageFromCamera) {
+        if !SinchChatSDK.shared.disabledFeatures.contains(.sendImageFromCamera) || !SinchChatSDK.shared.disabledFeatures.contains(.sendVideoMessageFromCamera) {
             
             let cameraAction  = UIAlertAction(title: mainView.localizationConfiguration.menuCamera, style: .default, handler: { _ in
                 
@@ -537,7 +566,6 @@ extension StartViewController: ComposeViewDelegate {
                         }
                     }
                 }
-                
             })
             
             cameraAction.setupActionWithImage(mainView.uiConfig.cameraMenuImage,
@@ -546,9 +574,10 @@ extension StartViewController: ComposeViewDelegate {
             alert.addAction(cameraAction)
         }
         
-        if !SinchChatSDK.shared.disabledFeatures.contains(.sendImageFromCamera) {
+        if !SinchChatSDK.shared.disabledFeatures.contains(.sendImageMessageFromGallery) || !SinchChatSDK.shared.disabledFeatures.contains(.sendVideoMessageFromGallery) {
             
             let cameraAction  = UIAlertAction(title: mainView.localizationConfiguration.menuImageGallery, style: .default, handler: { _ in
+                
                 self.imagePickerHelper.pickPhotoFromGallery()
             })
             
@@ -571,21 +600,21 @@ extension StartViewController: StartViewModelDelegate {
     func setVisibleTypingIndicator(_ isVisible: Bool, animated: Bool) {
         if isVisible {
             DispatchQueue.main.async {
-                self.setTypingIndicatorViewHidden(false, animated: animated) { [weak self] success in
+                self.setTypingIndicatorViewHidden(false, animated: animated, completion: { [weak self] success in
                     if success, self?.isLastCellVisible == true {
                         self?.mainView.collectionView.scrollToLastItem(animated: true)
                     }
-                }
+                })
             }
         } else {
             
             DispatchQueue.main.async {
                 
-                self.setTypingIndicatorViewHidden(true, animated: animated) { [weak self] success in
+                self.setTypingIndicatorViewHidden(true, animated: animated, completion: { [weak self] success in
                     if success, self?.isLastCellVisible == true {
                         self?.mainView.collectionView.scrollToLastItem(animated: true)
                     }
-                }
+                })
     
             }
         }
@@ -659,8 +688,14 @@ extension StartViewController: StartViewModelDelegate {
     
     func didReceiveHistoryFirstMessages(_ messages: [Message]) {
         DispatchQueue.main.async {
+            
             self.mainView.messageComposeView.scrollToBottomButton.isHidden = true
+            if messages.isEmpty {
+                self.refreshControl.endRefreshing()
 
+                return
+                
+            }
             CATransaction.begin()
             CATransaction.setCompletionBlock({
                 self.messages =  messages
@@ -673,7 +708,13 @@ extension StartViewController: StartViewModelDelegate {
         }
     }
     func didReceiveHistoryMessages(_ messages: [Message]) {
+
         var shouldRemoveFirstMessage: Bool = false
+        if messages.isEmpty {
+            self.refreshControl.endRefreshing()
+            return
+            
+        }
         
         DispatchQueue.main.async {
             CATransaction.begin()
@@ -698,16 +739,19 @@ extension StartViewController: StartViewModelDelegate {
     }
     
     func didReceiveMessages(_ messages: [Message]) {
-        
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             
             for streamMessage in messages {
                 var isFounded = false
                 for (index, message) in self.messages.reversed().enumerated() {
-                    var  entryId = message.entryId
+                    let  entryId = message.entryId
                     if streamMessage.entryId == message.entryId {
-                        self.messages[self.messages.count - 1 - index] = streamMessage
+                        
+                        var wholeMessage = streamMessage
+                        wholeMessage.body.isExpanded = message.body.isExpanded
+                        self.messages[self.messages.count - 1 - index] = wholeMessage
+                        
                         isFounded = true
                         UIView.performWithoutAnimation {
                             
@@ -777,7 +821,7 @@ extension StartViewController: StartViewModelDelegate {
 extension StartViewController: UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
     
     func numberOfSections(in collectionView: UICollectionView) -> Int {
-        var sections = messages.count
+        let sections = messages.count
 
         guard let collectionView = collectionView as? MessageCollectionView else {
 
@@ -819,6 +863,11 @@ extension StartViewController: UICollectionViewDataSource, UICollectionViewDeleg
                 let cell = collectionView.dequeueReusableCell(withReuseIdentifier:  VoiceMessageCell.cellId, for: indexPath) as! VoiceMessageCell
                 cell.configure(with: message, at: indexPath, and: mainView.collectionView, player: player, playingItem: playingItem)
                 cell.audioDelegate = self
+                return cell
+            case .file:
+                let cell = collectionView.dequeueReusableCell(withReuseIdentifier:  FileMessageCell.cellId, for: indexPath) as! FileMessageCell
+                cell.configure(with: message, at: indexPath, and: mainView.collectionView)
+            
                 return cell
             default:
                 let cell = collectionView.dequeueReusableCell(withReuseIdentifier:  ImageMessageCell.cellId, for: indexPath) as! ImageMessageCell
@@ -1017,15 +1066,44 @@ extension StartViewController: ChatDataSource {
     func messageForItem(at indexPath: IndexPath, in messagesCollectionView: MessageCollectionView) -> Message {
         messages[indexPath.section]
     }
+ 
 }
 
 extension StartViewController: MessageCellDelegate {
+    func didTapOnFile(url: String, in cell: MessageCollectionViewCell) {
+        
+        guard let url = URL(string: url) else {
+            return
+        }
+        
+        cordinator?.presentDocumentViewerController(viewController: self, cell: cell, uiConfig: mainView.uiConfig, localizationConfig: mainView.localizationConfiguration, url: url)
+            
+        }
     
+    func clearAllFiles() {
+        let fileManager = FileManager.default
+            
+        let paths = NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true).first!
+            
+        print("Directory: \(paths)")
+            
+        do {
+                
+            for file in fileURLs {
+                // For each file in the directory, create full path and delete the file
+                if let filePath = URL(string: file) {
+                    print("filePath: \(filePath)")
+                    try fileManager.removeItem(at: filePath)
+                }
+            }
+        } catch let error {
+            print(error)
+        }
+    }
     func didTapOnResend(message: Message, in cell: MessageCollectionViewCell) {
               
         sendMessage(MessageType.media(message: message))
     }
-    
     func didSelectURL(_ url: URL) {
         // htpps is recognized as link so we need to check if link contains http or https so SFSafariViewController dont crash
         if ["http", "https"].contains(url.scheme?.lowercased() ?? "") {
@@ -1033,6 +1111,18 @@ extension StartViewController: MessageCellDelegate {
             present(SFSafariViewController(url: url), animated: true)
         }
     }
+    func didSelectCustom(_ pattern: String, match: String?, message: Message?) {
+
+        guard let message = message else { return }
+        
+        if let row = self.messages.firstIndex(where: { $0.entryId == message.entryId }) {
+            
+                messages[row] = message
+                self.mainView.collectionView.reloadSections([row])
+
+        }
+    }
+
     func didTapMedia(with url:URL) {
 
         cordinator?.presentMediaViewerController(viewController: self,
@@ -1162,15 +1252,52 @@ extension StartViewController: AudioSessionControllerDelegate {
             updateAcivePlayerView()
             playingItem = nil
         case .ended( _):
-            
-            do {
-                
-            } catch let error as NSError {
-                print(error.localizedDescription)
-            }
+            break
         }
     }
 }
+
+extension StartViewController: UIDocumentPickerDelegate {
+    
+    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        for url in urls {
+            debugPrint(url.lastPathComponent)
+            sendMedia(.file(url, FileType.getFileType(urlExtension: url.pathExtension)))
+            
+        }
+
+        controller.dismiss(animated: false) {
+            self.addKeyboardObservers()
+            self.becomeFirstResponder()
+
+        }
+    }
+    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+        self.addKeyboardObservers()
+        self.becomeFirstResponder()
+    }
+}
+extension StartViewController: QLPreviewControllerDataSource, QLPreviewControllerDelegate {
+    func numberOfPreviewItems(in controller: QLPreviewController) -> Int {
+        return fileURLs.count
+    }
+    func previewController(_ controller: QLPreviewController, previewItemAt index: Int) -> QLPreviewItem {
+        
+        guard  let url = NSURL(string: fileURLs[index]) else {
+            fatalError("Could not load \(index).pdf")
+        }
+
+        return url as QLPreviewItem
+    }
+    func previewControllerDidDismiss(_ controller: QLPreviewController) {
+       // addKeyboardObservers()
+    }
+    // QLPreviewControllerDelegate
+    func previewController(_ controller: QLPreviewController, shouldOpen url: URL, for item: QLPreviewItem) -> Bool {
+            return true
+    }
+}
+
 extension StartViewController: AVPlayerWrapperDelegate {
     
     func AVWrapper(didChangeState state: AVPlayerWrapperState) {

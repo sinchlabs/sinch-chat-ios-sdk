@@ -74,24 +74,8 @@ final class MediaTextMessageCell: ImageBaseCell, MessageStatusDelegate {
         
         setupImageView(message: message, localizationConfig: messagesCollectionView.localizationConfig)
 
-            let enabledDetectors: [Detector] = [.url]
+        setupMessageLabel(messageLabel, message, messagesCollectionView)
 
-            messageLabel.configure {
-                messageLabel.enabledDetectors = enabledDetectors
-                for detector in enabledDetectors {
-                    
-                    let attributes: [NSAttributedString.Key: Any] = [
-                        NSAttributedString.Key.foregroundColor: messagesCollectionView.uiConfig.messageUrlLinkTextColor,
-                        NSAttributedString.Key.underlineStyle: NSUnderlineStyle.single.rawValue,
-                        NSAttributedString.Key.underlineColor: messagesCollectionView.uiConfig.messageUrlLinkTextColor
-                    ]
-                    messageLabel.setAttributes(attributes, detector: detector)
-                }
-                
-                if let message = message.body as? MessageMediaText {
-                    messageLabel.text = message.text
-                }
-            }
             
             dateLabel.configure {
         
@@ -107,7 +91,7 @@ final class MediaTextMessageCell: ImageBaseCell, MessageStatusDelegate {
             if let dateFont = dateLabel.messageLabelFont {
                 dateLabel.font = dateFont
             }
-            messageLabel.delegate = messagesCollectionView.touchDelegate
+      
             setupContainerView(messagesCollectionView, message)
         }
     private func setupContainerView(_ messagesCollectionView: MessageCollectionView, _ message: Message) {

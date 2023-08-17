@@ -1,14 +1,23 @@
 import UIKit
 
-protocol MessageBody: Codable {
+public protocol MessageBody: Codable {
     var sendDate: Int64? { get }
+    var isExpanded: Bool { get set }
+    
+    func getReadMore(maxCount: Int, textToAdd: String ) -> String 
 
 }
+public extension MessageBody {
+    
+    func getReadMore(maxCount: Int, textToAdd: String ) -> String {
+        return ""
+    }
+}
 
-protocol MessageWithURL: Codable {
+public protocol MessageWithURL: Codable {
     var url: String { get }
 }
 
-protocol MessageWithText: Codable {
+public protocol MessageWithText: Codable {
    func getText() -> String
 }

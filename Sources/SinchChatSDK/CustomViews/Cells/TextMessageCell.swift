@@ -53,29 +53,10 @@ final class TextMessageCell: MessageContentCell {
         dateLabel.textColor = messagesCollectionView.uiConfig.dateMessageLabelTextColor
     }
    
-    
     override func configure(with message: Message, at indexPath: IndexPath, and messagesCollectionView: MessageCollectionView) {
         super.configure(with: message, at: indexPath, and: messagesCollectionView)
-        
-        let enabledDetectors: [Detector] = [.url]
-
-        messageLabel.configure {
-            messageLabel.enabledDetectors = enabledDetectors
-            for detector in enabledDetectors {
-                
-                let attributes: [NSAttributedString.Key: Any] = [
-                    NSAttributedString.Key.foregroundColor: messagesCollectionView.uiConfig.messageUrlLinkTextColor,
-                    NSAttributedString.Key.underlineStyle: NSUnderlineStyle.single.rawValue,
-                    NSAttributedString.Key.underlineColor: messagesCollectionView.uiConfig.messageUrlLinkTextColor
-                ]
-                messageLabel.setAttributes(attributes, detector: detector)
-            }
-            
-            if let message = message.body as? MessageText {
-                messageLabel.text = message.text
-               
-            }
-        }
+       
+        setupMessageLabel(messageLabel, message, messagesCollectionView)
         
         dateLabel.configure {
     
@@ -91,8 +72,6 @@ final class TextMessageCell: MessageContentCell {
         if let dateFont = dateLabel.messageLabelFont {
             dateLabel.font = dateFont
         }
-        
-        messageLabel.delegate = messagesCollectionView.touchDelegate
         setupContainerView(messagesCollectionView, message)
     }
     

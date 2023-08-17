@@ -102,7 +102,7 @@ final class ImageMessageCell: ImageBaseCell, MessageStatusDelegate  {
             return
         }
         if !activityIndicator.isAnimating {
-            if  let error = error, let localizationConfiguration = localizationConfig, let message = message, error {
+            if let error = error, let localizationConfiguration = localizationConfig, let message = message, error {
 
                 setupImageView(message: message, localizationConfig: localizationConfiguration)
                 

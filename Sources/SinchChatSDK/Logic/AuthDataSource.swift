@@ -9,8 +9,9 @@ protocol AuthDataSource {
     var isLoggedIn: Bool { get }
     var identityHashValue: String? { get }
     var currentConfigID: String { get }
+    var currentAuthorization: AuthModel? { get }
     
-    func generateToken(config: SinchSDKConfig.AppConfig, identity: SinchSDKIdentity, completion: @escaping (Result<Void, AuthRepositoryError>) -> Void)
+    func generateToken(config: SinchSDKConfig.AppConfig, identity: SinchSDKIdentity, completion: @escaping (Result<AuthModel, AuthRepositoryError>) -> Void)
     func signRequest(_ callOptions: CallOptions) throws -> CallOptions
     func deleteToken() 
 }
@@ -31,6 +32,10 @@ final class DefaultAuthDataSource: AuthDataSource {
     var identityHashValue: String? {
         storage.read()?.identityHash
     }
+    
+    var currentAuthorization: AuthModel? {
+        storage.read()
+    }
 
     init(authRepository: AuthRepository, authStorage: AuthStorage) {
         storage = authStorage
@@ -49,7 +54,7 @@ final class DefaultAuthDataSource: AuthDataSource {
     
     func generateToken(config: SinchSDKConfig.AppConfig,
                        identity: SinchSDKIdentity,
-                       completion: @escaping (Result<Void, AuthRepositoryError>) -> Void) {
+                       completion: @escaping (Result<AuthModel, AuthRepositoryError>) -> Void) {
        
         if let token = storage.read(),
             token.clientID == config.clientID,
@@ -57,7 +62,7 @@ final class DefaultAuthDataSource: AuthDataSource {
             token.region == config.region,
             token.sinchIdentity == identity {
             
-            completion(.success(()))
+            completion(.success((token)))
             return
         }
         
@@ -67,8 +72,8 @@ final class DefaultAuthDataSource: AuthDataSource {
                 switch result {
                 case .failure(let error):
                     completion(.failure(error))
-                case .success:
-                    completion(.success(()))
+                case .success(let token):
+                    completion(.success((token)))
                 }
             })
         case let .selfSigned(userId, secret):
@@ -76,20 +81,20 @@ final class DefaultAuthDataSource: AuthDataSource {
                 switch result {
                 case .failure(let error):
                     completion(.failure(error))
-                case .success:
-                    completion(.success(()))
+                case .success(let token):
+                    completion(.success((token)))
                 }
             })
         }
     }
 
-    func generateSignedSession(userId: String, secret: String, completion: @escaping (Result<Void, AuthRepositoryError>) -> Void) {
+    func generateSignedSession(userId: String, secret: String, completion: @escaping (Result< AuthModel, AuthRepositoryError>) -> Void) {
         
         repository.createSignedToken(userId: userId, secret: secret) { result in
             switch result {
             case .success(let token):
                 self.storage.save(token)
-                completion(.success(()))
+                completion(.success((token)))
             case .failure(let error):
                 completion(.failure(error))
             }

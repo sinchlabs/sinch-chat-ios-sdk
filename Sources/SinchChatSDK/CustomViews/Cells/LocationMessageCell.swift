@@ -58,26 +58,13 @@ class LocationMessageCell: MessageContentCell {
         
         setupContainerView(messagesCollectionView, message)
         setupMapView(message: message)
-        
-        let enabledDetectors: [Detector] = [.url]
-        
-        messageLabel.configure {
-            messageLabel.enabledDetectors = enabledDetectors
-            for detector in enabledDetectors {
-                
-                let attributes: [NSAttributedString.Key: Any] = [
-                    NSAttributedString.Key.foregroundColor: messagesCollectionView.uiConfig.messageUrlLinkTextColor,
-                    NSAttributedString.Key.underlineStyle: NSUnderlineStyle.single.rawValue,
-                    NSAttributedString.Key.underlineColor: messagesCollectionView.uiConfig.messageUrlLinkTextColor
-                ]
-                messageLabel.setAttributes(attributes, detector: detector)
-            }
-            
-            if let message = message.body as? MessageLocation {
-                messageLabel.text = message.title
-                locationButton.setTitle(message.label, for: .normal)
-            }
+        setupMessageLabel(messageLabel, message, messagesCollectionView)
+
+        if let message = message.body as? MessageLocation {
+                             
+            locationButton.setTitle(message.label, for: .normal)
         }
+        
         dateLabel.configure {
             
             if let dateInSeconds = message.body.sendDate {
@@ -131,11 +118,15 @@ class LocationMessageCell: MessageContentCell {
             
         }
     }
+    
     /// Handle tap gesture on contentView and its subviews.
     override func handleTapGesture(_ gesture: UIGestureRecognizer) {
-        let touchLocation = gesture.location(in: self.contentView)
+        var touchLocation = gesture.location(in: self.contentView)
 
-        if !messageContainerView.frame.contains(touchLocation) {
+        if messageContainerView.frame.contains(touchLocation) {
+
+            messageLabel.handleGesture(convert(touchLocation, to: messageLabel))
+        } else {
             delegate?.didTapOutsideOfContent(in: self)
         }
     }

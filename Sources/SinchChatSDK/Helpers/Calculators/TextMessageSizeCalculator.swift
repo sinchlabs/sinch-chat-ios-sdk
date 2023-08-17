@@ -20,16 +20,11 @@ class TextMessageSizeCalculator: MessageSizeCalculator {
         let maxWidth = messageContainerMaxWidth(for: message)
         
         var messageLabelSize: CGSize = .zero
+
         let attributedText: NSAttributedString
-        var text: String = ""
+        let text: String = message.body.getReadMore(maxCount: messagesLayout.messagesCollectionView.uiConfig.numberOfCharactersBeforeCollapseTextMessage,
+                                                    textToAdd: messagesLayout.messagesCollectionView.localizationConfig.collapsedTextMessageButtonTitle)
 
-        if let body = message.body as? MessageText {
-            text = body.text
-
-        } else if let body = message.body as? MessageMediaText {
-            text = body.text
-        }
-        
         attributedText = NSAttributedString(string: text, attributes: [.font: messageLabelFont])
         messageLabelSize = labelSize(for: attributedText, considering: maxWidth)
 

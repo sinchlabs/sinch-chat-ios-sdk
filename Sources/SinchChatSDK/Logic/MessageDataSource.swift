@@ -22,13 +22,17 @@ protocol MessageDataSource {
     
     var delegate: MessageDataSourceDelegate? { get set }
     
+    var topicModel: TopicModel? { get }
+    var metadata: SinchMetadataArray { get }
+    var shouldInitializeConversation: Bool { get }
+    
     func uploadMedia(_ media: MediaType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void)
     func uploadMediaViaStream(_ media: MediaType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void)
     func sendMessage(_ message: MessageType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void)
     func sendEvent(_ event: EventType, completion: @escaping (Result<Void, MessageDataSourceError>) -> Void)
     func subscribeForMessages(completion: @escaping (Result<Message, MessageDataSourceError>) -> Void)
     func getMessageHistory(completion: @escaping (Result<[Message], MessageDataSourceError>) -> Void)
-    func sendConversationMetadata(_ metadata: [SinchMetadata]) -> Result<Void, MessageDataSourceError>
+    func sendConversationMetadata(_ metadata: SinchMetadataArray) -> Result<Void, MessageDataSourceError>
     func cancelSubscription()
     func closeChannel()
     func startChannel()
@@ -55,13 +59,15 @@ final class DefaultMessageDataSource: MessageDataSource {
     private let pageSize: Int32 = 10
     private var subscription: ServerStreamingCall<Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest, Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamResponse>?
     
-    private let topicModel: TopicModel?
-    private let metadata: [SinchMetadata]
-    private let shouldInitializeConversation: Bool
+    let topicModel: TopicModel?
+    var metadata: SinchMetadataArray
+    let shouldInitializeConversation: Bool
     
     private let jsonEncoder = JSONEncoder()
     
-    init(apiClient: APIClient, authDataSource: AuthDataSource, topicModel: TopicModel? = nil, metadata: [SinchMetadata] = [], shouldInitializeConversation: Bool = false) {
+    private var wasSomeMessageSent = false
+    
+    init(apiClient: APIClient, authDataSource: AuthDataSource, topicModel: TopicModel? = nil, metadata: SinchMetadataArray = [], shouldInitializeConversation: Bool = false) {
         self.client = apiClient
         self.authDataSource = authDataSource
         
@@ -69,12 +75,7 @@ final class DefaultMessageDataSource: MessageDataSource {
         self.topicModel = topicModel
         self.metadata = metadata
         self.shouldInitializeConversation = shouldInitializeConversation
-        
-        let metadataToSend = metadata.filter({ $0.getKeyValue().mode == .withEachMessage })
-        
-        if metadataToSend.isEmpty == false {
-            _ = sendConversationMetadata(metadataToSend)
-        }
+    
     }
     func closeChannel() {
         self.client.closeChannel()
@@ -171,6 +172,7 @@ final class DefaultMessageDataSource: MessageDataSource {
             completion(.failure(.notLoggedIn))
         }
     }
+    
     func sendMessage(_ message: MessageType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void) {
 
         do {
@@ -183,21 +185,28 @@ final class DefaultMessageDataSource: MessageDataSource {
             if let topicModel = topicModel {
                 message.topicID = topicModel.topicID
             }
-            if let metadata = convertSinchMetadataToMetadataJson(metadata: metadata.filter({ $0.getKeyValue().mode == .withEachMessage })) {
+            if let metadata = convertSinchMetadataToMetadataJson(metadata: metadata.filter({
+                // if this is first message then we want to send all metadata
+                return $0.getKeyValue().mode == .withEachMessage
+            })) {
                 message.metadata = metadata
             }
             
-            sendMessageAndEventCall = service.send(message)
-            
-            _ = sendMessageAndEventCall?.response.always { result in
+            sendEmptyMessageWithMetadataIfNeeded { [weak self] in
+                guard let self = self else { return }
                 
-                switch result {
-                case .success(let response):
+                sendMessageAndEventCall = service.send(message)
+                
+                _ = sendMessageAndEventCall?.response.always { [weak self] result in
                     
-                    completion(.success(response.messageID))
-                    
-                case .failure(let err):
-                    completion(.failure(.unknown(err)))
+                    switch result {
+                    case .success(let response):
+                        self?.wasSomeMessageSent = true
+                        completion(.success(response.messageID))
+                        
+                    case .failure(let err):
+                        completion(.failure(.unknown(err)))
+                    }
                 }
             }
             
@@ -205,6 +214,33 @@ final class DefaultMessageDataSource: MessageDataSource {
             completion(.failure(.notLoggedIn))
         }
     }
+    
+    func sendEmptyMessageWithMetadataIfNeeded(_ completion: @escaping () -> Void) {
+        let metadataOnce = convertSinchMetadataToMetadataJson(metadata: metadata)
+        guard wasSomeMessageSent == false, metadata.contains(where: { $0.getKeyValue().mode == .once }), let metadata = metadataOnce else {
+            completion()
+            return
+        }
+        
+        do {
+            
+            let service = try getService()
+            
+            var request = Sinch_Chat_Sdk_V1alpha2_SendRequest()
+            request.metadata = metadata
+            
+            sendMessageAndEventCall = service.send(request)
+            
+            _ = sendMessageAndEventCall?.response.always({ _ in
+                completion()
+            })
+            
+        } catch {
+            completion()
+        }
+        
+    }
+    
     func sendEvent(_ event: EventType, completion: @escaping (Result<Void, MessageDataSourceError>) -> Void) {
         do {
             let service = try getService()
@@ -220,17 +256,21 @@ final class DefaultMessageDataSource: MessageDataSource {
                 request.metadata = metadata
             }
 
-            sendMessageAndEventCall = service.send(request)
-
-            _ = sendMessageAndEventCall?.response.always { result in
-
-                switch result {
-                case .success(_):
-
-                    completion(.success(()))
-
-                case .failure(let err):
-                    completion(.failure(.unknown(err)))
+            sendEmptyMessageWithMetadataIfNeeded { [weak self] in
+                guard let self = self else { return }
+                
+                sendMessageAndEventCall = service.send(request)
+                
+                _ = sendMessageAndEventCall?.response.always { result in
+                    
+                    switch result {
+                    case .success(_):
+                        
+                        completion(.success(()))
+                        
+                    case .failure(let err):
+                        completion(.failure(.unknown(err)))
+                    }
                 }
             }
 
@@ -295,6 +335,7 @@ final class DefaultMessageDataSource: MessageDataSource {
         }
     }
     
+    // swiftlint:disable:next cyclomatic_complexity
     func subscribeForMessages(completion: @escaping (Result<Message, MessageDataSourceError>) -> Void) {
         guard subscription == nil else {
             completion(.failure(.subscriptionIsAlreadyStarted))
@@ -378,7 +419,7 @@ final class DefaultMessageDataSource: MessageDataSource {
         }
     }
     
-    func sendConversationMetadata(_ metadata: [SinchMetadata]) -> Result<Void, MessageDataSourceError> {
+    func sendConversationMetadata(_ metadata: SinchMetadataArray) -> Result<Void, MessageDataSourceError> {
         
         var keyValueDictionary: [String: String] = [:]
         metadata.forEach { metadata in
@@ -427,8 +468,22 @@ final class DefaultMessageDataSource: MessageDataSource {
         return firstPage
     }
     
-    private func getService() throws -> Sinch_Chat_Sdk_V1alpha2_SdkServiceClient {
-        try Sinch_Chat_Sdk_V1alpha2_SdkServiceClient(channel: client.getChannel(), defaultCallOptions: authDataSource.signRequest(.standardCallOptions))
+    private func getService() throws -> Sinch_Chat_Sdk_V1alpha2_SdkServiceNIOClient {
+        try Sinch_Chat_Sdk_V1alpha2_SdkServiceNIOClient(channel: client.getChannel(), defaultCallOptions: authDataSource.signRequest(.standardCallOptions))
+    }
+    
+    private func addSize(_ response: HTTPURLResponse, mediaMessage: inout MessageMedia) {
+        if let size = response.allHeaderFields["Content-Length"] as? String, let sized = Double(size) {
+            
+            let sizeInMb = sized / (1024.0 * 1024.0)
+            if sizeInMb < 1 {
+                let sizeInKB = sized / 1024.0
+                mediaMessage.size = String(format: "%.1f KB", sizeInKB)
+
+            } else {
+                mediaMessage.size = String(format: "%.1f MB", sizeInMb)
+            }
+        }
     }
     
     func getMediaMessageTypeFromMessage(_ message: MessageMedia, completion: @escaping (MessageMedia?) -> Void) {
@@ -455,18 +510,34 @@ final class DefaultMessageDataSource: MessageDataSource {
                 switch type {
                 case "video/mp4", "video/mov":
                     mediaMessage.type = .video
-                case "audio/aac", "audio/adts", "audio/ac3","audio/aif","audio/aiff","audio/aifc", "audio/caf",
+                case "audio/aac", "audio/adts", "audio/ac3", "audio/aif","audio/aiff", "audio/aifc", "audio/caf",
                     "audio/mp4", "audio/mp3", "audio/m4a", "audio/snd", "audio/au", "audio/wav", "audio/sd2":
                     mediaMessage.type = .audio
                 case "image/jpg", "image/jpeg", "image/png", "image/tif", "image/tiff", "image/gif", "image/bmp",
                     "image/BMPf", "image/ico", "image/cur", "image/xbm":
                     mediaMessage.type = .image
-                    
+                case "application/pdf":
+                    mediaMessage.type = .file(.pdf)
+                case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                    mediaMessage.type = .file(.docx)
+                case "application/msword":
+                    mediaMessage.type = .file(.doc)
+                case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+                    mediaMessage.type = .file(.xlsx)
+                case  "application/vnd.ms-excel":
+                    mediaMessage.type = .file(.xls)
+                case "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+                    mediaMessage.type = .file(.pptx)
+                case "application/vnd.ms-powerpoint":
+                    mediaMessage.type = .file(.ppt)
+
                 default:
-                    mediaMessage.type = .unsupported
+                    mediaMessage.type = .file(.unknown)
+                    
                 }
+                self.addSize(response, mediaMessage: &mediaMessage)
+
             }
-            
             completion(mediaMessage)
         })
         
@@ -499,7 +570,7 @@ final class DefaultMessageDataSource: MessageDataSource {
                     
                     return Message(entryId: entry.entryID,
                                    owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue, pictureUrl: agent.pictureURL)),
-                                   body: MessageText(text: incomingText, sendDate: entry.deliveryTime.seconds))
+                                   body: MessageText(text: incomingText, sendDate: entry.deliveryTime.seconds, isExpanded: false))
                 } else {
                     
                     return Message(entryId: entry.entryID, owner: .incoming(nil),
@@ -516,6 +587,12 @@ final class DefaultMessageDataSource: MessageDataSource {
                                                   sendDate: entry.deliveryTime.seconds)
                 
                 return Message(entryId: entry.entryID, owner: .outgoing, body: messageBody)
+            }
+            
+            if !entry.contactMessage.fallbackMessage.rawMessage.isEmpty {
+                return Message(entryId: entry.entryID, owner: .system, body: MessageEvent(type: .fallbackMessage(
+                    payload: entry.contactMessage.fallbackMessage.rawMessage
+                )))
             }
             
             let incomingLocationMessage = entry.appMessage.locationMessage
@@ -587,7 +664,6 @@ final class DefaultMessageDataSource: MessageDataSource {
             if !incomingCarouselMessage.cards.isEmpty {
                 
                 let carouselChoicesArray = DefaultMessageDataSource.createChoicesArray(incomingCarouselMessage.choices, entryID: entry.entryID)
-                
                 var cardsArray: [MessageCard] = []
                 
                 for incomingCardMessage in incomingCarouselMessage.cards {
@@ -669,33 +745,37 @@ final class DefaultMessageDataSource: MessageDataSource {
                                body: MessageEvent(type: .composeStarted,
                                                   sendDate: entry.deliveryTime.seconds))
 
-            }
-
-            if case .composingEndEvent(_)? =  entry.appEvent.event {
+            } else if case .composingEndEvent(_)? =  entry.appEvent.event {
                 return Message(entryId: entry.entryID, owner: .system,
                                body: MessageEvent(type: .composeEnd,
                                                   sendDate: entry.deliveryTime.seconds))
-
+                
+            } else if case .composingEvent(_)? =  entry.contactEvent.event {
+                return nil
+            
+            } else if case .composingEndEvent(_)? =  entry.contactEvent.event {
+                return nil
             }
 
-            if entry.contactEvent.event != nil {
+            if !entry.contactEvent.unknownFields.data.isEmpty {
                 return nil
 
             }
+
             if entry.appEvent.event != nil {
                 return nil
             }
 
-            if entry.appEvent.event != nil {
-                return nil
-            }
             return Message(entryId: entry.entryID, owner: .incoming(nil), body: MessageUnsupported(sendDate: entry.deliveryTime.seconds))
         }
         
         return nil
     }
     
-    private func convertSinchMetadataToMetadataJson(metadata: [SinchMetadata]) -> String? {
+    private func convertSinchMetadataToMetadataJson(metadata: SinchMetadataArray) -> String? {
+        if metadata.isEmpty {
+            return nil
+        }
         var dictMetadata: [String: String] = [:]
         
         metadata.forEach({

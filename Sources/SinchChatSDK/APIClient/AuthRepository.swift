@@ -10,7 +10,7 @@ enum AuthRepositoryError: Error {
 
 public typealias AccessToken = String
 
-public struct AuthModel: Codable {
+public struct AuthModel: Codable, Equatable {
     public let accessToken: AccessToken
     public let sinchIdentity: SinchSDKIdentity
     public let clientID: String
@@ -23,6 +23,31 @@ public struct AuthModel: Codable {
             return nil
         }
         return data.base64EncodedString()
+    }
+    
+    public func getUserID() -> String? {
+        do {
+            let payload = try JWTDecoder.decode(jwtToken: accessToken)
+            return payload["uuid"] as? String
+
+        } catch {
+            return nil
+
+        }
+    }
+    
+    public static func == (lhs: AuthModel, rhs: AuthModel) -> Bool {
+        lhs.accessToken == rhs.accessToken &&
+        lhs.identityHash == rhs.identityHash &&
+        compareWithoutAccessToken(lhs: lhs, rhs: rhs)
+    }
+    
+    public static func compareWithoutAccessToken(lhs: AuthModel, rhs: AuthModel) -> Bool {
+        return lhs.clientID == rhs.clientID &&
+        lhs.configID == rhs.configID &&
+        lhs.projectID == rhs.projectID &&
+        lhs.region == rhs.region &&
+        lhs.getUserID() == rhs.getUserID()
     }
 }
 

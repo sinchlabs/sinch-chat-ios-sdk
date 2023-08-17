@@ -15,6 +15,28 @@ final class CarouselMessageCell: MessageContentCell, UIScrollViewDelegate {
 
         return scrollView
     }()
+    var backgroundContainerView: UIView = {
+        let containerView = UIView()
+        containerView.backgroundColor = .white
+        containerView.clipsToBounds = true
+        containerView.layer.masksToBounds = true
+        return containerView
+    }()
+    var cardContainerView: UIView = {
+        let containerView = UIView()
+        containerView.backgroundColor = .white
+        containerView.clipsToBounds = true
+        containerView.layer.masksToBounds = true
+        return containerView
+    }()
+    var carouselChoiceContainerView: UIView = {
+        let containerView = UIView()
+        containerView.backgroundColor = .gray
+        containerView.clipsToBounds = true
+        containerView.layer.masksToBounds = true
+        return containerView
+    }()
+    
     var pageControl = UIPageControl()
     
     var scrollContentView: UIView = UIView()
@@ -39,17 +61,20 @@ final class CarouselMessageCell: MessageContentCell, UIScrollViewDelegate {
             let page = ceil(ScrollViewHelper.getCurrentPage(scrollView: scrollView, pageWidth: pageWidth))
 
             cellAttributes = attributes
-            pageWidth = attributes.messageContainerSize.width
+            pageWidth = attributes.carouselContentViewFrame.width
+            backgroundContainerView.frame = CGRect(origin: .zero, size: attributes.messageContainerSize)
+            cardContainerView.frame = attributes.carouselCardViewFrame
+            carouselChoiceContainerView.frame = attributes.carouselChoiceButtonsViewFrame
             
             if let maxCardFrameHeight = cellAttributes.carouselCardFrames.map({ $0.frame.size.height }).max() {
                 
                 scrollView.frame = CGRect(x: 0,
                                           y: 0,
-                                          width: attributes.messageContainerSize.width,
+                                          width: attributes.carouselContentViewFrame.width,
                                           height: maxCardFrameHeight)
                 scrollContentView.frame = CGRect(x: 0,
                                                  y: 0,
-                                                 width: attributes.messageContainerSize.width * CGFloat(attributes.carouselCardFrames.count),
+                                                 width: attributes.carouselContentViewFrame.width * CGFloat(attributes.carouselCardFrames.count),
                                                  height: maxCardFrameHeight)
                 
             }
@@ -74,7 +99,7 @@ final class CarouselMessageCell: MessageContentCell, UIScrollViewDelegate {
             }
             buttonsFrame = attributes.buttonsFrame
             
-            scrollView.setContentOffset(CGPoint(x: page * attributes.messageContainerSize.width, y: 0.0), animated: false)
+            scrollView.setContentOffset(CGPoint(x: page * attributes.carouselContentViewFrame .width, y: 0.0), animated: false)
             
         }
     }
@@ -98,10 +123,14 @@ final class CarouselMessageCell: MessageContentCell, UIScrollViewDelegate {
     
     override func setupSubviews() {
         super.setupSubviews()
-        messageContainerView.addSubview(scrollView)
+        messageContainerView.addSubview(backgroundContainerView)
+        backgroundContainerView.addSubview(cardContainerView)
+        cardContainerView.addSubview(scrollView)
         scrollView.addSubview(scrollContentView)
-        messageContainerView.addSubview(pageControl)
-        messageContainerView.addSubview(dateLabel)
+        cardContainerView.addSubview(pageControl)
+        backgroundContainerView.addSubview(carouselChoiceContainerView)
+        backgroundContainerView.addSubview(dateLabel)
+
         scrollView.delegate = self
         statusView.isHidden = true
 
@@ -110,7 +139,7 @@ final class CarouselMessageCell: MessageContentCell, UIScrollViewDelegate {
     override func configure(with message: Message, at indexPath: IndexPath, and messagesCollectionView: MessageCollectionView) {
         self.message = message
         super.configure(with: message, at: indexPath, and: messagesCollectionView)
-        pageWidth = messageContainerView.frame.width
+        pageWidth = cellAttributes.carouselContentViewFrame.width
 
         setupContainerView(messagesCollectionView, message)
         setupCards(message: message, messagesCollectionView: messagesCollectionView)
@@ -118,6 +147,9 @@ final class CarouselMessageCell: MessageContentCell, UIScrollViewDelegate {
         
         if let message = message.body as? MessageCarousel {
             setupButtons( choices: message.choices, messagesCollectionView: messagesCollectionView)
+            if message.currentCard != 0 {
+                scrollView.setContentOffset(CGPoint(x: message.currentCard * Int(pageWidth), y:0), animated: false)
+            }
         }
         
         dateLabel.configure {
@@ -130,6 +162,38 @@ final class CarouselMessageCell: MessageContentCell, UIScrollViewDelegate {
         
         if let dateFont = dateLabel.messageLabelFont {
             dateLabel.font = dateFont
+        }
+        
+        switch message.owner {
+            
+        case .outgoing:
+            backgroundContainerView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMinYCorner]
+
+        case .incoming(_):
+            backgroundContainerView.layer.maskedCorners = [.layerMaxXMinYCorner, .layerMaxXMaxYCorner, .layerMinXMinYCorner]
+        case .system:
+            backgroundContainerView.layer.maskedCorners = [.layerMaxXMinYCorner, .layerMaxXMaxYCorner, .layerMinXMinYCorner, .layerMinXMaxYCorner]
+
+        }
+        
+        if let message = message.body as? MessageCarousel {
+            carouselChoiceContainerView.layer.masksToBounds = true
+            
+            cardContainerView.layer.cornerRadius = 10.0
+            cardContainerView.layer.masksToBounds = true
+            
+            if message.choices.isEmpty {
+                cardContainerView.layer.maskedCorners = [.layerMaxXMinYCorner, .layerMaxXMaxYCorner, .layerMinXMinYCorner, .layerMinXMaxYCorner]
+                carouselChoiceContainerView.layer.cornerRadius = 0
+
+            } else {
+                carouselChoiceContainerView.layer.cornerRadius = 10.0
+                carouselChoiceContainerView.layer.masksToBounds = true
+                
+                cardContainerView.layer.maskedCorners = [.layerMaxXMinYCorner, .layerMinXMinYCorner]
+                carouselChoiceContainerView.layer.maskedCorners = [.layerMaxXMaxYCorner, .layerMinXMaxYCorner]
+
+            }
         }
     }
     
@@ -147,11 +211,12 @@ final class CarouselMessageCell: MessageContentCell, UIScrollViewDelegate {
     private func setupCards(message: Message, messagesCollectionView: MessageCollectionView) {
         
         guard let carouselMessage = message.body as? MessageCarousel else { return }
-        pageWidth = messageContainerView.frame.width
+        pageWidth = cellAttributes.carouselContentViewFrame.width
+
         if let maxCardFrameHeight = cellAttributes.carouselCardFrames.map({ $0.frame.size.height }).max() {
             
-            scrollView.frame = CGRect(x: 0, y: 0, width: messageContainerView.frame.width, height: maxCardFrameHeight)
-            scrollContentView.frame = CGRect(x: 0, y: 0, width:messageContainerView.frame.width * CGFloat(carouselMessage.cards.count), height: maxCardFrameHeight)
+            scrollView.frame = CGRect(x: 0, y: 0, width: cellAttributes.carouselContentViewFrame.width, height: maxCardFrameHeight)
+            scrollContentView.frame = CGRect(x: 0, y: 0, width: cellAttributes.carouselContentViewFrame.width * CGFloat(carouselMessage.cards.count), height: maxCardFrameHeight)
         
         }
         scrollView.contentSize = scrollContentView.frame.size
@@ -163,6 +228,9 @@ final class CarouselMessageCell: MessageContentCell, UIScrollViewDelegate {
                                     message: carouselMessage.cards[index],
                                     attributes: cellAttributes,
                                     index: index)
+            cardView.textLabel.selectedCard = 0
+            cardView.textLabel.message = message
+            cardView.textLabel.delegate = messagesCollectionView.touchDelegate
             cardView.delegate = self
             cards.append(cardView)
             scrollContentView.addSubview(cardView)
@@ -195,18 +263,23 @@ final class CarouselMessageCell: MessageContentCell, UIScrollViewDelegate {
             button.addTarget(self, action: #selector(carouselChoiceButtonTapped(_ :)), for: .touchUpInside)
             
             buttons.append(button)
-            messageContainerView.addSubview(button)
+            carouselChoiceContainerView.addSubview(button)
             
         }
     }
     
     private func setupContainerView(_ messagesCollectionView: MessageCollectionView, _ message: Message) {
         delegate = messagesCollectionView.touchDelegate
-        
+        messageContainerView.backgroundColor = .clear
+        backgroundContainerView.backgroundColor = messagesCollectionView.uiConfig.carouselMessageChoicesBackgroundColor
+
         if message.isFromCurrentUser() {
-            messageContainerView.backgroundColor = messagesCollectionView.uiConfig.outgoingMessageBackgroundColor
+            cardContainerView.backgroundColor = messagesCollectionView.uiConfig.outgoingMessageBackgroundColor
+            carouselChoiceContainerView.backgroundColor = messagesCollectionView.uiConfig.outgoingMessageBackgroundColor
+
         } else {
-            messageContainerView.backgroundColor = messagesCollectionView.uiConfig.incomingMessageBackgroundColor
+            cardContainerView.backgroundColor = messagesCollectionView.uiConfig.incomingMessageBackgroundColor
+            carouselChoiceContainerView.backgroundColor = messagesCollectionView.uiConfig.incomingMessageBackgroundColor
             avatarView.updateWithModel(message, uiConfig: messagesCollectionView.uiConfig)
         }
          dateLabel.textColor = messagesCollectionView.uiConfig.dateMessageLabelTextColor
@@ -220,6 +293,10 @@ final class CarouselMessageCell: MessageContentCell, UIScrollViewDelegate {
             delegate?.didTapOutsideOfContent(in: self)
 
         } else if messageContainerView.frame.contains(touchLocation) {
+            guard let carouselMessage = message?.body as? MessageCarousel else { return }
+            let card = cards[pageControl.currentPage]
+            card.textLabel.handleGesture(convert(touchLocation, to: card.textLabel))
+
             debugPrint("user tap text")
         } else {
             delegate?.didTapOutsideOfContent(in: self)
@@ -243,8 +320,11 @@ final class CarouselMessageCell: MessageContentCell, UIScrollViewDelegate {
         
     }
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        let pageNumber = ScrollViewHelper.getCurrentPage(scrollView: scrollView, pageWidth: pageWidth)
-        pageControl.currentPage = Int(pageNumber)
+        let pageNumber = Int(ScrollViewHelper.getCurrentPage(scrollView: scrollView, pageWidth: pageWidth))
+        for card in cards {
+            card.textLabel.selectedCard = pageNumber
+        }
+        pageControl.currentPage = pageNumber
     }
 }
 extension CarouselMessageCell: CardProtocol {

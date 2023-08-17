@@ -1,4 +1,5 @@
 import UIKit
+import Combine
 
 public final class SinchChatSDK {
     
@@ -13,15 +14,18 @@ public final class SinchChatSDK {
     let pushNotificationHandler: PushNotificationHandler = DefaultPushNotificationHandler()
     lazy var _chat = DefaultSinchChat(pushPermissionHandler: pushNotificationHandler)
     
-    var disabledFeatures: Set<SinchEnabledFeatures> = [.sendVideoMessageFromGallery]
+    var disabledFeatures: Set<SinchEnabledFeatures> = []
     
     var options: SinchInitializeOptions?
     private(set) var config: SinchSDKConfig.AppConfig?
-    private var authDataSource: AuthDataSource? {
+    var authDataSource: AuthDataSource? {
         didSet {
             pushNotificationHandler.authDataSource = authDataSource
         }
     }
+    
+    public lazy var eventListenerSubject = PassthroughSubject<SinchPluginEvent, Never>()
+    public lazy var customMessageTypeHandlers: [(_ model: Message) -> Message?] = []
     
     private init() {}
     
@@ -33,7 +37,11 @@ public final class SinchChatSDK {
             registerForRemoteNotificationIfNeeded()
             setPushRepositoryIfPossible()
         }
+        if options.plugins.isEmpty == false {
+            options.plugins.forEach({ $0.initialize(methods: self) })
+        }
         self.options = options
+        
     }
     
     /// Sets identity of the user.
@@ -54,10 +62,18 @@ public final class SinchChatSDK {
             self.setPushRepositoryIfPossible()
             
             switch result {
-            case .failure:
-                completion?(.failure(.internalError))
-            case .success:
+            case .failure(let error):
+                switch error {
+                case .internalError(tracingID: let tracingID):
+                    completion?(.failure(.internalError(tracingID: tracingID)))
+                default:
+                    completion?(.failure(.internalError(tracingID: "unknown")))
+                }
+            case .success(let token):
+                SinchChatSDK.shared.eventListenerSubject.send(.didSetIdentity(token))
+
                 completion?(.success(()))
+                
             }
         })
         
@@ -82,6 +98,7 @@ public final class SinchChatSDK {
             switch result {
             case .success:
                 currentAuthDataSource.deleteToken()
+                SinchChatSDK.shared.eventListenerSubject.send(.didRemoveIdentity)
 
                 completion?(.success(()))
             case .failure(let error):
@@ -115,7 +132,7 @@ public final class SinchChatSDK {
     }
     
     static var version: String {
-        "0.1.0" + (SinchChatSDK.shared.options?.pushNotificationsMode == .prod ? "-prod" : "-dev")
+        "0.1.18" + (SinchChatSDK.shared.options?.pushNotificationsMode == .prod ? "-prod" : "-dev")
     }
 }
 
@@ -126,20 +143,34 @@ public enum SinchSDKIdentity: Codable, Equatable {
     case selfSigned(userId: String, secret: String)
 }
 
+public extension SinchSDKIdentity {
+    
+    func getUserID() -> String? {
+        switch self {
+        case .selfSigned(userId: let userID, secret: _):
+            return userID
+        case .anonymous:
+            return nil
+        }
+    }
+}
+
 public enum SinchSDKIdentityError: Error {
     /// Our internal issue.
-    case internalError
+    case internalError(tracingID: String)
     /// Secret is invalid. Make sure it is generated correctly.
     case invalidSecret
 }
 
 public struct SinchInitializeOptions {
     public var pushNotificationsMode: SinchPushNotificationsMode = .prod
+    public var plugins: [SinchPlugin] = []
     
     public static let standard = SinchInitializeOptions(pushNotificationMode: .prod)
     
-    public init(pushNotificationMode: SinchPushNotificationsMode) {
+    public init(pushNotificationMode: SinchPushNotificationsMode, plugins: [SinchPlugin] = []) {
         self.pushNotificationsMode = pushNotificationMode
+        self.plugins = plugins
     }
 }
 
@@ -155,5 +186,7 @@ public enum SinchEnabledFeatures {
     case sendVoiceMessage
     case sendLocationSharingMessage
     case sendImageFromCamera
-    
+    case sendVideoMessageFromCamera
+    case sendDocuments
+
 }

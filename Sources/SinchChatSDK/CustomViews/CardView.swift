@@ -72,7 +72,7 @@ class CardView: SinchView {
     var attributes: ChatFlowLayoutAttributes
     var cardIndex: Int
     weak var delegate: CardProtocol?
-    
+
     init(uiConfiguration: SinchSDKConfig.UIConfig,
          localizationConfiguration: SinchSDKConfig.LocalizationConfig,
          message: MessageCard, attributes: ChatFlowLayoutAttributes, index: Int) {
@@ -99,8 +99,38 @@ class CardView: SinchView {
         textLabel.textColor = uiConfig.incomingMessageTextColor
         textLabel.messageLabelFont = attributes.messageLabelFont
         textLabel.font = attributes.messageLabelFont
-        textLabel.text = message.description
+        textLabel.text = message.getReadMore(maxCount: uiConfig.numberOfCharactersBeforeCollapseTextMessage,
+                                             textToAdd: localizationConfiguration.collapsedTextMessageButtonTitle)
+      
         textLabel.frame = attributes.carouselCardFrames[cardIndex].messageFrame
+        var enabledDetectors: [Detector] = [.url]
+
+        if !message.isExpanded {
+            
+            let patternText = localizationConfiguration.collapsedTextMessageButtonTitle
+            
+            let pattern = patternText + "$"
+            let regex = try? NSRegularExpression(pattern: pattern, options: [])
+            
+            if let regex = regex {
+                enabledDetectors.append(.custom(regex))
+            }
+        }
+        textLabel.configure {
+            textLabel.enabledDetectors = enabledDetectors
+            for detector in enabledDetectors {
+                
+                let attributes: [NSAttributedString.Key: Any] = [
+                    NSAttributedString.Key.foregroundColor: uiConfig.messageUrlLinkTextColor,
+                    NSAttributedString.Key.underlineStyle: NSUnderlineStyle.single.rawValue,
+                    NSAttributedString.Key.underlineColor: uiConfig.messageUrlLinkTextColor
+                ]
+                textLabel.setAttributes(attributes, detector: detector)
+            }
+            
+            textLabel.text = message.getReadMore(maxCount: uiConfig.numberOfCharactersBeforeCollapseTextMessage,
+                                                 textToAdd: localizationConfiguration.collapsedTextMessageButtonTitle)
+        }
         addSubview(textLabel)
 
         imageView.frame = attributes.carouselCardFrames[cardIndex].mediaFrame

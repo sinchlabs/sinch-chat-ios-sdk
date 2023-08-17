@@ -1,6 +1,6 @@
 import Foundation
 
-enum Owner: Codable {
+public enum Owner: Codable {
     case outgoing
     case incoming(Agent?)
     case system

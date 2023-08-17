@@ -24,15 +24,13 @@ class LocationMessageSizeCalculator: MessageSizeCalculator {
 
         var messageLabelSize: CGSize = .zero
         let attributedText: NSAttributedString
-        var text: String = ""
-
-        if let body = message.body as? MessageLocation {
-            text = body.title
-        }
+        let text: String = message.body.getReadMore(maxCount: messagesLayout.messagesCollectionView.uiConfig.numberOfCharactersBeforeCollapseTextMessage,
+                                          textToAdd: messagesLayout.messagesCollectionView.localizationConfig.collapsedTextMessageButtonTitle)
+        
         if text.isEmpty {
             messageLabelSize = .zero
         } else {
-        attributedText = NSAttributedString(string: text, attributes: [.font: messageLabelFont])
+            attributedText = NSAttributedString(string: text, attributes: [.font: messageLabelFont])
         messageLabelSize = labelSize(for: attributedText, considering: maxWidth - messageLabelInsets.right - messageLabelInsets.left)
         }
         

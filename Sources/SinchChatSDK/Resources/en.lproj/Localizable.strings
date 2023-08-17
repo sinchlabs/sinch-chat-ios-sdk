@@ -15,16 +15,17 @@
 
 "menu_title_options" = "Options";
 "menu_button_title_copy" = "Copy";
+"menu_button_title_document" = "Document";
 
 "button_title_close" = "CLOSE";
 "button_title_maybe_later" = "Maybe Later";
 
 "menu_button_title_share_location" = "Share Location";
 "menu_button_title_camera" = "Camera";
-"menu_button_title_gallery" = "Image Gallery";
+"menu_button_title_gallery" = "Gallery";
 "button_title_share_location" = "Share Location";
 "button_title_cancel" = "Cancel";
-
+"button_title_collapsed_text_message_button" = "Reed more";
 "alert_title_location_disabled" = "Turn On Location Services to Allow this app to Determine Your Location";
 "alert_message_location_disabled" = "We need Location Services to be able to send your location on the chat. Please go to Settings > Privacy > Location Services to use this feature.";
 "alert_title_microphone_disabled" = "We need access to Microphone to Allow this app to record Voice message. Please go to Settings and Allow access to Camera.";

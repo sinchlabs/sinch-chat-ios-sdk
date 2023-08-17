@@ -4,9 +4,7 @@ final class MediaViewerController: SinchViewController<MediaViewerViewModel, Med
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        
-        self.title = mainView.localizationConfiguration.navigationBarImageViewText
-                
+                        
         mainView.imageView.setImage(url: viewModel.url)
         
         let swipeDown = UISwipeGestureRecognizer(target: self, action: #selector(respondToSwipeGesture))
@@ -41,17 +39,4 @@ final class MediaViewerController: SinchViewController<MediaViewerViewModel, Med
         }
     }
     
-    private func addCloseButton() {
-        let closeImage = UIImage(named: "backArrowIcon",
-                                 in: Bundle.staticBundle,
-                                 compatibleWith: nil)?.withRenderingMode(.alwaysOriginal)
-        navigationItem.leftBarButtonItem = UIBarButtonItem(image: closeImage,
-                                                           style: .plain,
-                                                           target: self,
-                                                           action: #selector(closeAction))
-    }
-    
-    @objc private func closeAction() {
-        self.dismiss(animated: true, completion: nil)
-    }
 }

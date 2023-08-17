@@ -57,24 +57,7 @@ class ChoicesMessageCell: MessageContentCell {
       
         setupContainerView(messagesCollectionView, message)
         
-        let enabledDetectors: [Detector] = [.url]
-        
-        messageLabel.configure {
-            messageLabel.enabledDetectors = enabledDetectors
-            for detector in enabledDetectors {
-                
-                let attributes: [NSAttributedString.Key: Any] = [
-                    NSAttributedString.Key.foregroundColor: messagesCollectionView.uiConfig.messageUrlLinkTextColor,
-                    NSAttributedString.Key.underlineStyle: NSUnderlineStyle.single.rawValue,
-                    NSAttributedString.Key.underlineColor: messagesCollectionView.uiConfig.messageUrlLinkTextColor
-                ]
-                messageLabel.setAttributes(attributes, detector: detector)
-            }
-            
-            if let message = message.body as? MessageChoices {
-                    messageLabel.text = message.text
-            }
-        }
+        setupMessageLabel(messageLabel, message, messagesCollectionView)
         
         if let message = message.body as? MessageChoices {
                 setupButtons( choices: message.choices, messagesCollectionView: messagesCollectionView)
@@ -144,10 +127,12 @@ class ChoicesMessageCell: MessageContentCell {
     /// Handle tap gesture on contentView and its subviews.
     override func handleTapGesture(_ gesture: UIGestureRecognizer) {
         let touchLocation = gesture.location(in: self.contentView)
-
-        if !messageContainerView.frame.contains(touchLocation) {
-            delegate?.didTapOutsideOfContent(in: self)
-        }
+        
+            if messageContainerView.frame.contains(touchLocation) {
+                messageLabel.handleGesture(convert(touchLocation, to: messageLabel))
+            } else {
+                delegate?.didTapOutsideOfContent(in: self)
+            }
     }
     
     @objc func choiceButtonTapped(_ sender: AnyObject) {

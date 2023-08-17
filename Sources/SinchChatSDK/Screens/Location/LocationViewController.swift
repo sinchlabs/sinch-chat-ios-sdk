@@ -35,7 +35,7 @@ final class LocationViewController: SinchViewController<LocationViewModel, Locat
             currentLocation = location.coordinate
         }
         
-        mainView.closeButton.addTarget(self, action: #selector(closeAction), for: .touchUpInside)
+        mainView.closeButton.addTarget(self, action: #selector(closeLocationAction), for: .touchUpInside)
         mainView.sendButton.addTarget(self, action: #selector(sendButtonAction), for: .touchUpInside)
          
     }
@@ -107,7 +107,7 @@ final class LocationViewController: SinchViewController<LocationViewModel, Locat
         DispatchQueue.main.async {
             let alert = UIAlertController(title: self.mainView.localizationConfiguration.locationDeniedInAppAlertTitle, message: nil, preferredStyle: .alert)
             let notNowButton = UIAlertAction(title: self.mainView.localizationConfiguration.locationAlertButtonTitleNotNow, style: .default) { [weak self] _ in
-                self?.closeAction()
+                self?.closeLocationAction()
             }
             let settingsButton = UIAlertAction(title: self.mainView.localizationConfiguration.locationAlertButtonTitleSettings, style: .default) { _ in
                 if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -130,7 +130,7 @@ final class LocationViewController: SinchViewController<LocationViewModel, Locat
                                           message: self.mainView.localizationConfiguration.locationDisabledAlertMessage,
                                           preferredStyle: .alert)
             let okButton = UIAlertAction(title: self.mainView.localizationConfiguration.locationAlertButtonTitleOk, style: .default) { [weak self] _ in
-                self?.closeAction()
+                self?.closeLocationAction()
             }
             let settingsButton = UIAlertAction(title: self.mainView.localizationConfiguration.locationAlertButtonTitleSettings, style: .default) { _ in
                 if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -147,7 +147,7 @@ final class LocationViewController: SinchViewController<LocationViewModel, Locat
         }
     }
     
-    @objc private func closeAction() {
+    @objc private func closeLocationAction() {
         stopLocationManager()
         self.dismiss(animated: true, completion: nil)
     }

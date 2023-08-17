@@ -68,7 +68,8 @@ final class DefaultPushRepository: PushRepository {
                 case .success:
                     completion(.success(()))
                 case .failure(let error):
-                    completion(.failure(error))
+                    print("Unsubscribe error" + error.localizedDescription)
+                    completion(.success(()))
                 }
             }
         } catch {

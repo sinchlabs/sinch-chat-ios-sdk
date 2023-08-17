@@ -50,6 +50,7 @@ class MessageSizeCalculator: ChatCellSizeCalculator {
         itemHeight += (padding.top + padding.bottom)
         return CGSize(width: messagesLayout.itemWidth, height: itemHeight)
     }
+  
     
     func cellContentHeight(for message: Message, at indexPath: IndexPath) -> CGFloat {
         

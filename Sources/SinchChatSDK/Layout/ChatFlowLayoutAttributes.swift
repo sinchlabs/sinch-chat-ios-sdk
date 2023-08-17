@@ -37,7 +37,11 @@ struct CardAttributes: Equatable {
     public var pageControlFrame: CGRect = .zero
     public var carouselCardFrames: [CardAttributes] = []
     public var avatarPosition = AvatarPosition(horizontal: .notSet)
-    
+    public var carouselContentViewFrame: CGRect = .zero
+    public var carouselCardViewFrame: CGRect = .zero
+    public var carouselChoiceButtonsViewFrame: CGRect = .zero
+    public var backgroundFrame: CGRect = .zero
+
     // MARK: - Methods
     
     override func copy(with zone: NSZone? = nil) -> Any {
@@ -65,6 +69,10 @@ struct CardAttributes: Equatable {
         copy.mediaFrame = mediaFrame
         copy.carouselCardFrames = carouselCardFrames
         copy.statusViewSize = statusViewSize
+        copy.carouselContentViewFrame = carouselContentViewFrame
+        copy.carouselCardViewFrame = carouselCardViewFrame
+        copy.carouselChoiceButtonsViewFrame = carouselChoiceButtonsViewFrame
+        copy.backgroundFrame = backgroundFrame
 
         return copy
         // swiftlint:enable force_cast
@@ -94,6 +102,10 @@ struct CardAttributes: Equatable {
             && attributes.carouselCardFrames == carouselCardFrames
             && attributes.pageControlFrame == pageControlFrame
             && attributes.statusViewSize == statusViewSize
+            && attributes.carouselContentViewFrame == carouselContentViewFrame
+            && attributes.carouselCardViewFrame == carouselCardViewFrame
+            && attributes.carouselChoiceButtonsViewFrame == carouselChoiceButtonsViewFrame
+            && attributes.backgroundFrame == backgroundFrame
 
         } else {
             return false

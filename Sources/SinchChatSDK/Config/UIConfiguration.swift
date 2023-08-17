@@ -7,6 +7,7 @@ public extension SinchSDKConfig {
         
         public static let defaultValue = UIConfig()
         
+        public var numberOfCharactersBeforeCollapseTextMessage = 250
         public var navigationBarColor = UIColor(named: "primaryThemeColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var navigationBarTitleColor = UIColor(named: "primaryNavigationBarTextColor", in: Bundle.staticBundle, compatibleWith: nil)!
 
@@ -27,7 +28,8 @@ public extension SinchSDKConfig {
         public var incomingMessageSenderBackgroundColor = UIColor(named: "primaryThemeColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var incomingMessageSenderNameTextColor = UIColor(named: "secondaryTextColor", in: Bundle.staticBundle, compatibleWith: nil)!
         var incomingMessageSenderNameFont = UIFont.systemFont(ofSize: 18)
-            
+        public var carouselMessageChoicesBackgroundColor = UIColor(named: "carouselChoicesBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        
         // MARK: - Common user interface settings
         
         public var messageUrlLinkTextColor = UIColor(named: "primaryLinkColor", in: Bundle.staticBundle, compatibleWith: nil)!
@@ -83,7 +85,7 @@ public extension SinchSDKConfig {
         public var topAudioBarBackgroundColor = UIColor(named: "secondaryAudioBarBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var recordingRedColor = UIColor(named: "primaryRedColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var dateLabelMediaBackgroundColor = UIColor(named: "primaryDateMediaBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
-        
+        public var viewMediaBackgroundColor = UIColor(named: "primaryInputBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var playVideoImage = UIImage(named: "playVideoIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var recordButtonImage = UIImage(named: "recordIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var sendFilledImage = UIImage(named: "sendFilledIcon", in: Bundle.staticBundle, compatibleWith: nil)
@@ -94,6 +96,8 @@ public extension SinchSDKConfig {
         public var deliveredStatusImage = UIImage(named: "deliveredIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var seenStatusImage = UIImage(named: "seenIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var refreshStatusImage = UIImage(named: "refreshIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var fileMessageIcon = UIImage(named: "fileIcon", in: Bundle.staticBundle, compatibleWith: nil)
+
         // MARK: - InAppMessaging
         
         public var inAppMessageBackgroundColor = UIColor(named: "primaryInAppMessageBackground", in: Bundle.staticBundle, compatibleWith: nil)!

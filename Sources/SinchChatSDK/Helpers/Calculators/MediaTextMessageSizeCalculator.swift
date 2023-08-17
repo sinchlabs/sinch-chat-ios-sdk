@@ -14,11 +14,8 @@ final class MediaTextMessageSizeCalculator: TextMessageSizeCalculator {
 
         var messageLabelSize: CGSize = .zero
         let attributedText: NSAttributedString
-        var text: String = ""
-
-        if let body = message.body as? MessageMediaText {
-            text = body.text
-        }
+        let text: String = message.body.getReadMore(maxCount: messagesLayout.messagesCollectionView.uiConfig.numberOfCharactersBeforeCollapseTextMessage,
+                                                    textToAdd: messagesLayout.messagesCollectionView.localizationConfig.collapsedTextMessageButtonTitle)
         
         attributedText = NSAttributedString(string: text, attributes: [.font: messageLabelFont])
         messageLabelSize = labelSize(for: attributedText, considering: maxWidth - messageLabelInsets.right - messageLabelInsets.left)

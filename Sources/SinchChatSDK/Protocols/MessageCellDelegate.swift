@@ -8,5 +8,6 @@ import Foundation
     func didTapOutsideOfContent()
     func didTapOnChoice(_ text: ChoiceMessageType, in cell: MessageCollectionViewCell)
     func didTapOnResend(message: Message, in cell: MessageCollectionViewCell)
+    func didTapOnFile(url: String, in cell: MessageCollectionViewCell)
 
 }

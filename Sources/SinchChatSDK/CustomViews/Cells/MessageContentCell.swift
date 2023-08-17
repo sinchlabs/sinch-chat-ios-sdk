@@ -52,7 +52,43 @@ class MessageContentCell: MessageCollectionViewCell {
         layoutStatusView(with: attributes)
 
     }
-
+    func addCustomDetector(_ message: Message, _ messagesCollectionView: MessageCollectionView, _ enabledDetectors: inout [Detector]) {
+        
+        if !message.body.isExpanded {
+            
+            let patternText = messagesCollectionView.localizationConfig.collapsedTextMessageButtonTitle
+            
+            let pattern = patternText + "$"
+            let regex = try? NSRegularExpression(pattern: pattern, options: [])
+            
+            if let regex = regex {
+                enabledDetectors.append(.custom(regex))
+            }
+        }
+    }
+    func setupMessageLabel(_ label: MessageLabel, _ message: Message, _ messagesCollectionView: MessageCollectionView) {
+        var enabledDetectors: [Detector] = [.url]
+        addCustomDetector(message, messagesCollectionView, &enabledDetectors)
+        
+        label.configure {
+            label.enabledDetectors = enabledDetectors
+            for detector in enabledDetectors {
+                
+                let attributes: [NSAttributedString.Key: Any] = [
+                    NSAttributedString.Key.foregroundColor: messagesCollectionView.uiConfig.messageUrlLinkTextColor,
+                    NSAttributedString.Key.underlineStyle: NSUnderlineStyle.single.rawValue,
+                    NSAttributedString.Key.underlineColor: messagesCollectionView.uiConfig.messageUrlLinkTextColor
+                ]
+                label.setAttributes(attributes, detector: detector)
+            }
+            
+            label.message = message
+            label.text = message.body.getReadMore(maxCount: messagesCollectionView.uiConfig.numberOfCharactersBeforeCollapseTextMessage,
+                                                  textToAdd: messagesCollectionView.localizationConfig.collapsedTextMessageButtonTitle)
+            
+        }
+        label.delegate = messagesCollectionView.touchDelegate
+    }
     func configureContainerViewCornerRadius(message: Message) {
       
         switch message.owner {
