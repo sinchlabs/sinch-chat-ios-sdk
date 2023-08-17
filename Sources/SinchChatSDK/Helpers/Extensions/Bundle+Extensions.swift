@@ -1,6 +1,6 @@
 import Foundation
-
-extension Bundle {
+// TODO
+public extension Bundle {
 
         static let staticBundle = Bundle.module
 }

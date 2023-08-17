@@ -1,17 +1,18 @@
 import UIKit
 
-class SinchView: UIView {
+//TODO
+open class SinchView: UIView {
     
-    var uiConfig = SinchSDKConfig.UIConfig.defaultValue
-    var localizationConfiguration = SinchSDKConfig.LocalizationConfig.defaultValue
+    public var uiConfig = SinchSDKConfig.UIConfig.defaultValue
+    public var localizationConfiguration = SinchSDKConfig.LocalizationConfig.defaultValue
     
-    init() {
+    public init() {
                
         super.init(frame: .zero)
         commonInit()
     }
     
-    init(uiConfiguration: SinchSDKConfig.UIConfig, localizationConfiguration: SinchSDKConfig.LocalizationConfig) {
+    public init(uiConfiguration: SinchSDKConfig.UIConfig, localizationConfiguration: SinchSDKConfig.LocalizationConfig) {
         self.uiConfig = uiConfiguration
         self.localizationConfiguration = localizationConfiguration
         super.init(frame: .zero)
@@ -19,17 +20,17 @@ class SinchView: UIView {
     }
     
     @available(*, unavailable, message: "Use init")
-    required init?(coder: NSCoder) {
+    public required init?(coder: NSCoder) {
         fatalError()
     }
 
-    func commonInit() {
+    public func commonInit() {
         setupProperties()
         setupSubviews()
         setupConstraints()
     }
 
-    func setupSubviews() {}
-    func setupConstraints() {}
-    func setupProperties() {}
+    open func setupSubviews() {}
+    open func setupConstraints() {}
+    open func setupProperties() {}
 }

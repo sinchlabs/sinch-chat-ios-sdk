@@ -27,4 +27,16 @@ public extension String {
         }
         return String(hash).lowercased()
     }
+    
+    func convertToValidFileName() -> String {
+   // https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
+           let invalidFileNameCharactersRegex = "[^a-zA-Z0-9_.!()*+']"
+           let fullRange = startIndex..<endIndex
+           let validName = replacingOccurrences(of: invalidFileNameCharactersRegex,
+                                                with: "-",
+                                                options: .regularExpression,
+                                                range: fullRange)
+           return validName
+    }
+   
 }

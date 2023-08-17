@@ -1,7 +1,8 @@
 import Foundation
 
 /// A protocol used to handle tap events on detected text.
-public protocol MessageLabelDelegate: AnyObject {
+
+protocol MessageLabelDelegate: AnyObject {
 
     /// Triggered when a tap occurs on a detected address.
     ///
@@ -50,11 +51,11 @@ public protocol MessageLabelDelegate: AnyObject {
     /// - Parameters:
     ///   - pattern: the pattern of the regular expression
     ///   - match: part that match with the regular expression
-    func didSelectCustom(_ pattern: String, match: String?)
+    func didSelectCustom(_ pattern: String, match: String?, message: Message?)
 
 }
 
-public extension MessageLabelDelegate {
+ extension MessageLabelDelegate {
 
     func didSelectAddress(_ addressComponents: [String: String]) {}
 
@@ -70,6 +71,6 @@ public extension MessageLabelDelegate {
 
     func didSelectHashtag(_ hashtag: String) {}
 
-    func didSelectCustom(_ pattern: String, match: String?) {}
+    func didSelectCustom(_ pattern: String, match: String?, message: Message?) {}
 
 }

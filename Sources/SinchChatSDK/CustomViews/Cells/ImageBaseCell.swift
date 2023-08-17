@@ -86,7 +86,7 @@ class ImageBaseCell: MessageContentCell {
                 case .success(_):
                     self.placeholderLabel.text = ""
                     self.errorImageView.image = nil
-                    
+                    self.error = false
                 case .failure(_):
                     self.showErrorViewForImageDownload(localizationConfig: localizationConfig)
                 }

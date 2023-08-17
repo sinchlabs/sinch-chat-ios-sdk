@@ -21,13 +21,6 @@ public protocol SinchChat {
                                localizationConfig: SinchSDKConfig.LocalizationConfig?,
                                options: GetChatViewControllerOptions?) throws -> SinchChatViewController
     
-    /// Sets metadata for single conversation. This methods overrides previous metadata.
-    /// - Parameters:
-    ///    - metadata: Keys with values.
-    func setConversationMetadata(_ metadata: [SinchMetadata]) throws
-    
-    
-    
 }
 
 public protocol SinchChatViewController: UIViewController {
@@ -74,7 +67,7 @@ final class DefaultSinchChat: SinchChat {
     
     var advanced: SinchChatAdvanced = .init()
     
-    private var authDataSource: AuthDataSource?
+    internal var authDataSource: AuthDataSource?
     private let pushPermissionHandler: PushNofiticationPermissionHandler
     private let chatNotificationHandler = ChatNotificationHandler()
     private var region: Region?
@@ -111,7 +104,7 @@ final class DefaultSinchChat: SinchChat {
         guard let client = DefaultAPIClient(region: region) else {
             throw SinchChatSDKError.unavailable
         }
-                
+        
         apiClient = client
         
         var topicModel: TopicModel?
@@ -132,27 +125,10 @@ final class DefaultSinchChat: SinchChat {
         self.rootCordinator = rootCordinator
         let uiConfig = uiConfig ?? SinchSDKConfig.UIConfig.defaultValue
         let locConfig = localizationConfig ?? SinchSDKConfig.LocalizationConfig.defaultValue
-
+        
         lastChatOptions = options
         return rootCordinator.getRootViewController(uiConfig: uiConfig, localizationConfig: locConfig )
-    }
-    
-    public func setConversationMetadata(_ metadata: [SinchMetadata]) throws {
-        guard isChatAvailable() == .available, let authDataSource = authDataSource, let region = region else {
-            throw SinchChatSDKError.unavailable
-        }
-        if apiClient == nil {
-            guard let client = DefaultAPIClient(region: region) else {
-                throw SinchChatSDKError.unavailable
-            }
-            apiClient = client
-        }
         
-        let messageDataSource = DefaultMessageDataSource(apiClient: apiClient!,
-                                                         authDataSource: authDataSource,
-                                                         topicModel: nil)
-        
-        _ = messageDataSource.sendConversationMetadata(metadata)
     }
     
     func initilize(region: Region, authDataSource: AuthDataSource) {
@@ -170,29 +146,31 @@ extension DefaultSinchChat: ChatNotificationHandlerDelegate {
     }
 }
 
-public protocol SinchMetadata {
+public protocol SinchMetadata: Codable, Hashable {
     // swiftlint:disable:next large_tuple
     func getKeyValue() -> (key: String, value: String, mode: SinchMetadataMode)
 }
 
-public enum SinchMetadataMode {
+public typealias SinchMetadataArray = Array<SinchMetadataCustom>
+
+public enum SinchMetadataMode: Codable {
     case once
     case withEachMessage
 }
 
 public struct GetChatViewControllerOptions {
     let topicID: String?
-    let metadata: [SinchMetadata]
+    let metadata: SinchMetadataArray
     let shouldInitializeConversation: Bool
     
-    public init(topicID: String? = nil, metadata: [SinchMetadata], shouldInitializeConversation: Bool = false) {
+    public init(topicID: String? = nil, metadata: SinchMetadataArray, shouldInitializeConversation: Bool = false) {
         self.topicID = topicID
         self.metadata = metadata
         self.shouldInitializeConversation = shouldInitializeConversation
     }
 }
 
-public struct SinchMetadataCustom: SinchMetadata {
+public struct SinchMetadataCustom: Codable, Equatable, SinchMetadata {
     let key: String
     let value: String
     let mode: SinchMetadataMode
@@ -203,8 +181,15 @@ public struct SinchMetadataCustom: SinchMetadata {
         self.mode = mode
     }
     
+    // swiftlint:disable:next large_tuple
     public func getKeyValue() -> (key: String, value: String, mode: SinchMetadataMode) {
         return (key, value, mode)
+    }
+    
+    public static func == (lhs: SinchMetadataCustom, rhs: SinchMetadataCustom) -> Bool {
+        lhs.key == rhs.key &&
+        lhs.value == rhs.value &&
+        lhs.mode == rhs.mode
     }
 }
 

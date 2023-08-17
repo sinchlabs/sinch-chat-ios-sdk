@@ -1,12 +1,15 @@
 import Foundation
 
-enum EventType: Codable {
+public enum EventType: Codable {
     
     case joined(Agent)
     case left(Agent)
     case composeStarted
     case composeEnd
     
+    case fallbackMessage(payload: String)
+    
+    case customText(text: String)
     
     var convertToSinchEvent: Sinch_Chat_Sdk_V1alpha2_SendRequest? {
         var request = Sinch_Chat_Sdk_V1alpha2_SendRequest()
@@ -30,13 +33,14 @@ enum EventType: Codable {
     }
 }
 
-struct MessageEvent: MessageBody {
+public struct MessageEvent: MessageBody {
     
-    var type: EventType
-    var sendDate: Int64?
-    
-    var text: String {
-        let message: String
+    public var type: EventType
+    public var sendDate: Int64?
+    public var isExpanded: Bool = false
+
+    public var text: String? {
+        let message: String?
         
         switch type {
           
@@ -53,15 +57,21 @@ struct MessageEvent: MessageBody {
             message = ""
         case .composeEnd:
             message = ""
+            
+        case .fallbackMessage:
+            message = ""
+            
+        case let .customText(text):
+            message = text
         }
         return message
     }
 }
 
-struct Agent: Codable {
+public struct Agent: Codable {
     
-    var name: String
-    var type: Int
-    var pictureUrl: String?
+    public var name: String
+    public var type: Int
+    public var pictureUrl: String?
     
 }

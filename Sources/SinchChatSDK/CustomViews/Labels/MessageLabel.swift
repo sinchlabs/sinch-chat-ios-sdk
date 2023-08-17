@@ -33,13 +33,14 @@ class MessageLabel: UILabel {
     // MARK: - Public Properties
 
     weak var delegate: MessageLabelDelegate?
-
+    var message: Message?
+    var selectedCard: Int?
     var enabledDetectors: [Detector] = [] {
         didSet {
             setTextStorage(attributedText, shouldParse: true)
         }
     }
-
+    
     override var attributedText: NSAttributedString? {
         didSet {
             setTextStorage(attributedText, shouldParse: true)
@@ -514,7 +515,21 @@ class MessageLabel: UILabel {
     }
 
     private func handleCustom(_ pattern: String, match: String) {
-        delegate?.didSelectCustom(pattern, match: match)
+        
+        guard var message1 = message else { return }
+        message1.body.isExpanded = true
+        
+            if var body = message1.body as? MessageCarousel, let row = selectedCard {
+                body.cards[row].isExpanded =  true
+                body.currentCard = row
+                message1.body = body
+                
+                delegate?.didSelectCustom(pattern, match: match, message: message1)
+
+            } else {
+                
+                delegate?.didSelectCustom(pattern, match: match, message: message1)
+            }
     }
 
 }

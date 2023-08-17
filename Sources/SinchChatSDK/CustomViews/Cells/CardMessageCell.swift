@@ -94,40 +94,13 @@ final class CardMessageCell: ImageBaseCell {
         setupContainerView(messagesCollectionView, message)
         setupPlaceholderView(messagesCollectionView, message)
         setupImageView(message: message, localizationConfig: messagesCollectionView.localizationConfig)
-        let enabledDetectors: [Detector] = [.url]
-        titleLabel.configure {
-            titleLabel.enabledDetectors = enabledDetectors
-            for detector in enabledDetectors {
-                
-                let attributes: [NSAttributedString.Key: Any] = [
-                    NSAttributedString.Key.foregroundColor: messagesCollectionView.uiConfig.messageUrlLinkTextColor,
-                    NSAttributedString.Key.underlineStyle: NSUnderlineStyle.single.rawValue,
-                    NSAttributedString.Key.underlineColor: messagesCollectionView.uiConfig.messageUrlLinkTextColor
-                ]
-                titleLabel.setAttributes(attributes, detector: detector)
-            }
-            
-            if let message = message.body as? MessageCard {
-                titleLabel.text = message.title
-            }
-        }
-        messageLabel.configure {
-            messageLabel.enabledDetectors = enabledDetectors
-            for detector in enabledDetectors {
-                
-                let attributes: [NSAttributedString.Key: Any] = [
-                    NSAttributedString.Key.foregroundColor: messagesCollectionView.uiConfig.messageUrlLinkTextColor,
-                    NSAttributedString.Key.underlineStyle: NSUnderlineStyle.single.rawValue,
-                    NSAttributedString.Key.underlineColor: messagesCollectionView.uiConfig.messageUrlLinkTextColor
-                ]
-                messageLabel.setAttributes(attributes, detector: detector)
-            }
-            
-            if let message = message.body as? MessageCard {
-                    messageLabel.text = message.description
-            }
+    
+        if let message = message.body as? MessageCard {
+            titleLabel.text = message.title
         }
         
+        setupMessageLabel(messageLabel, message, messagesCollectionView)
+
         if let message = message.body as? MessageCard {
             setupButtons( choices: message.choices, messagesCollectionView: messagesCollectionView)
         }
@@ -215,6 +188,8 @@ final class CardMessageCell: ImageBaseCell {
                 }
             }
         } else if messageContainerView.frame.contains(touchLocation) {
+            
+            messageLabel.handleGesture(convert(touchLocation, to: messageLabel))
             debugPrint("user tap text")
         } else {
             delegate?.didTapOutsideOfContent(in: self)

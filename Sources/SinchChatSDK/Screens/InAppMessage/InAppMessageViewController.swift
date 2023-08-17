@@ -21,8 +21,8 @@ final class InAppMessageViewController: SinchViewController<InAppMessageViewMode
     override func viewDidLoad() {
         super.viewDidLoad()
                         
-        mainView.closeButton.addTarget(self, action:#selector(closeAction), for: .touchUpInside)
-        mainView.cancelButton.addTarget(self, action:#selector(closeAction), for: .touchUpInside)
+        mainView.closeButton.addTarget(self, action:#selector(closeInAppAction), for: .touchUpInside)
+        mainView.cancelButton.addTarget(self, action:#selector(closeInAppAction), for: .touchUpInside)
 
         mainView.delegate = self
         if let message = viewModel.message.body as? MessageWithText {
@@ -30,7 +30,7 @@ final class InAppMessageViewController: SinchViewController<InAppMessageViewMode
         }
     }
     
-    @objc private func closeAction() {
+    @objc private func closeInAppAction() {
         delegate?.closeMessage(viewModel.message)
         self.dismiss(animated: true, completion: nil)
     }

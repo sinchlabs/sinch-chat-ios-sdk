@@ -8,6 +8,7 @@ final class ChatFlowLayout: UICollectionViewFlowLayout {
     
     lazy public var textMessageSizeCalculator = TextMessageSizeCalculator(layout: self)
     lazy public var imageMessageSizeCalculator = ImageMessageSizeCalculator(layout: self)
+    lazy public var fileMessageSizeCalculator = FileMessageSizeCalculator(layout: self)
     lazy public var eventMessageSizeCalculator = EventMessageSizeCalculator(layout: self)
     lazy public var dateMessageSizeCalculator = DateMessageSizeCalculator(layout: self)
     lazy public var typingCellSizeCalculator = TypeIndicatorCellSizeCalculator(layout: self)
@@ -82,6 +83,9 @@ final class ChatFlowLayout: UICollectionViewFlowLayout {
         } else if let messageBody = message.body as? MessageMedia {
             
             switch messageBody.type {
+            case .file:
+                return fileMessageSizeCalculator
+
             case .audio:
                 return voiceMessageCellSizeCalculator
             default:

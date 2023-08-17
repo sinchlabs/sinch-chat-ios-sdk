@@ -22,6 +22,10 @@ internal class LocationActionHandler {
         }
         
         alert.addAction(googleMapsAction)
+        
+        alert.addAction(UIAlertAction(title: localization.menuCancel, style: .cancel, handler: { _ in
+            debugPrint("User click cancel button")
+        }))
         alert.popoverPresentationController?.sourceView = viewController.view
         
         viewController.present(alert, animated: true)

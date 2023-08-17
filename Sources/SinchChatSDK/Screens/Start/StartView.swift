@@ -20,6 +20,7 @@ final class StartView: SinchView {
         backgroundColor = uiConfig.backgroundColor
         collectionView.register(TextMessageCell.self, forCellWithReuseIdentifier: TextMessageCell.cellId)
         collectionView.register(ImageMessageCell.self, forCellWithReuseIdentifier: ImageMessageCell.cellId)
+        collectionView.register(FileMessageCell.self, forCellWithReuseIdentifier: FileMessageCell.cellId)
         collectionView.register(EventMessageCell.self, forCellWithReuseIdentifier: EventMessageCell.cellId)
         collectionView.register(DateMessageCell.self, forCellWithReuseIdentifier: DateMessageCell.dateCellId)
         collectionView.register(MediaTextMessageCell.self, forCellWithReuseIdentifier: MediaTextMessageCell.cellId)
@@ -34,7 +35,8 @@ final class StartView: SinchView {
 
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(collectionView)
-        
+        collectionView.contentInsetAdjustmentBehavior = .never
+
         errorView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(errorView)
         errorView.isHidden = true

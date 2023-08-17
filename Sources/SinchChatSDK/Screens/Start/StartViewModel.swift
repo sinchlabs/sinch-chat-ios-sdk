@@ -17,6 +17,7 @@ protocol StartViewModel: MessageDataSourceDelegate {
     func closeChannel()
     func processNewMessages(_ message: Message) -> [Message]
     func sendEvent(_ event: EventType )
+    func getChatOptions() -> SinchChatOptions
 
 }
 
@@ -113,6 +114,14 @@ final class DefaultStartViewModel: StartViewModel {
     
     // MARK: - Public methods
     
+    func getChatOptions() -> SinchChatOptions {
+        return .init(
+            topicID: dataSource.topicModel?.topicID,
+            metadata: dataSource.metadata,
+            shouldInitializeConversation: dataSource.shouldInitializeConversation
+        )
+    }
+
     func setInternetConnectionState(_ state: InternetConnectionState) {
         self.state = state
     }
@@ -120,7 +129,14 @@ final class DefaultStartViewModel: StartViewModel {
     func processHistoryMessages(_ messages: [Message]) -> [Message] {
         
         var array: [[Message]] = []
-        for message in messages.reversed() {
+        for notProcessedMessage in messages.reversed() {
+            guard let message = self.processPluginMessage(notProcessedMessage) else {
+                continue
+            }
+            if let msgEvent = message.body as? MessageEvent,
+               msgEvent.text?.isEmpty ?? true {
+                continue
+            }
             
             if messagesArrays.isEmpty {
                 messagesArrays.append([message])
@@ -129,7 +145,7 @@ final class DefaultStartViewModel: StartViewModel {
                 
                 if let messageFromHistory = messagesArrays.first?.first,
                    let dateFromHistory = messageFromHistory.body.sendDate,
-                   let date =  message.body.sendDate {
+                   let date = message.body.sendDate {
                     
                     if dateFromHistory.isSameDay(date) {
                         messagesArrays[0].insert(message, at: 0)
@@ -150,6 +166,15 @@ final class DefaultStartViewModel: StartViewModel {
                             
                         }
                     }
+                } else {
+                    messagesArrays.insert([message], at: 0)
+                    
+                    if array.isEmpty {
+                        array.append([message])
+                    } else {
+                        array.insert([message], at: 0)
+                        
+                    }
                 }
             }
         }
@@ -158,6 +183,11 @@ final class DefaultStartViewModel: StartViewModel {
     }
     
     func processNewMessages(_ message: Message) -> [Message] {
+        
+        if let msgEvent = message.body as? MessageEvent,
+           msgEvent.text?.isEmpty ?? true {
+            return []
+        }
         
         let startCount = messagesArrays.count
         
@@ -248,7 +278,11 @@ final class DefaultStartViewModel: StartViewModel {
             
             switch result {
             case .success(let message):
-                if let event = message.body as? MessageEvent {
+                guard let processedMessageByPlugins = self.processPluginMessage(message) else {
+                    return
+                }
+                
+                if let event = processedMessageByPlugins.body as? MessageEvent {
                     
                     switch event.type {
                     case .composeStarted:
@@ -276,7 +310,7 @@ final class DefaultStartViewModel: StartViewModel {
                         break
                     }
                 }
-                let messages = self.processNewMessages(message)
+                let messages = self.processNewMessages(processedMessageByPlugins)
                 if !messages.isEmpty {
                     self.timeOfLastReceivedMessage = Date()
                     self.delegate?.didReceiveMessages(messages)
@@ -365,35 +399,33 @@ final class DefaultStartViewModel: StartViewModel {
 
             }
         
-        case .location(let latitude, let longitude, let localizationConfig):
+        case let .location(latitude, longitude, localizationConfig):
             messageBody = MessageLocation(label: localizationConfig.outgoingLocationMessageButtonTitle,
                                           title: localizationConfig.outgoingLocationMessageTitle,
                                           latitude: Double(latitude),
                                           longitude: Double(longitude), sendDate: date)
             
-        case .fallbackMessage(_):
+        case .fallbackMessage:
             return nil
             
+        case .genericEvent:
+            return nil
         }
         
         return Message(entryId: entryId, owner: .outgoing, body: messageBody, status: .sending)
     }
     
-        func sendEvent(_ event: EventType ) {
-              
-        dataSource.sendEvent(event) { [weak self] result in
-
-            guard let self = self else {
-                return
-            }
-
+    func sendEvent(_ event: EventType ) {
+        
+        dataSource.sendEvent(event) { result in
+            
             switch result {
-
+                
             case .success(): break
-
+                
             case .failure(let error):
                 Logger.verbose(error)
-
+                
             }
         }
     }
@@ -439,8 +471,27 @@ final class DefaultStartViewModel: StartViewModel {
             messageBody = MessageMedia(url: urlString, sendDate: Int64(Date().timeIntervalSince1970),
                                        placeholderImage: nil, type: .video)
             
+        case .file(_, let type):
+            
+            if type == .gif {
+                messageBody = MessageMedia(url: urlString, sendDate: Int64(Date().timeIntervalSince1970),
+                                           placeholderImage: nil, type: .image)
+            } else {
+                messageBody = MessageMedia(url: urlString, sendDate: Int64(Date().timeIntervalSince1970),
+                                           placeholderImage: nil, type: .file(type))
+            }
         }
         return Message(entryId: "-1", owner: .outgoing, body: messageBody, status: .sending)
+    }
+    
+    private func processPluginMessage(_ message: Message) -> Message? {
+        var processedMessage: Message? = message
+        SinchChatSDK.shared.customMessageTypeHandlers.forEach { handler in
+            if let msg = processedMessage {
+                processedMessage = handler(msg)
+            }
+        }
+        return processedMessage
     }
 }
 extension DefaultStartViewModel: MessageDataSourceDelegate {

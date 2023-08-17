@@ -2,7 +2,7 @@ import Foundation
 
 public extension SinchSDKConfig {
 
-    struct LocalizationConfig {
+    public struct LocalizationConfig {
 
         public static let defaultValue = LocalizationConfig()
         
@@ -18,6 +18,8 @@ public extension SinchSDKConfig {
         public var connected = NSLocalizedString("label_connected", bundle: Bundle.staticBundle, comment: "")
         public var noInternetConnection = NSLocalizedString("label_no_internet_connection", bundle: Bundle.staticBundle, comment: "")
         public var alertMessageCouldNotLoadHistory = NSLocalizedString("alert_could_not_load_history", bundle: Bundle.staticBundle, comment: "")
+        public var collapsedTextMessageButtonTitle = NSLocalizedString("button_title_collapsed_text_message_button", bundle: Bundle.staticBundle, comment: "")
+
         public var alertMessageNotSent = NSLocalizedString("alert_message_not_sent", bundle: Bundle.staticBundle, comment: "")
         public var alertTitleError = NSLocalizedString("alert_title_error", bundle: Bundle.staticBundle, comment: "")
         public var alertTitleErrorCameraDisabled = NSLocalizedString("alert_message_camera_disabled", bundle: Bundle.staticBundle, comment: "")
@@ -25,7 +27,7 @@ public extension SinchSDKConfig {
         public var alertButtonTitleOk = NSLocalizedString("alert_button_title_ok", bundle: Bundle.staticBundle, comment: "")
         public var menuTitleOptions = NSLocalizedString("menu_title_options", bundle: Bundle.staticBundle, comment: "")
         public var menuButtonTitleCopy = NSLocalizedString("menu_button_title_copy", bundle: Bundle.staticBundle, comment: "")
-        
+        public var menuDocument = NSLocalizedString("menu_button_title_document", bundle: Bundle.staticBundle, comment: "")
         public var menuShareLocation = NSLocalizedString("menu_button_title_share_location", bundle: Bundle.staticBundle, comment: "")
         public var menuCamera = NSLocalizedString("menu_button_title_camera", bundle: Bundle.staticBundle, comment: "")
         public var menuImageGallery = NSLocalizedString("menu_button_title_gallery", bundle: Bundle.staticBundle, comment: "")

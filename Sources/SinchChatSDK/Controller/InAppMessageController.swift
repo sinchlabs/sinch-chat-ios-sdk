@@ -64,7 +64,7 @@ class DefaultInAppMessageController: InAppMessageController, InAppMessageViewDel
     
     private func presentInAppMessage(_ message: Message) {
         
-        guard  let viewController = DefaultInAppMessageController.getVisibleController() else { return }
+        guard  let viewController = WindowHelper.getVisibleController() else { return }
         
         if viewController is UIAlertController {
             self.timer = Timer.scheduledTimer(withTimeInterval: checkIfAlertIsRemovedInSec, repeats: false) { [weak self] _ in
@@ -96,7 +96,7 @@ class DefaultInAppMessageController: InAppMessageController, InAppMessageViewDel
         
         if let owner: String = payload["owner"] as? String, owner == "sinch" {
             
-            guard let payloadData = inApp["payload"],
+            guard let payloadData = inApp["protobufPayload"],
                   let serializedData = Data(base64Encoded: payloadData) else {
                 return nil
             }
@@ -253,55 +253,4 @@ class DefaultInAppMessageController: InAppMessageController, InAppMessageViewDel
         return nil
     }
     
-    static func getVisibleController() -> UIViewController? {
-        if #available(iOS 13.0, *) {
-            
-            var windowScene: UIWindowScene?
-            var activeWindowScene: UIWindowScene?
-            
-            for scene in UIApplication.shared.connectedScenes {
-                if let scene = scene as? UIWindowScene {
-                    
-                    windowScene = scene
-                    
-                    if scene.activationState == .foregroundActive {
-                        activeWindowScene = windowScene
-                        break
-                    }
-                }
-            }
-            
-            let activeWindow = activeWindowScene ?? windowScene
-            if let delegate = activeWindow?.delegate as? UIWindowSceneDelegate, let window = delegate.window, let viewController =  window?.rootViewController {
-                return  getVisibleViewController(viewController)
-            }
-        }
-        
-        return getVisibleViewController(UIApplication.shared.delegate?.window??.rootViewController )
-        
-    }
-    
-    static func getVisibleViewController(_ currentVc: UIViewController?) -> UIViewController? {
-        
-        if let presentedViewController = currentVc?.presentedViewController {
-            return getVisibleViewController(presentedViewController)
-        }
-        
-        if let navigationController = currentVc as? UINavigationController {
-            return navigationController.visibleViewController
-        }
-        
-        if let tabBarController = currentVc as? UITabBarController {
-            return tabBarController.selectedViewController
-        }
-        
-        if let pageViewController = currentVc as? UIPageViewController {
-            return pageViewController
-        }
-        if let alert = currentVc as? UIAlertController {
-            return alert
-        }
-        
-        return currentVc
-    }
 }

@@ -24,7 +24,7 @@ final class ImagePickerHelper: NSObject {
         pickerController.delegate = self
         pickerController.allowsEditing = true
         pickerController.sourceType = .photoLibrary
-       
+        pickerController.presentationController?.delegate = self
     }
     
     func pickPhotoFromGallery() {
@@ -39,7 +39,12 @@ final class ImagePickerHelper: NSObject {
             pickerController.mediaTypes = mediaTypes
             self.pickerController.videoMaximumDuration = 15
             self.pickerController.sourceType = .photoLibrary
-            self.presentationController?.present(self.pickerController, animated: true)
+
+            self.presentationController?.present(self.pickerController, animated: true, completion: {
+                if let presentationController = self.presentationController as? StartViewController {
+                    presentationController.removeKeyboardObservers()
+                }
+            })
         }
     }
     
@@ -47,8 +52,23 @@ final class ImagePickerHelper: NSObject {
         if UIImagePickerController.isSourceTypeAvailable(.camera) {
             
             pickerController.sourceType = .camera
-            pickerController.cameraCaptureMode = .photo
-                pickerController.mediaTypes = [kUTTypeImage as String]
+            var mode: UIImagePickerController.CameraCaptureMode = .photo
+        
+            var mediaTypes: [String] = []
+            if !SinchChatSDK.shared.disabledFeatures.contains(.sendImageFromCamera) {
+                mediaTypes.append(kUTTypeImage as String)
+            }
+            if !SinchChatSDK.shared.disabledFeatures.contains(.sendVideoMessageFromCamera) {
+                mediaTypes.append(contentsOf: [kUTTypeMovie as String, kUTTypeVideo as String, kUTTypeMPEG4 as String])
+                if SinchChatSDK.shared.disabledFeatures.contains(.sendImageFromCamera) {
+                    mode = .video
+
+                }
+            }
+            
+            pickerController.mediaTypes = mediaTypes
+            pickerController.cameraCaptureMode = mode
+            
             AVCaptureDevice.requestAccess(for: AVMediaType.video,
                                           completionHandler: { (granted:Bool) -> Void in
                 if granted {
@@ -69,17 +89,24 @@ final class ImagePickerHelper: NSObject {
     private func pickerController(_ controller: UIImagePickerController, didSelect image: UIImage?) {
         controller.dismiss(animated: true, completion: nil)
         delegate?.didSelect(image: image)
+        self.presentationController?.inputAccessoryView?.isHidden = false
+
     }
     private func pickerController(_ controller: UIImagePickerController, didSelectVideo video: URL) {
         
         controller.dismiss(animated: true, completion: nil)
+        self.presentationController?.inputAccessoryView?.isHidden = false
+
         delegate?.didSelect(video: video)
+
     }
 }
 extension ImagePickerHelper: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     
     public func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
         pickerController(picker, didSelect: nil)
+        self.presentationController?.inputAccessoryView?.isHidden = false
+
     }
     
     public func imagePickerController(_ picker: UIImagePickerController,
@@ -95,5 +122,14 @@ extension ImagePickerHelper: UIImagePickerControllerDelegate, UINavigationContro
         } else {
                 pickerController(picker, didSelect: nil)
         }
+    }
+}
+extension ImagePickerHelper: UIAdaptivePresentationControllerDelegate {
+   
+    func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+        print("The dismissal animation finished after the user swiped down.")
+        self.presentationController?.inputAccessoryView?.isHidden = false
+        delegate?.didSelect(image: nil)
+        // This is probably where you want to put your code that you want to call.
     }
 }

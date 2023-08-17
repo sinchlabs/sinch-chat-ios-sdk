@@ -1,6 +1,6 @@
 import Foundation
 
-enum MessageType {
+public enum MessageType {
     case text(String)
     case choiceResponseMessage(postbackData: String, entryID: String)
     case media(message: Message)
@@ -9,7 +9,10 @@ enum MessageType {
     // Custom message type, usually sent on conversation started.
     case fallbackMessage(String)
     
-    var convertToSinchMessage: Sinch_Chat_Sdk_V1alpha2_SendRequest? {
+    // Generic event message type.
+    case genericEvent(payload: String)
+    
+    internal var convertToSinchMessage: Sinch_Chat_Sdk_V1alpha2_SendRequest? {
         var request = Sinch_Chat_Sdk_V1alpha2_SendRequest()
         var contactMessage = Sinch_Conversationapi_Type_ContactMessage()
         
@@ -51,6 +54,12 @@ enum MessageType {
             fallbackMessage.rawMessage = message
             
             contactMessage.fallbackMessage = fallbackMessage
+            
+        case .genericEvent(let payload):            
+            var event = Sinch_Conversationapi_Type_FallbackMessage()
+            event.rawMessage = payload
+            
+            contactMessage.fallbackMessage = event
         }
         
         request.message = contactMessage

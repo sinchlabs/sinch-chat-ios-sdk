@@ -72,8 +72,15 @@ final class VideoMessageCell: ImageBaseCell, MessageStatusDelegate  {
             imageView.frame = attributes.mediaFrame
         }
     }
-       
-     func setupTumbnailFromUrl(_ url: URL) {
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        imageView.kf.cancelDownloadTask() // first, cancel current download task
+        imageView.kf.setImage(with: URL(string: "")) // second, prevent kingfisher from setting previous image
+        imageView.image = nil
+    }
+    
+    func setupTumbnailFromUrl(_ url: URL) {
+        
         let asset = AVAsset(url: url)
         let imageGenerator = AVAssetImageGenerator(asset: asset)
         imageGenerator.appliesPreferredTrackTransform = true
@@ -94,9 +101,33 @@ final class VideoMessageCell: ImageBaseCell, MessageStatusDelegate  {
             case .success(_):
                 self.errorImageView.image = nil
                 
-            case .failure(_):
-                self.errorImageView.image = UIImage(named: "errorIcon",
-                                                    in: Bundle.staticBundle, compatibleWith: nil)!
+            case .failure(let error):
+                
+                switch error {
+                case .imageSettingError(reason: let reason):
+                    switch reason {
+                        
+                    case .notCurrentSourceTask(_, _, _):
+                        break
+                    default:
+                        self.errorImageView.image = UIImage(named: "errorIcon",
+                                                            in: Bundle.staticBundle, compatibleWith: nil)!
+                    }
+                    
+                case .requestError(reason: let reason):
+                    switch reason {
+                        
+                    case .taskCancelled(_, _):
+                        break
+                    default:
+                        self.errorImageView.image = UIImage(named: "errorIcon",
+                                                            in: Bundle.staticBundle, compatibleWith: nil)!
+                    }
+                    
+                default:
+                    self.errorImageView.image = UIImage(named: "errorIcon",
+                                                        in: Bundle.staticBundle, compatibleWith: nil)!
+                }
             }
         }
     }
@@ -133,9 +164,9 @@ final class VideoMessageCell: ImageBaseCell, MessageStatusDelegate  {
 
         
         if message.isFromCurrentUser() {
-                statusView.isHidden = false
-                statusView.setupStatusView(message.status, in: messagesCollectionView)
-                messageContainerView.backgroundColor = messagesCollectionView.uiConfig.outgoingMessageBackgroundColor
+            statusView.isHidden = false
+            statusView.setupStatusView(message.status, in: messagesCollectionView)
+            messageContainerView.backgroundColor = messagesCollectionView.uiConfig.outgoingMessageBackgroundColor
             
         } else {
             statusView.isHidden = true
