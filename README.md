@@ -13,9 +13,9 @@ This is documentation how to easily implement our SDK for chat and for push feat
 
   
 
-- Xcode 13+
+- Xcode 14+
 
-- Swift package manager (********iOS 11+********)
+- Swift package manager (********iOS 13+********)
 
   
 
