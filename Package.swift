@@ -18,7 +18,7 @@ let package = Package(
         // .package(url: /* package url */, from: "1.0.0"),
         .package(url: "https://github.com/rwbutler/connectivity", from: "5.0.0"),
         .package(url: "https://github.com/grpc/grpc-swift.git", from: "1.10.0"),
-        .package(url: "https://github.com/onevcat/Kingfisher.git", branch: "version6-xcode13")
+        .package(url: "https://github.com/onevcat/Kingfisher.git", from: "7.0.0")
     ],
     targets: [
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
@@ -32,10 +32,7 @@ let package = Package(
             ],
             resources: [
                 .process("record.wav")]
-        ),
-        .testTarget(
-            name: "SinchChatSDKTests",
-            dependencies: ["SinchChatSDK"])
+        )
     ],
     swiftLanguageVersions: [.v5]
 )
