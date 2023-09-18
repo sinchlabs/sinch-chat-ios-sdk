@@ -1,4 +1,4 @@
-// swift-tools-version:5.6
+// swift-tools-version:5.7
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -28,7 +28,11 @@ let package = Package(
             dependencies: [
                 .product(name: "GRPC", package: "grpc-swift"),
                 .product(name: "Kingfisher", package: "Kingfisher"),
-                .product(name: "Connectivity", package: "Connectivity")
+                .product(
+                    name: "Connectivity",
+                    package: "Connectivity",
+                    moduleAliases: ["Reachability": "SinchReachability"]
+                )
             ],
             resources: [
                 .process("record.wav")]
@@ -36,3 +40,4 @@ let package = Package(
     ],
     swiftLanguageVersions: [.v5]
 )
+
