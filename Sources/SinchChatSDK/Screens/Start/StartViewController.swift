@@ -1,7 +1,7 @@
 import UIKit
 import SafariServices
 import GRPC
-import Connectivity
+import Network
 import AVFoundation
 import AVKit
 import QuickLook
@@ -17,8 +17,8 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
     
     var imagePickerHelper: ImagePickerHelper!
     weak var cordinator: RootCoordinator?
-    var connectivity = Connectivity()
-    
+    let monitor = NWPathMonitor()
+
     private(set) lazy var refreshControl: UIRefreshControl = {
         let control = UIRefreshControl()
         control.addTarget(self, action: #selector(loadMoreMessages), for: .valueChanged)
@@ -181,6 +181,7 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
         viewModel.closeChannel()
         SinchChatSDK.shared.eventListenerSubject.send(.didCloseChat)
         clearAllFiles()
+        monitor.cancel()
 
     }
     
