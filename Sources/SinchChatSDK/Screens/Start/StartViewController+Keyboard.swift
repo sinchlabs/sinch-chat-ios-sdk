@@ -1,58 +1,30 @@
 import UIKit
-import Connectivity
+import Network
 
 internal extension StartViewController {
     
     func addNoInternetObservers() {
         
-        let connectivityChanged: (Connectivity) -> Void = { [weak self] connectivity in
-            self?.updateConnectionStatus(connectivity.status)
+        monitor.pathUpdateHandler = { [weak self] path in
+            DispatchQueue.main.async { [weak self] in
+                if path.status == .satisfied {
+                    self?.viewModel.setInternetConnectionState(.isOn)
+                } else {
+                    self?.viewModel.setInternetConnectionState(.isOff)
+                }
+            }
         }
         
-        connectivity.whenConnected = connectivityChanged
-        connectivity.whenDisconnected = connectivityChanged
-        connectivity.framework = .network
-        connectivity.startNotifier()
+        let queue = DispatchQueue(label: "internetConnectionMonitor")
+        monitor.start(queue: queue)
         
     }
-    func updateConnectionStatus(_ status: ConnectivityStatus) {
         
-        switch status {
-        case .connected:
-            self.viewModel.setInternetConnectionState(.isOn)
-
-        case .connectedViaWiFi:
-            self.viewModel.setInternetConnectionState(.isOn)
-            
-        case .connectedViaWiFiWithoutInternet:
-            self.viewModel.setInternetConnectionState(.isOff)
-            
-        case .connectedViaCellular:
-            self.viewModel.setInternetConnectionState(.isOn)
-            
-        case .connectedViaCellularWithoutInternet:
-            self.viewModel.setInternetConnectionState(.isOff)
-            
-//        case .connectedViaEthernet:
-//            self.viewModel.setInternetConnectionState(.isOn)
-//
-//        case .connectedViaEthernetWithoutInternet:
-//            self.viewModel.setInternetConnectionState(.isOff)
-        case .notConnected:
-            self.viewModel.setInternetConnectionState(.isOff)
-
-        case .determining:
-            break
-        default:
-            self.viewModel.setInternetConnectionState(.isOn)
-        }
-    }
-    
     func addKeyboardObservers() {
         NotificationCenter.default.addObserver(self, selector: #selector(StartViewController.handleKeyboardDidChangeState(_:)),
                                                name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(StartViewController.handleTextViewDidBeginEditing(_:)),
-                                               name: UITextView.textDidBeginEditingNotification, object: nil)        
+                                               name: UITextView.textDidBeginEditingNotification, object: nil)
     }
     
     func removeKeyboardObservers() {
@@ -63,18 +35,18 @@ internal extension StartViewController {
     
     // MARK: - Notification Handlers
     
-     @objc
+    @objc
     private func handleTextViewDidBeginEditing(_ notification: Notification) {
-            guard
-                let inputTextView = notification.object as? ComposeTextView,
-                inputTextView === mainView.messageComposeView.composeTextView
-            else {
-                return
-            }
+        guard
+            let inputTextView = notification.object as? ComposeTextView,
+            inputTextView === mainView.messageComposeView.composeTextView
+        else {
+            return
+        }
         if mainView.collectionView.contentOffset.y >=
             (mainView.collectionView.contentSize.height - mainView.collectionView.frame.size.height) {
             mainView.collectionView.scrollToLastItem()
-        }        
+        }
     }
     @objc
     private func handleKeyboardDidChangeState(_ notification: Notification) {
@@ -122,23 +94,23 @@ internal extension StartViewController {
             if mainView.collectionView.contentSize.height >= mainView.collectionView.frame.size.height {
                 
                 let contentOffset = CGPoint(x: mainView.collectionView.contentOffset.x, y: mainView.collectionView.contentOffset.y + differenceOfBottomInset)
-
+                
                 guard contentOffset.y <= mainView.collectionView.contentSize.height else {
                     return
                 }
                 mainView.collectionView.setContentOffset(contentOffset, animated: false)
             }
-        
+            
         } else {
-                messageCollectionViewBottomInset = newBottomInset
-        
+            messageCollectionViewBottomInset = newBottomInset
+            
         }
     }
     
     // MARK: - Inset Computation
     
     private func requiredScrollViewBottomInset(forKeyboardFrame keyboardFrame: CGRect) -> CGFloat {
-   
+        
         let intersection = mainView.collectionView.frame.intersection(keyboardFrame)
         
         if intersection.isNull || (mainView.collectionView.frame.maxY - intersection.maxY) > 0.001 {

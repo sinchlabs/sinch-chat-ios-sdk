@@ -16,7 +16,6 @@ let package = Package(
     dependencies: [
         // Dependencies declare other packages that this package depends on.
         // .package(url: /* package url */, from: "1.0.0"),
-        .package(url: "https://github.com/rwbutler/connectivity", from: "5.0.0"),
         .package(url: "https://github.com/grpc/grpc-swift.git", from: "1.10.0"),
         .package(url: "https://github.com/onevcat/Kingfisher.git", from: "7.0.0")
     ],
@@ -27,12 +26,7 @@ let package = Package(
             name: "SinchChatSDK",
             dependencies: [
                 .product(name: "GRPC", package: "grpc-swift"),
-                .product(name: "Kingfisher", package: "Kingfisher"),
-                .product(
-                    name: "Connectivity",
-                    package: "Connectivity",
-                    moduleAliases: ["Reachability": "SinchReachability"]
-                )
+                .product(name: "Kingfisher", package: "Kingfisher")
             ],
             resources: [
                 .process("record.wav")]
