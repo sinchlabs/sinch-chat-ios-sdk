@@ -113,7 +113,7 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
         stackView.distribution = .fillEqually
         stackView.alignment = .fill
         stackView.axis = .vertical
-        stackView.spacing = 10
+        stackView.spacing = 16
         
         return stackView
     }()
@@ -141,6 +141,13 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
         backgroundView.clipsToBounds = true
         return backgroundView
     }()
+    var lineView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .clear
+        return view
+    }()
+    
     var pageControl = UIPageControl()
     var pageWidth: CGFloat = 240.0
     
@@ -181,43 +188,48 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
         contentView.backgroundColor = .black.withAlphaComponent(0.7)
         backgroundView.backgroundColor = uiConfig.inAppMessageBackgroundColor
         closeButton.setImage( uiConfig.inAppMessageinAppCloseImage, for: .normal)
+        closeButton.isHidden = true
         textLabel.textColor = uiConfig.inAppMessageTextColor
         titleLabel.textColor = uiConfig.inAppMessageTextColor
         
         cancelButton.titleLabel?.font = uiConfig.inAppMessageButtonTitleFont
-        
+        cancelButton.setupBorderedStyle(textColor: uiConfig.inAppMessageCancelButtonBackgroundColor, borderColor:  uiConfig.inAppMessageCancelButtonBackgroundColor)
+        cancelButton.setTitle(localizationConfiguration.buttonTitleClose, for: .normal)
+
+        textLabel.isHidden = true
+        titleLabel.isHidden = true
+
         switch message.body {
             
         case let message as MessageText:
-            cancelButton.setupPlainStyle(backgroundColor: uiConfig.inAppMessageButtonBackgroundColor, textColor: uiConfig.inAppMessageButtonTitleColor)
-            cancelButton.setTitle(localizationConfiguration.buttonTitleClose, for: .normal)
+        
             textLabel.text = message.text
+            textLabel.isHidden = false
             backgroundView.addSubview(textLabel)
             
         case let message as MessageMedia:
             backgroundView.addSubview(backgroundImageView)
             backgroundView.addSubview(placeholderImageView)
             backgroundView.addSubview(imageView)
-            cancelButton.setupPlainStyle(backgroundColor: uiConfig.inAppMessageButtonBackgroundColor,
-                                         textColor: uiConfig.inAppMessageButtonTitleColor)
+        
             let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(imageTapped(tapGestureRecognizer:)))
             imageView.addGestureRecognizer(tapGestureRecognizer)
             setImageFromURL(message.url)
-            cancelButton.setTitle(localizationConfiguration.buttonTitleClose, for: .normal)
-            
+            closeButton.isHidden = false
+
         case let message as MessageLocation:
-            
-            cancelButton.setTitle(localizationConfiguration.buttonTitleMaybeLater, for: .normal)
-            cancelButton.setupBorderedStyle(textColor: uiConfig.inAppMessageMaybeLaterButtonTitleColor, borderColor: uiConfig.inAppMessageMaybeLaterButtonBorderColor)
-            
+        
             locationButton.titleLabel?.font = uiConfig.inAppMessageButtonTitleFont
             locationButton.setTitleColor(uiConfig.inAppMessageButtonTitleColor, for: .normal)
-            locationButton.setImage(uiConfig.locationMessageImage, for:  .normal)
+            locationButton.setImage(uiConfig.inAppMessageLocationMessageImage, for:  .normal)
             locationButton.backgroundColor = uiConfig.inAppMessageButtonBackgroundColor
             
             backgroundView.addSubview(mapView)
-            titleLabel.text = message.title
-            backgroundView.addSubview(titleLabel)
+            
+            textLabel.text = message.title
+            textLabel.isHidden = false
+            backgroundView.addSubview(textLabel)
+
             locationButton.setTitle(message.label, for: .normal)
             locationButton.titleLabel?.font = uiConfig.buttonTitleFont
             locationButton.setTitleColor( uiConfig.buttonTitleColor, for: .normal)
@@ -227,25 +239,28 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
             setupMapView(message: self.message)
             
         case let message as MessageChoices:
-            cancelButton.setTitle(localizationConfiguration.buttonTitleMaybeLater, for: .normal)
-            cancelButton.setupBorderedStyle(textColor: uiConfig.inAppMessageMaybeLaterButtonTitleColor, borderColor: uiConfig.inAppMessageMaybeLaterButtonBorderColor)
-            backgroundView.addSubview(titleLabel)
-            titleLabel.text = message.text
+        
+            textLabel.text = message.text
+            textLabel.isHidden = false
+            backgroundView.addSubview(textLabel)
+
             self.buttons = setupButtons(choices: message.choices)
             backgroundView.addSubview(buttonsStackView)
             for button in buttons {
                 buttonsStackView.addArrangedSubview(button)
             }
-            
+
         case let message as MessageCard:
             backgroundView.addSubview(backgroundImageView)
             backgroundView.addSubview(placeholderImageView)
-            
-            cancelButton.setTitle(localizationConfiguration.buttonTitleMaybeLater, for: .normal)
-            cancelButton.setupBorderedStyle(textColor: uiConfig.inAppMessageMaybeLaterButtonTitleColor, borderColor: uiConfig.inAppMessageMaybeLaterButtonBorderColor)
+     
             titleLabel.textColor = uiConfig.inAppMessageTextColor
+            titleLabel.isHidden = false
             titleLabel.text = message.title
+            
             textLabel.text = message.description
+            textLabel.isHidden = false
+
             setImageFromURL(message.url)
             
             backgroundView.addSubview(imageView)
@@ -256,10 +271,9 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
             for button in buttons {
                 buttonsStackView.addArrangedSubview(button)
             }
+            closeButton.isHidden = false
+
         case let message as MessageCarousel:
-            
-            cancelButton.setTitle(localizationConfiguration.buttonTitleMaybeLater, for: .normal)
-            cancelButton.setupBorderedStyle(textColor: uiConfig.inAppMessageMaybeLaterButtonTitleColor, borderColor: uiConfig.inAppMessageMaybeLaterButtonBorderColor)
             
             backgroundView.addSubview(horizontalScrollView)
             horizontalScrollView.addSubview(horizontalContentView)
@@ -289,12 +303,15 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
             
             setupPageControl()
             self.buttons = setupButtons(choices: message.choices)
+            lineView.backgroundColor = uiConfig.inAppMessageCarouselSeparatorColor
+            backgroundView.addSubview(lineView)
             backgroundView.addSubview(buttonsStackView)
             
             for button in buttons {
                 buttonsStackView.addArrangedSubview(button)
             }
-            
+            closeButton.isHidden = false
+
         default:
             break
             
@@ -354,7 +371,7 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
                 
             case .locationMessage(let message):
                 button.setTitle(message.label, for: .normal)
-                button.setImage(uiConfig.locationMessageImage, for:  .normal)
+                button.setImage(uiConfig.inAppMessageLocationMessageImage, for:  .normal)
                 button.setInsets(forContentPadding: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
                                  imageTitlePadding: 10)
                 
@@ -371,17 +388,17 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
     private func addSharedConstraints() {
         
         compactConstraints.append(contentsOf: [
-            backgroundView.topAnchor.constraint(greaterThanOrEqualTo: contentView.topAnchor, constant: 20),
-            backgroundView.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -20),
+            backgroundView.topAnchor.constraint(greaterThanOrEqualTo: contentView.topAnchor, constant: 25),
+            backgroundView.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -25),
             backgroundView.centerYAnchor.constraint(equalTo:  contentView.centerYAnchor),
             backgroundView.centerXAnchor.constraint(equalTo:  contentView.centerXAnchor),
-            backgroundView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -20),
-            backgroundView.leadingAnchor.constraint(equalTo:  safeAreaLayoutGuide.leadingAnchor, constant: 20),
+            backgroundView.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -25),
+            backgroundView.leadingAnchor.constraint(equalTo:  safeAreaLayoutGuide.leadingAnchor, constant: 25),
             backgroundView.heightAnchor.constraint(greaterThanOrEqualToConstant: 60)])
         
         regularConstraints.append(contentsOf: [
-            backgroundView.topAnchor.constraint(greaterThanOrEqualTo: contentView.topAnchor, constant: 20),
-            backgroundView.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -20),
+            backgroundView.topAnchor.constraint(greaterThanOrEqualTo: contentView.topAnchor, constant: 25),
+            backgroundView.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -25),
             backgroundView.centerYAnchor.constraint(equalTo:  contentView.centerYAnchor),
             backgroundView.centerXAnchor.constraint(equalTo:  contentView.centerXAnchor),
             backgroundView.heightAnchor.constraint(greaterThanOrEqualToConstant: 60),
@@ -397,9 +414,9 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
         let constraint = contentView.heightAnchor.constraint(greaterThanOrEqualTo: scrollView.heightAnchor, constant: 0.0)
         constraint.priority = UILayoutPriority(250)
         
-        let cancelButtonBottom = cancelButton.bottomAnchor.constraint(equalTo:  self.backgroundView.bottomAnchor, constant: -32)
-        let cancelButtonTrailing = cancelButton.trailingAnchor.constraint(equalTo:  backgroundView.trailingAnchor, constant: -24)
-        let cancelButtonLeading = cancelButton.leadingAnchor.constraint(equalTo:  backgroundView.leadingAnchor, constant: 24)
+        let cancelButtonBottom = cancelButton.bottomAnchor.constraint(equalTo:  self.backgroundView.bottomAnchor, constant: -25)
+        let cancelButtonTrailing = cancelButton.trailingAnchor.constraint(equalTo:  backgroundView.trailingAnchor, constant: -25)
+        let cancelButtonLeading = cancelButton.leadingAnchor.constraint(equalTo:  backgroundView.leadingAnchor, constant: 25)
         let cancelButtonHeight = cancelButton.heightAnchor.constraint(equalToConstant: 36)
         
         NSLayoutConstraint.activate([
@@ -437,11 +454,11 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
             
         case is MessageText:
             
-            let textLabelTop = textLabel.topAnchor.constraint(equalTo: closeButton.bottomAnchor, constant: 45)
-            let textLabelTrailing = textLabel.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -24)
-            let textLabelLeading = textLabel.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 24)
+            let textLabelTop = textLabel.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 25)
+            let textLabelTrailing = textLabel.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -25)
+            let textLabelLeading = textLabel.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 25)
             
-            let cancelButtonTop = cancelButton.topAnchor.constraint(equalTo: textLabel.bottomAnchor, constant: 40)
+            let cancelButtonTop = cancelButton.topAnchor.constraint(equalTo: textLabel.bottomAnchor, constant: 16)
             
             NSLayoutConstraint.activate([
                 
@@ -455,10 +472,10 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
         case is MessageMedia:
             
             let backgroundImageViewTop = backgroundImageView.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 0)
-            let backgroundImageViewBottom = backgroundImageView.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -108)
+            let backgroundImageViewBottom = backgroundImageView.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -86)
             let backgroundImageViewTrailing = backgroundImageView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: 0)
             let backgroundImageViewLeading = backgroundImageView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 0)
-            let backgroundImageViewHeight = backgroundImageView.heightAnchor .constraint(equalToConstant: 238)
+            let backgroundImageViewHeight = backgroundImageView.heightAnchor.constraint(equalToConstant: 400)
             
             let imageViewTop = imageView.topAnchor.constraint(equalTo: backgroundImageView.topAnchor, constant: 0)
             let imageViewBottom = imageView.bottomAnchor.constraint(equalTo: backgroundImageView.bottomAnchor, constant: 0)
@@ -467,10 +484,10 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
             
             let placeholderImageCenterX = placeholderImageView.centerXAnchor.constraint(equalTo: backgroundView.centerXAnchor, constant: 0)
             let placeholderImageCenterY = placeholderImageView.centerYAnchor.constraint(equalTo: imageView.centerYAnchor, constant: 0)
-            let placeholderImageViewWidth = placeholderImageView.heightAnchor .constraint(equalToConstant: 134)
-            let placeholderImageViewHeight = placeholderImageView.heightAnchor .constraint(equalToConstant: 134)
+            let placeholderImageViewWidth = placeholderImageView.heightAnchor.constraint(equalToConstant: 134)
+            let placeholderImageViewHeight = placeholderImageView.heightAnchor.constraint(equalToConstant: 134)
             
-            let cancelButtonTop = cancelButton.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 40)
+            let cancelButtonTop = cancelButton.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 25)
             
             NSLayoutConstraint.activate([
                 
@@ -497,15 +514,15 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
             let mapViewTop = mapView.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 0)
             let mapViewTrailing = mapView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: 0)
             let mapViewLeading = mapView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 0)
-            let mapViewHeight = mapView.heightAnchor.constraint(equalToConstant: 187.0)
+            let mapViewHeight = mapView.heightAnchor.constraint(equalToConstant: 200.0)
             
-            let titleLabelTop = titleLabel.topAnchor.constraint(equalTo: mapView.bottomAnchor, constant: 24)
-            let titleLabelTrailing = titleLabel.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20)
-            let titleLabelLeading = titleLabel.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20)
+            let titleLabelTop = textLabel.topAnchor.constraint(equalTo: mapView.bottomAnchor, constant: 25)
+            let titleLabelTrailing = textLabel.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -25)
+            let titleLabelLeading = textLabel.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 25)
             
-            let locationButtonTop = locationButton.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 40)
-            let locationButtonTrailing = locationButton.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20)
-            let locationButtonLeading = locationButton.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20)
+            let locationButtonTop = locationButton.topAnchor.constraint(equalTo: textLabel.bottomAnchor, constant: 16)
+            let locationButtonTrailing = locationButton.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -25)
+            let locationButtonLeading = locationButton.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 25)
             let locationButtonHeight = locationButton.heightAnchor.constraint(equalToConstant: 36.0)
             
             let cancelButtonTop = cancelButton.topAnchor.constraint(equalTo: locationButton.bottomAnchor, constant: 16)
@@ -529,13 +546,13 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
             ])
             
         case is MessageChoices:
-            let titleLabelTop = titleLabel.topAnchor.constraint(equalTo: closeButton.bottomAnchor, constant: 45)
-            let titleLabelTrailing = titleLabel.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20)
-            let titleLabelLeading = titleLabel.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20)
+            let titleLabelTop = textLabel.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 25)
+            let titleLabelTrailing = textLabel.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -25)
+            let titleLabelLeading = textLabel.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 25)
             
-            let stackTop = buttonsStackView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 40)
-            let stackTrailing = buttonsStackView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20)
-            let stackLeading = buttonsStackView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20)
+            let stackTop = buttonsStackView.topAnchor.constraint(equalTo: textLabel.bottomAnchor, constant: 16)
+            let stackTrailing = buttonsStackView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -25)
+            let stackLeading = buttonsStackView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 25)
             let cancelButtonTop = cancelButton.topAnchor.constraint(equalTo: buttonsStackView.bottomAnchor, constant: 16)
             
             NSLayoutConstraint.activate([
@@ -555,7 +572,7 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
             let backgroundImageViewTop = backgroundImageView.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 0)
             let backgroundImageViewTrailing = backgroundImageView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: 0)
             let backgroundImageViewLeading = backgroundImageView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 0)
-            let backgroundImageViewHeight = backgroundImageView.heightAnchor.constraint(equalToConstant: 165)
+            let backgroundImageViewHeight = backgroundImageView.heightAnchor.constraint(equalToConstant: 200)
             
             let imageViewTop = imageView.topAnchor.constraint(equalTo: backgroundImageView.topAnchor, constant: 0)
             let imageViewBottom = imageView.bottomAnchor.constraint(equalTo: backgroundImageView.bottomAnchor, constant: 0)
@@ -567,17 +584,17 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
             let placeholderImageViewWidth = placeholderImageView.widthAnchor.constraint(equalToConstant: 100)
             let placeholderImageViewHeight = placeholderImageView.heightAnchor.constraint(equalToConstant: 100)
             
-            let titleLabelTop = titleLabel.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 24)
-            let titleLabelTrailing = titleLabel.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20)
-            let titleLabelLeading = titleLabel.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20)
+            let titleLabelTop = titleLabel.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 25)
+            let titleLabelTrailing = titleLabel.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -25)
+            let titleLabelLeading = titleLabel.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 25)
             
-            let textLabelTop = textLabel.topAnchor.constraint(equalTo:  titleLabel.bottomAnchor, constant: 2)
-            let textLabelTrailing = textLabel.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20)
-            let textLabelLeading = textLabel.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20)
+            let textLabelTop = textLabel.topAnchor.constraint(equalTo:  titleLabel.bottomAnchor, constant: 16)
+            let textLabelTrailing = textLabel.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -25)
+            let textLabelLeading = textLabel.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 25)
             
-            let stackTop = buttonsStackView.topAnchor.constraint(equalTo: textLabel.bottomAnchor, constant: 40)
-            let stackTrailing = buttonsStackView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20)
-            let stackLeading = buttonsStackView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20)
+            let stackTop = buttonsStackView.topAnchor.constraint(equalTo: textLabel.bottomAnchor, constant: 16)
+            let stackTrailing = buttonsStackView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -25)
+            let stackLeading = buttonsStackView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 25)
             
             let cancelButtonTop = cancelButton.topAnchor.constraint(equalTo: buttonsStackView.bottomAnchor, constant: 16)
             
@@ -611,7 +628,7 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
                 stackTrailing,
                 cancelButtonTop
             ])
-        case let message as MessageCarousel:
+            case let message as MessageCarousel:
             let horizontalScrollViewTop = horizontalScrollView.topAnchor.constraint(equalTo:  backgroundView.topAnchor, constant: 0)
             let horizontalScrollViewTrailing = horizontalScrollView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: 0)
             let horizontalScrollViewLeading = horizontalScrollView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 0)
@@ -629,21 +646,46 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
             let cardsStackViewLeading = cardsStackView.leadingAnchor.constraint(equalTo: horizontalContentView.leadingAnchor, constant: 0)
             let cardsStackViewBottom = cardsStackView.bottomAnchor.constraint(equalTo: horizontalContentView.bottomAnchor, constant: 0)
             
-            for (index, card) in cards.enumerated() {
+            for (_, card) in cards.enumerated() {
                 
                 card.widthAnchor.constraint(equalTo: backgroundView.widthAnchor, constant: 0).isActive = true
                 
             }
             
             let pageTop = pageControl.topAnchor.constraint(equalTo: horizontalScrollView.bottomAnchor, constant: 2)
-            let pageTrailing = pageControl.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20)
-            let pageLeading = pageControl.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20)
+            let pageTrailing = pageControl.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -25)
+            let pageLeading = pageControl.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 25)
             let pageHeight = pageControl.heightAnchor.constraint(equalToConstant: 8)
             
-            let stackTop = buttonsStackView.topAnchor.constraint(equalTo: pageControl.bottomAnchor, constant: 22)
-            let stackTrailing = buttonsStackView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20)
-            let stackLeading = buttonsStackView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20)
-            let cancelButtonTop = cancelButton.topAnchor.constraint(equalTo: buttonsStackView.bottomAnchor, constant: 16)
+            let lineTop: NSLayoutConstraint
+            
+            if message.cards.count == 1 {
+                
+                lineTop = lineView.topAnchor.constraint(equalTo: cardsStackView.bottomAnchor, constant: 8)
+                
+            } else {
+                lineTop = lineView.topAnchor.constraint(equalTo: pageControl.bottomAnchor, constant: 16)
+
+            }
+            
+            let lineTrailing = lineView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: 0)
+            let lineLeading = lineView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 0)
+            let lineHeight = lineView.heightAnchor.constraint(equalToConstant: 1)
+            
+            let stackTop = buttonsStackView.topAnchor.constraint(equalTo: lineView.bottomAnchor, constant: 16)
+            let stackTrailing = buttonsStackView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -25)
+            let stackLeading = buttonsStackView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 25)
+            
+            let cancelButtonTop: NSLayoutConstraint
+            
+            if message.choices.isEmpty {
+                
+                cancelButtonTop = cancelButton.topAnchor.constraint(equalTo: lineView.bottomAnchor, constant: 16)
+                
+            } else {
+                cancelButtonTop = cancelButton.topAnchor.constraint(equalTo: buttonsStackView.bottomAnchor, constant: 16)
+
+            }
             
             NSLayoutConstraint.activate([
                 
@@ -672,6 +714,10 @@ class InAppMessageView: SinchView, UIScrollViewDelegate {
                 pageLeading,
                 pageHeight,
                 
+                lineTop,
+                lineTrailing,
+                lineLeading,
+                lineHeight,
                 cancelButtonTop
             ])
             

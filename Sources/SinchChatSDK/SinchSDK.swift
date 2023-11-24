@@ -13,17 +13,24 @@ public final class SinchChatSDK {
     
     let pushNotificationHandler: PushNotificationHandler = DefaultPushNotificationHandler()
     lazy var _chat = DefaultSinchChat(pushPermissionHandler: pushNotificationHandler)
-    
-    var disabledFeatures: Set<SinchEnabledFeatures> = []
+
+    public var disabledFeatures: Set<SinchEnabledFeatures> = []
     
     var options: SinchInitializeOptions?
-    private(set) var config: SinchSDKConfig.AppConfig?
+    
+    private(set) var config: SinchSDKConfig.AppConfig? {
+        didSet {
+            _chat.region = config?.region
+        }
+    }
     var authDataSource: AuthDataSource? {
         didSet {
             pushNotificationHandler.authDataSource = authDataSource
+            _chat.authDataSource = authDataSource
         }
     }
     
+    public var additionalMetadata: SinchMetadataArray = []
     public lazy var eventListenerSubject = PassthroughSubject<SinchPluginEvent, Never>()
     public lazy var customMessageTypeHandlers: [(_ model: Message) -> Message?] = []
     
@@ -71,14 +78,12 @@ public final class SinchChatSDK {
                 }
             case .success(let token):
                 SinchChatSDK.shared.eventListenerSubject.send(.didSetIdentity(token))
+                self.reinitializeChat()
 
                 completion?(.success(()))
                 
             }
         })
-        
-        reinitializeChat()
-        
     }
     
     /// Removes identity of the user.
@@ -124,11 +129,9 @@ public final class SinchChatSDK {
     }
     
     private func reinitializeChat() {
-        guard let authDataSource = authDataSource, let config = config else {
-            return
-        }
-        
-        _chat.initilize(region: config.region, authDataSource: authDataSource)
+             
+        _chat.initilize()
+
     }
     
     static var version: String {
@@ -141,18 +144,6 @@ public enum SinchSDKIdentity: Codable, Equatable {
     case anonymous
     /// Creates session with specific user identifier.
     case selfSigned(userId: String, secret: String)
-}
-
-public extension SinchSDKIdentity {
-    
-    func getUserID() -> String? {
-        switch self {
-        case .selfSigned(userId: let userID, secret: _):
-            return userID
-        case .anonymous:
-            return nil
-        }
-    }
 }
 
 public enum SinchSDKIdentityError: Error {

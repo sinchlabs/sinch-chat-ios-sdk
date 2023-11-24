@@ -8,7 +8,11 @@ public enum Region: Codable, Equatable {
     case custom(host: String, pushAPIHost: String)
 }
 
+internal var triggerFatalError = Swift.fatalError
+
 protocol APIClient {
+    var isChannelStarted: Bool { get }
+    
     func getChannel() -> GRPCChannel
     func closeChannel()
     func startChannel()
@@ -25,7 +29,8 @@ final class DefaultAPIClient: APIClient {
 
     private let host: String
     private let port = 443
-
+    var isChannelStarted = false
+    
     private var channel: GRPCChannel
     
     init?(region: Region) {
@@ -33,7 +38,8 @@ final class DefaultAPIClient: APIClient {
         case .EU1:
             host = "sdk.sinch-chat.unauth.prod.sinch.com"
         case .US1:
-            fatalError("there is no url for US region provided yet")
+           
+            host = "sdk.sinch-chat.us1.prod.sinch.com"
         case .custom(let host, _):
             self.host = host
         }
@@ -49,6 +55,7 @@ final class DefaultAPIClient: APIClient {
                       eventLoopGroup: DefaultAPIClient.group) {
                     $0.keepalive = keepalive
                 }
+            isChannelStarted = true
         } catch let error {
             Logger.error("error during creating GRPCChannelPool", error.localizedDescription)
             return nil
@@ -67,6 +74,8 @@ final class DefaultAPIClient: APIClient {
                       eventLoopGroup: DefaultAPIClient.group) {
                     $0.keepalive = keepalive
                 }
+            isChannelStarted = true
+
         } catch let error {
             Logger.error("error during creating GRPCChannelPool", error.localizedDescription)
         }
@@ -78,5 +87,7 @@ final class DefaultAPIClient: APIClient {
     
     func closeChannel() {
         _ = channel.close()
+        isChannelStarted = false
+        debugPrint("*********CLOSE CHANEL************")
     }
 }

@@ -85,6 +85,7 @@ class ImageBaseCell: MessageContentCell {
                     
                 case .success(_):
                     self.placeholderLabel.text = ""
+                    self.placeholderImageView.image = nil
                     self.errorImageView.image = nil
                     self.error = false
                 case .failure(_):

@@ -125,7 +125,7 @@ class InAppCardView: SinchView {
         let backgroundImageViewTop = backgroundImageView.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 0)
         let backgroundImageViewTrailing = backgroundImageView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: 0)
         let backgroundImageViewLeading = backgroundImageView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 0)
-        let backgroundImageViewHeight = backgroundImageView.heightAnchor.constraint(equalToConstant: 165)
+        let backgroundImageViewHeight = backgroundImageView.heightAnchor.constraint(equalToConstant: 200)
 
         let imageViewTop = imageView.topAnchor.constraint(equalTo: backgroundImageView.topAnchor, constant: 0)
         let imageViewBottom = imageView.bottomAnchor.constraint(equalTo: backgroundImageView.bottomAnchor, constant: 0)
@@ -137,20 +137,20 @@ class InAppCardView: SinchView {
         let placeholderImageViewWidth = placeholderImageView.widthAnchor.constraint(equalToConstant: 100)
         let placeholderImageViewHeight = placeholderImageView.heightAnchor.constraint(equalToConstant: 100)
 
-        let titleLabelTop = titleLabel.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 24)
-        let titleLabelTrailing = titleLabel.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20)
-        let titleLabelLeading = titleLabel.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20)
+        let titleLabelTop = titleLabel.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 25)
+        let titleLabelTrailing = titleLabel.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -25)
+        let titleLabelLeading = titleLabel.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 25)
 
-        let textLabelTop = textLabel.topAnchor.constraint(equalTo:  titleLabel.bottomAnchor, constant: 2)
-        let textLabelTrailing = textLabel.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20)
-        let textLabelLeading = textLabel.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20)
+        let textLabelTop = textLabel.topAnchor.constraint(equalTo:  titleLabel.bottomAnchor, constant: 16)
+        let textLabelTrailing = textLabel.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -25)
+        let textLabelLeading = textLabel.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 25)
 
         buttonsStackView.translatesAutoresizingMaskIntoConstraints = false
 
-        let stackTop = buttonsStackView.topAnchor.constraint(greaterThanOrEqualTo: textLabel.bottomAnchor, constant: 40)
-        let stackTrailing = buttonsStackView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -20)
-        let stackLeading = buttonsStackView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 20)
-        let stackBottom = buttonsStackView.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -20)
+        let stackTop = buttonsStackView.topAnchor.constraint(greaterThanOrEqualTo: textLabel.bottomAnchor, constant: 16)
+        let stackTrailing = buttonsStackView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -25)
+        let stackLeading = buttonsStackView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 25)
+        let stackBottom = buttonsStackView.bottomAnchor.constraint(equalTo: backgroundView.bottomAnchor, constant: -16)
 
         NSLayoutConstraint.activate([
             backgroundTop,
@@ -217,7 +217,7 @@ class InAppCardView: SinchView {
                 
             case .locationMessage(let message):
                 button.setTitle(message.label, for: .normal)
-                button.setImage(uiConfig.locationMessageImage, for:  .normal)
+                button.setImage(uiConfig.inAppMessageLocationMessageImage, for:  .normal)
                 button.setInsets(forContentPadding: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
                                  imageTitlePadding: 10)
 

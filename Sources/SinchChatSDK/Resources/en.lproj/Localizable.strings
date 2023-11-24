@@ -51,3 +51,5 @@
 "sent_status" = "Sent";
 "delivered_status" = "Delivered";
 "seen_status" = "Seen";
+
+"inbox_title" = "Message Center";

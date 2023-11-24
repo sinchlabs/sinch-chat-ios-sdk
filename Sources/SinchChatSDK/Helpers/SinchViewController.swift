@@ -1,5 +1,4 @@
 import UIKit
-//TODO
 
 open class SinchViewController<T, V: SinchView>: UIViewController {
 
@@ -31,26 +30,19 @@ open class SinchViewController<T, V: SinchView>: UIViewController {
         let textAttributes = [ NSAttributedString.Key.foregroundColor: uiConfig.navigationBarTitleColor,
                                NSAttributedString.Key.font: UIFont.boldSystemFont(ofSize: 16)]
         
-        if #available(iOS 13.0, *) {
             let appearance = UINavigationBarAppearance()
             appearance.configureWithOpaqueBackground()
             appearance.backgroundColor = uiConfig.navigationBarColor
             appearance.titleTextAttributes = textAttributes
-            
+          //  appearance.shadowColor = .clear
             navigationItem.standardAppearance = appearance
+            navigationItem.compactAppearance = appearance
             navigationItem.scrollEdgeAppearance = appearance
             navigationController?.navigationBar.tintColor = uiConfig.navigationBarTitleColor
 
-        } else {
-            navigationController?.navigationBar.barTintColor = uiConfig.navigationBarColor
-            navigationController?.navigationBar.tintColor = uiConfig.navigationBarTitleColor
-            navigationController?.navigationBar.titleTextAttributes = textAttributes
-        }
     }
     func addCloseButton() {
-        let closeImage = UIImage(named: "backArrowIcon",
-                                 in: Bundle.staticBundle,
-                                 compatibleWith: nil)?.withRenderingMode(.alwaysOriginal)
+        let closeImage = mainView.uiConfig.closeIcon
         navigationItem.leftBarButtonItem = UIBarButtonItem(image: closeImage,
                                                            style: .plain,
                                                            target: self,
@@ -59,5 +51,18 @@ open class SinchViewController<T, V: SinchView>: UIViewController {
     
     @objc func closeAction() {
         self.dismiss(animated: true, completion: nil)
+    }
+    
+    func addBackButton() {
+        let backImage = mainView.uiConfig.backIcon
+
+        navigationItem.leftBarButtonItem = UIBarButtonItem(image: backImage,
+                                                           style: .plain,
+                                                           target: self,
+                                                           action: #selector(backAction))
+    }
+    
+    @objc func backAction() {
+        self.navigationController?.popViewController(animated: true)
     }
 }

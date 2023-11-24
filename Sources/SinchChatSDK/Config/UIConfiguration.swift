@@ -64,6 +64,8 @@ public extension SinchSDKConfig {
         public var photoImage = UIImage(named: "photoIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var plusImage = UIImage(named: "plusIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var voiceRecordingImage = UIImage(named: "recordVoiceIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var backIcon = UIImage(named: "backIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var closeIcon = UIImage(named: "backIcon", in: Bundle.staticBundle, compatibleWith: nil)
 
         public var emojiImage = UIImage(named: "emojiIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var sendImage = UIImage(named: "sendIcon", in: Bundle.staticBundle, compatibleWith: nil)
@@ -73,6 +75,7 @@ public extension SinchSDKConfig {
         public var menuButtonTextColor = UIColor(named: "primaryTextColor", in: Bundle.staticBundle, compatibleWith: nil)!
 
         public var shareLocationMenuImage = UIImage(named: "locationBlueIcon", in: Bundle.staticBundle, compatibleWith: nil)
+        public var fileDocumentMenuImage = UIImage(named: "documentIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var cameraMenuImage = UIImage(named: "cameraIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var galleryMenuImage = UIImage(named: "galleryIcon", in: Bundle.staticBundle, compatibleWith: nil)
         
@@ -97,7 +100,21 @@ public extension SinchSDKConfig {
         public var seenStatusImage = UIImage(named: "seenIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var refreshStatusImage = UIImage(named: "refreshIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var fileMessageIcon = UIImage(named: "fileIcon", in: Bundle.staticBundle, compatibleWith: nil)
-
+        
+        // MARK: - Inbox
+        
+        public var inboxUnreadDotColor = UIColor(named: "secondaryPageControlColor", in: Bundle.staticBundle, compatibleWith: nil)
+        public var inboxConversationNameColor = UIColor(named: "primaryTextColor", in: Bundle.staticBundle, compatibleWith: nil)
+        public var inboxStatusTextColor = UIColor(named: "primaryTextColor", in: Bundle.staticBundle, compatibleWith: nil)
+        public var inboxLastMessageTextColor = UIColor(named: "primaryDescriptionText", in: Bundle.staticBundle, compatibleWith: nil)
+        public var inboxDateTextColor = UIColor(named: "primaryDescriptionText", in: Bundle.staticBundle, compatibleWith: nil)
+        public var inboxChevronRightImage = UIImage(named: "chevron.right", in: Bundle.staticBundle, compatibleWith: nil)
+        public var inboxBackgroundColor = UIColor(named: "primaryBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        public var inboxNotificationDotColor = UIColor(named: "notificationDotColor", in: Bundle.staticBundle, compatibleWith: nil)
+        public var inboxStartConversationImage = UIImage(named: "startConversationIcon", in: Bundle.staticBundle, compatibleWith: nil)?.withRenderingMode(.alwaysTemplate)
+        public var inboxAvatarBackgroundColor =  UIColor(named: "primaryThemeColor", in: Bundle.staticBundle, compatibleWith: nil)
+        public var inboxAvatarNameTextColor: UIColor =  .white
+        public var inboxAvatarPlaceholderImage: UIImage?
         // MARK: - InAppMessaging
         
         public var inAppMessageBackgroundColor = UIColor(named: "primaryInAppMessageBackground", in: Bundle.staticBundle, compatibleWith: nil)!
@@ -106,8 +123,10 @@ public extension SinchSDKConfig {
         public var inAppMessageLightCloseImage = UIImage(named: "inAppLightCloseIcon", in: Bundle.staticBundle, compatibleWith: nil)
         public var inAppMessageButtonTitleColor = UIColor(named: "inAppButtonTitleColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var inAppMessageTappedButtonTitleColor = UIColor(named: "tappedButtonTitleColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        public var inAppMessageLocationMessageImage = UIImage(named: "inAppLocationIcon", in: Bundle.staticBundle, compatibleWith: nil)
 
         public var inAppMessageButtonBackgroundColor = UIColor(named: "inAppMessageButtonBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
+        public var inAppMessageCancelButtonBackgroundColor = UIColor(named: "inAppBorderColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var inAppMessageButtonTappedBackgroundColor = UIColor(named: "tappedButtonBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)!
 
         public var inAppMessageButtonTitleFont = UIFont.boldSystemFont(ofSize: 14)
@@ -119,8 +138,9 @@ public extension SinchSDKConfig {
         public var inAppMessageMaybeLaterButtonTitleColor = UIColor(named: "inAppMaybeButtonTitleColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var inAppMessageMaybeLaterButtonBorderColor = UIColor(named: "inAppMaybeButtonBorderColor", in: Bundle.staticBundle, compatibleWith: nil)!
         public var inAppMessageTextColor = UIColor(named: "inAppTextColor", in: Bundle.staticBundle, compatibleWith: nil)!
-        public var inAppMessageImagePlaceholder = UIImage(named: "mediaPlaceholder", in: Bundle.staticBundle, compatibleWith: nil)
-        public var inAppMessageImageBackgroundColor = UIColor(named:  "inAppImageBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)
-        
+        public var inAppMessageImagePlaceholder = UIImage(named:"mediaPlaceholder", in: Bundle.staticBundle, compatibleWith: nil)
+        public var inAppMessageImageBackgroundColor = UIColor(named: "inAppImageBackgroundColor", in: Bundle.staticBundle, compatibleWith: nil)
+        public var inAppMessageCarouselSeparatorColor = UIColor(named: "inAppCarouselSeparatorColor", in: Bundle.staticBundle, compatibleWith: nil)
+
     }
 }

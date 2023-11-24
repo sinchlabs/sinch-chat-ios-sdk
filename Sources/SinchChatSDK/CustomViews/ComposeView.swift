@@ -191,8 +191,9 @@ final class ComposeView: SinchView {
     }
     override func setupConstraints() {
         var leftWidth = 0.0
-        if !(SinchChatSDK.shared.disabledFeatures.contains(.sendImageFromCamera) && SinchChatSDK.shared.disabledFeatures.contains(.sendLocationSharingMessage)) {
-            leftWidth = 48.0
+        if !(SinchChatSDK.shared.disabledFeatures.contains(.sendLocationSharingMessage) &&
+            SinchChatSDK.shared.disabledFeatures.contains(.sendDocuments)) {
+            leftWidth = 40.0
         }
         
         leftStackViewConstraint = leftStackView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 18)
@@ -265,12 +266,13 @@ final class ComposeView: SinchView {
     }
     
     func setupButtonVisibility() {
-        let isPlusButtonAvailable = SinchChatSDK.shared.disabledFeatures.contains(.sendLocationSharingMessage)
+        let isPlusButtonAvailable = (SinchChatSDK.shared.disabledFeatures.contains(.sendLocationSharingMessage) && SinchChatSDK.shared.disabledFeatures.contains(.sendDocuments))
         plusButton.isHidden = isPlusButtonAvailable
         
         let isPhotoAvailable = (SinchChatSDK.shared.disabledFeatures.contains(.sendImageMessageFromGallery) &&
                                 SinchChatSDK.shared.disabledFeatures.contains(.sendVideoMessageFromGallery) &&
                                 SinchChatSDK.shared.disabledFeatures.contains(.sendImageFromCamera))
+
         photoButton.isHidden = isPhotoAvailable
         voiceRecordingButton.isHidden = SinchChatSDK.shared.disabledFeatures.contains(.sendVoiceMessage)
         

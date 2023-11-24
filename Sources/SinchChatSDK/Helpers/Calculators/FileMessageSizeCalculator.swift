@@ -27,8 +27,9 @@ class FileMessageSizeCalculator: MessageSizeCalculator {
         messageContainerSize.height = messageLabelInsets.top + messageLabelInsets.top +
                                       titleLabelFont.lineHeight + messageLabelFont.lineHeight + messageLabelInsets.bottom +
                                       dateLabelInsets.top + dateLabelSize.height +  dateLabelInsets.bottom
+        let width = messageContainerMaxWidth(for: message) > 280.0 ? CGFloat(280.0) : messageContainerMaxWidth(for: message)
         
-        messageContainerSize.width = max(280, dateLabelSize.width + dateLabelInsets.left + dateLabelInsets.right)
+        messageContainerSize.width = max(width, (dateLabelSize.width + dateLabelInsets.left + dateLabelInsets.right))
         
         return messageContainerSize
     }

@@ -2,7 +2,7 @@ import Foundation
 
 public extension SinchSDKConfig {
 
-    public struct LocalizationConfig {
+        struct LocalizationConfig {
 
         public static let defaultValue = LocalizationConfig()
         
@@ -10,6 +10,7 @@ public extension SinchSDKConfig {
         public var disabledChatMessageText = NSLocalizedString("label_disabled_chat_messages", bundle: Bundle.staticBundle, comment: "")
         
         public var navigationBarText = "Sinch chat"
+
         public var navigationBarImageViewText = NSLocalizedString("label_image", bundle: Bundle.staticBundle, comment: "")
         public var today = NSLocalizedString("label_today", bundle: Bundle.staticBundle, comment: "")
         public var yesterday = NSLocalizedString("label_yesterday", bundle: Bundle.staticBundle, comment: "")
@@ -56,6 +57,9 @@ public extension SinchSDKConfig {
         public var voiceMessageTitle = NSLocalizedString("voice_message_title", bundle: Bundle.staticBundle, comment: "")
         public var alertTitleHoldToRecord = NSLocalizedString("alert_message_hold_to_record", bundle: Bundle.staticBundle, comment: "")
         public var unsupportedMessageExplanation = NSLocalizedString("unsupported_message_explanation", bundle: Bundle.staticBundle, comment: "")
+        
+        // MARK: - Inbox
+        public var inboxNavigationBarText = NSLocalizedString("inbox_title", bundle: Bundle.staticBundle, comment: "")
         
         // MARK: - InAppMessaging
         

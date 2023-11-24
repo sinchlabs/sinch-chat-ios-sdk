@@ -32,13 +32,23 @@ internal class LocationActionHandler {
     }
     
     private static func openAppleMaps(title: String?, latitude: Double, longitude: Double) {
-        let directionsURL = "http://maps.apple.com/?q=\(title ?? "")&ll=\(latitude),\(longitude)"
-        print(directionsURL)
-        guard let url = URL(string: directionsURL) else {
-            return
+            
+        let scheme = "http"
+        let host = "maps.apple.com"
+        let path = ""
+        let queryItem1 = URLQueryItem(name: "q", value: (title ?? ""))
+        let queryItem2 = URLQueryItem(name: "ll", value: "\(latitude),\(longitude)")
+
+        var urlComponents = URLComponents()
+        urlComponents.scheme = scheme
+        urlComponents.host = host
+        urlComponents.path = path
+        urlComponents.queryItems = [queryItem1, queryItem2]
+
+        if let url = urlComponents.url {
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+            print(url)
         }
-    
-        UIApplication.shared.open(url, options: [:], completionHandler: nil)
     }
     
     private static func openGoogleMaps(latitude: Double, longitude: Double) {

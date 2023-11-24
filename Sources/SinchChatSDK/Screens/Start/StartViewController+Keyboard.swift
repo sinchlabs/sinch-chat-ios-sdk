@@ -14,17 +14,15 @@ internal extension StartViewController {
                 }
             }
         }
-        
         let queue = DispatchQueue(label: "internetConnectionMonitor")
         monitor.start(queue: queue)
-        
     }
-        
+
     func addKeyboardObservers() {
         NotificationCenter.default.addObserver(self, selector: #selector(StartViewController.handleKeyboardDidChangeState(_:)),
                                                name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(StartViewController.handleTextViewDidBeginEditing(_:)),
-                                               name: UITextView.textDidBeginEditingNotification, object: nil)
+                                               name: UITextView.textDidBeginEditingNotification, object: nil)        
     }
     
     func removeKeyboardObservers() {
@@ -35,18 +33,18 @@ internal extension StartViewController {
     
     // MARK: - Notification Handlers
     
-    @objc
+     @objc
     private func handleTextViewDidBeginEditing(_ notification: Notification) {
-        guard
-            let inputTextView = notification.object as? ComposeTextView,
-            inputTextView === mainView.messageComposeView.composeTextView
-        else {
-            return
-        }
+            guard
+                let inputTextView = notification.object as? ComposeTextView,
+                inputTextView === mainView.messageComposeView.composeTextView
+            else {
+                return
+            }
         if mainView.collectionView.contentOffset.y >=
             (mainView.collectionView.contentSize.height - mainView.collectionView.frame.size.height) {
             mainView.collectionView.scrollToLastItem()
-        }
+        }        
     }
     @objc
     private func handleKeyboardDidChangeState(_ notification: Notification) {
@@ -94,23 +92,23 @@ internal extension StartViewController {
             if mainView.collectionView.contentSize.height >= mainView.collectionView.frame.size.height {
                 
                 let contentOffset = CGPoint(x: mainView.collectionView.contentOffset.x, y: mainView.collectionView.contentOffset.y + differenceOfBottomInset)
-                
+
                 guard contentOffset.y <= mainView.collectionView.contentSize.height else {
                     return
                 }
                 mainView.collectionView.setContentOffset(contentOffset, animated: false)
             }
-            
+        
         } else {
-            messageCollectionViewBottomInset = newBottomInset
-            
+                messageCollectionViewBottomInset = newBottomInset
+        
         }
     }
     
     // MARK: - Inset Computation
     
     private func requiredScrollViewBottomInset(forKeyboardFrame keyboardFrame: CGRect) -> CGFloat {
-        
+   
         let intersection = mainView.collectionView.frame.intersection(keyboardFrame)
         
         if intersection.isNull || (mainView.collectionView.frame.maxY - intersection.maxY) > 0.001 {

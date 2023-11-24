@@ -37,6 +37,7 @@ final class ImagePickerHelper: NSObject {
                 mediaTypes.append(contentsOf: [kUTTypeMovie as String, kUTTypeVideo as String, kUTTypeMPEG4 as String])
             }
             pickerController.mediaTypes = mediaTypes
+            
             self.pickerController.videoMaximumDuration = 15
             self.pickerController.sourceType = .photoLibrary
 

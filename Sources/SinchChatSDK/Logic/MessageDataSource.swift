@@ -41,6 +41,166 @@ protocol MessageDataSource {
     func isFirstPage() -> Bool
     
 }
+class InboxMessageDataSource: MessageDataSource {
+    
+    private let messageDataSource: DefaultMessageDataSource
+    
+    init(apiClient: APIClient, authDataSource: AuthDataSource, topicModel: TopicModel? = nil, metadata: SinchMetadataArray = [], shouldInitializeConversation: Bool = false) {
+        messageDataSource = DefaultMessageDataSource(
+            apiClient: apiClient,
+            authDataSource: authDataSource,
+            topicModel: topicModel,
+            metadata: metadata,
+            shouldInitializeConversation: shouldInitializeConversation
+        )
+    }
+    
+    var delegate: MessageDataSourceDelegate? {
+        get {
+            return messageDataSource.delegate
+        }
+        set {
+            messageDataSource.delegate = newValue
+        }
+    }
+    
+    var topicModel: TopicModel? {
+        messageDataSource.topicModel
+        
+    }
+    
+    var metadata: SinchMetadataArray {
+        get {
+            return messageDataSource.metadata
+        }
+        set {
+            messageDataSource.metadata = newValue
+        }
+    }
+    
+    var shouldInitializeConversation: Bool {
+        
+         messageDataSource.shouldInitializeConversation
+
+    }
+    
+    func uploadMedia(_ media: MediaType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void) {
+        messageDataSource.uploadMedia(media, completion: completion)
+    }
+    
+    func uploadMediaViaStream(_ media: MediaType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void) {
+        messageDataSource.uploadMediaViaStream(media, completion: completion)
+    }
+    
+    func sendMessage(_ message: MessageType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void) {
+        messageDataSource.sendMessage(message, completion: completion)
+    }
+    
+    func sendEvent(_ event: EventType, completion: @escaping (Result<Void, MessageDataSourceError>) -> Void) {
+        messageDataSource.sendEvent(event, completion: completion)
+    }
+    
+    fileprivate func saveLastMessage(_ message: Message) -> Bool {
+        // save to user efaults this message but delete others.
+        // Create Note
+        if let auth = self.messageDataSource.authDataSource.currentAuthorization, let messageText = message.convertToText {
+            
+            // todo
+            let date = message.body.sendDate ?? Int64(Date().timeIntervalSince1970)
+            let conversation = InboxConversation(text: messageText, sendDate:  Date(timeIntervalSince1970: TimeInterval(date)),
+                                                 avatarImage: nil,
+                                                 options: InboxChatOptions(option: .init(
+                                                                    topicID: self.messageDataSource.topicModel?.topicID,
+                                                                    metadata: self.messageDataSource.metadata,
+                                                                    shouldInitializeConversation: self.messageDataSource.shouldInitializeConversation),
+                                                                    authModel:auth))
+            
+            do {
+                // Create JSON Encoder
+                let encoder = JSONEncoder()
+                
+                // Encode Note
+                let data = try encoder.encode(conversation)
+                
+                // Write/Set Data
+                UserDefaults.standard.set(data, forKey: "lastMessage")
+                UserDefaults.standard.synchronize()
+                return true
+            } catch {
+                print("Unable to Encode Conversation (\(error))")
+                return false
+            }
+            
+        } else {
+            return false
+        }
+    }
+    
+    func subscribeForMessages(completion: @escaping (Result<Message, MessageDataSourceError>) -> Void) {
+        messageDataSource.subscribeForMessages(completion: { result in
+            
+            switch result {
+            case .success(let message):
+                self.saveLastMessage(message)
+                
+            case .failure:
+                break
+            }
+            
+            completion(result)
+        })
+    }
+    
+    func getMessageHistory(completion: @escaping (Result<[Message], MessageDataSourceError>) -> Void) {
+        messageDataSource.getMessageHistory(completion: { result in
+                
+                switch result {
+                case .success(let messages):
+                    if self.messageDataSource.firstPage {
+                        for index in stride(from: messages.count - 1, through: 0, by: -1) {
+                            
+                            if self.saveLastMessage(messages[index]) {
+                                break
+                            }
+                        }
+                    }
+                case .failure:
+                    break
+                }
+                
+                completion(result)
+            })
+    }
+    
+    func sendConversationMetadata(_ metadata: SinchMetadataArray) -> Result<Void, MessageDataSourceError> {
+        messageDataSource.sendConversationMetadata(metadata)
+    }
+    
+    func cancelSubscription() {
+        messageDataSource.cancelSubscription()
+    }
+    
+    func closeChannel() {
+        messageDataSource.closeChannel()
+    }
+    
+    func startChannel() {
+        messageDataSource.startChannel()
+    }
+    
+    func cancelCalls() {
+        messageDataSource.cancelCalls()
+    }
+    
+    func isSubscribed() -> Bool {
+        messageDataSource.isSubscribed()
+    }
+    
+    func isFirstPage() -> Bool {
+        messageDataSource.isFirstPage()
+    }
+    
+}
 
 final class DefaultMessageDataSource: MessageDataSource {
 
@@ -773,10 +933,15 @@ final class DefaultMessageDataSource: MessageDataSource {
     }
     
     private func convertSinchMetadataToMetadataJson(metadata: SinchMetadataArray) -> String? {
-        if metadata.isEmpty {
+        if metadata.isEmpty, SinchChatSDK.shared.additionalMetadata.isEmpty {
             return nil
         }
         var dictMetadata: [String: String] = [:]
+        
+        SinchChatSDK.shared.additionalMetadata.forEach({
+            let tuple = $0.getKeyValue()
+            dictMetadata[tuple.key] = tuple.value
+        })
         
         metadata.forEach({
             let tuple = $0.getKeyValue()

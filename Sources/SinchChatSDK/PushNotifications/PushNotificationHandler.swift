@@ -21,6 +21,7 @@ protocol PushNotificationHandler: PushNofiticationPermissionHandler {
 
     func registerAddressee(_ service: PushNotificationAddressee)
     func removeAddressee(_ service: PushNotificationAddressee)
+    func getAddressee(id: PushNotificationAddresseeName ) -> PushNotificationAddressee?
 }
 
 protocol PushNotificationAddressee {
@@ -56,6 +57,10 @@ final class DefaultPushNotificationHandler: PushNotificationHandler {
 
     init(userDefaults: UserDefaults = UserDefaults.standard) {
         self.pushDeviceTokenCoordinator = PushDeviceTokenCoordinator(userDefaults: userDefaults)
+    }
+    
+    func getAddressee(id: PushNotificationAddresseeName ) -> PushNotificationAddressee? {
+        return pushServices[id]
     }
 
     func registerAddressee(_ service: PushNotificationAddressee) {

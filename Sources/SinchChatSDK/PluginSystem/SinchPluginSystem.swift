@@ -10,6 +10,8 @@ public protocol SinchPluginAvailablePluginMethods: AnyObject {
     
     var customMessageTypeHandlers: [(_ model: Message) -> Message?] { get set }
     
+    var additionalMetadata: SinchMetadataArray { get set }
+    
     func getAuthorizationToken() -> AuthModel?
     
     func sendMessage(_ message: MessageType, authModel: AuthModel?, chatOptions: SinchChatOptions?, completion: @escaping (Result<String, Error>) -> Void)

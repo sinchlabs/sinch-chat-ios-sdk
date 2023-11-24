@@ -58,6 +58,45 @@ final class AvatarView: UIView {
 
     }
 
+    func updateWithConversation(_ conversation: InboxConversation, uiConfig: SinchSDKConfig.UIConfig) {
+        var name: String?
+        var pictureUrlString: String?
+        
+        if let metadata = conversation.chatOptions?.option?.metadata {
+            
+            metadata.forEach { metadata in
+                let data = metadata.getKeyValue()
+                if data.key == "senderDisplayName" {
+                    name = data.value
+                } else if data.key == "senderPictureUrl" {
+                    pictureUrlString = data.value
+                }
+            }
+        }
+        nameLabel.text = ""
+        nameLabel.textColor = uiConfig.inboxAvatarNameTextColor
+        backgroundColor = uiConfig.inboxAvatarBackgroundColor
+
+        if let imageUrl = pictureUrlString,
+           let imageURL = URL(string: imageUrl) {
+            
+            imageView.setImage(url: imageURL) { result in
+                switch result {
+                case .success:
+                    self.nameLabel.isHidden = true
+                    self.imageView.isHidden = false
+                    
+                    self.backgroundColor = uiConfig.incomingMessageSenderBackgroundColor
+                case .failure:
+                    self.handleNonAvatarModelsWithName(name, uiConfig: uiConfig)
+                }
+            }
+            
+        } else {
+            handleNonAvatarModelsWithName(name, uiConfig: uiConfig)
+        }
+    }
+    
     func updateWithModel(_ message: Message, uiConfig: SinchSDKConfig.UIConfig) {
         nameLabel.font = uiConfig.incomingMessageSenderNameFont
         nameLabel.textColor = uiConfig.incomingMessageSenderNameTextColor
@@ -84,6 +123,24 @@ final class AvatarView: UIView {
             } else {
                 handleNonAvatarModels(agent, uiConfig: uiConfig)
             }
+        }
+    }
+    private func handleNonAvatarModelsWithName(_ name: String?, uiConfig: SinchSDKConfig.UIConfig) {
+            
+        if let name = name {
+            
+            if let firstLetter = name.first?.uppercased() {
+                nameLabel.text = firstLetter
+            }
+            nameLabel.isHidden = false
+            imageView.isHidden = true
+            backgroundColor = uiConfig.inboxAvatarBackgroundColor
+            
+        } else {
+            nameLabel.text = ""
+            nameLabel.isHidden = true
+            imageView.isHidden = false
+            backgroundColor = uiConfig.inboxAvatarBackgroundColor
         }
     }
     

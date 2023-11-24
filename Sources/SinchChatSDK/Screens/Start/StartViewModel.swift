@@ -3,6 +3,7 @@ import UIKit
 
 protocol StartViewModel: MessageDataSourceDelegate {
     var delegate: StartViewModelDelegate? { get }
+    var isStartedFromInbox: Bool { get set }
 
     func setInternetConnectionState(_ state: InternetConnectionState)
     func sendMedia(_ media: MediaType, completion: @escaping (Result<Message, Error>) -> Void)
@@ -35,12 +36,16 @@ protocol StartViewModelDelegate: AnyObject {
 
 final class DefaultStartViewModel: StartViewModel {
     
-    private var dataSource: MessageDataSource
+    private var dataSource: InboxMessageDataSource
     private let notificationPermission: PushNofiticationPermissionHandler
     
     weak var delegate: StartViewModelDelegate?
     var messagesArrays: [[Message]] = []
     var isMessageSent = false
+    var isEventSent = false
+    var isTypingIndicatorVisible = false
+    var isStartedFromInbox = false
+
     var error: Error?
     var state: InternetConnectionState = .notDetermined {
         willSet {
@@ -54,10 +59,12 @@ final class DefaultStartViewModel: StartViewModel {
     var timeOfLastReceivedMessage: Date?
     var timer: Timer?
 
-    init(messageDataSource: MessageDataSource, notificationPermission: PushNofiticationPermissionHandler) {
+    init(messageDataSource: InboxMessageDataSource, notificationPermission: PushNofiticationPermissionHandler, startedFromInbox: Bool = false) {
         dataSource = messageDataSource
         
         self.notificationPermission = notificationPermission
+        self.isStartedFromInbox = startedFromInbox
+
     }
     
     deinit {
@@ -213,7 +220,6 @@ final class DefaultStartViewModel: StartViewModel {
             return [message]
         } else {
             return createArrayWithDateMessage([[message]])
-            
         }
     }
     
@@ -287,15 +293,16 @@ final class DefaultStartViewModel: StartViewModel {
                     switch event.type {
                     case .composeStarted:
                         if self.shouldHandleTypingIndicator() {
-                            self.delegate?.setVisibleTypingIndicator(true, animated: true)
+                            self.isTypingIndicatorVisible = true
+                            self.delegate?.setVisibleTypingIndicator( self.isTypingIndicatorVisible, animated: true)
                             DispatchQueue.main.async {
                                 
                                 self.timer?.invalidate()
                                 self.timer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: false) { [weak self] _ in
                                     
                                     guard let self = self else { return }
-                                    
-                                    self.delegate?.setVisibleTypingIndicator(false, animated: true)
+                                    self.isTypingIndicatorVisible = false
+                                    self.delegate?.setVisibleTypingIndicator(self.isTypingIndicatorVisible, animated: true)
                                     
                                 }
                             }
@@ -303,7 +310,8 @@ final class DefaultStartViewModel: StartViewModel {
                         return
                     case .composeEnd :
                         self.timer?.invalidate()
-                        self.delegate?.setVisibleTypingIndicator(false, animated: true)
+                        self.isTypingIndicatorVisible = false
+                        self.delegate?.setVisibleTypingIndicator(self.isTypingIndicatorVisible, animated: true)
                         
                         return
                     default:
@@ -324,7 +332,8 @@ final class DefaultStartViewModel: StartViewModel {
     }
     
     func loadHistory() {
-        
+        error = nil
+
         dataSource.getMessageHistory { [weak self] messages in
             
             guard let self = self else {
@@ -344,6 +353,7 @@ final class DefaultStartViewModel: StartViewModel {
                 }
             case .failure(let error):
                 Logger.verbose(error)
+                self.error = error
                 self.delegate?.errorLoadingMoreHistory(error: error)
                 
             }
@@ -352,15 +362,15 @@ final class DefaultStartViewModel: StartViewModel {
     
     func sendMessage(_ message: MessageType, completion: @escaping (Result<Message?, Error>) -> Void) {
         
+        isMessageSent = false
+       
         if state == .isOff {
             self.delegate?.errorSendingMessage(error: .noInternetConnection)
             return
         }
-        
         askForNotifications()
-        isMessageSent = false
         error = nil
-        
+
         dataSource.sendMessage(message) { [weak self] result in
             guard let self = self else {
                 return
@@ -416,26 +426,40 @@ final class DefaultStartViewModel: StartViewModel {
     }
     
     func sendEvent(_ event: EventType ) {
-        
-        dataSource.sendEvent(event) { result in
+
+        isEventSent = false
+       
+        if state == .isOff {
+            self.delegate?.errorSendingMessage(error: .noInternetConnection)
+            return
+        }
+
+        dataSource.sendEvent(event) { [weak self] result in
+            
+            guard let self = self else {
+                return
+            }
             
             switch result {
-                
-            case .success(): break
-                
+
+            case .success():
+                self.isEventSent = true
+
             case .failure(let error):
+                self.isEventSent = false
                 Logger.verbose(error)
                 
             }
         }
     }
     func sendMedia(_ media: MediaType, completion: @escaping (Result<Message, Error>) -> Void) {
-        
+
         if state == .isOff {
             self.delegate?.errorSendingMessage(error: .noInternetConnection)
             return
         }
-        
+        error = nil
+
         dataSource.uploadMedia(media) { [weak self] result in
             
             guard let self = self else {

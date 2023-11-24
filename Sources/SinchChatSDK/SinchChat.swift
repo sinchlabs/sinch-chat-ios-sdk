@@ -1,7 +1,8 @@
 import UIKit
 
 public protocol SinchChat {
-    
+     var inbox: SinchInbox { get }
+
     /// Advanced settings and method of Sinch Chat.
     var advanced: SinchChatAdvanced { get }
     
@@ -61,20 +62,35 @@ public enum SinchChatState {
 
 final class DefaultSinchChat: SinchChat {
     
+    /// Contains all methods connected with Inbox. Before using the inbox you should use method `setIdentity`.
+    public var inbox: SinchInbox { _inbox }
+
+    lazy var _inbox = DefaultSinchInbox(pushPermissionHandler: pushPermissionHandler)
+
     var state: SinchChatState = .idle
     
     var lastChatOptions: GetChatViewControllerOptions?
     
     var advanced: SinchChatAdvanced = .init()
     
-    internal var authDataSource: AuthDataSource?
+    internal var authDataSource: AuthDataSource? {
+        didSet {
+            _inbox.authDataSource = authDataSource
+        }
+    }
+    internal var region: Region? {
+        didSet {
+            _inbox.region = region
+        }
+    }
+    internal var apiClient: APIClient?
+
     private let pushPermissionHandler: PushNofiticationPermissionHandler
     private let chatNotificationHandler = ChatNotificationHandler()
-    private var region: Region?
     private var rootCordinator: RootCoordinator?
-    private var apiClient: APIClient?
 
-    init(pushPermissionHandler: PushNofiticationPermissionHandler) {
+    init(pushPermissionHandler: PushNofiticationPermissionHandler,
+         apiClient: APIClient? = nil) {
         self.pushPermissionHandler = pushPermissionHandler
     }
     
@@ -101,26 +117,33 @@ final class DefaultSinchChat: SinchChat {
         guard isChatAvailable() == .available, let authDataSource = authDataSource, let region = region else {
             throw SinchChatSDKError.unavailable
         }
-        guard let client = DefaultAPIClient(region: region) else {
-            throw SinchChatSDKError.unavailable
-        }
         
-        apiClient = client
+        if let apiClient = self.apiClient {
+            
+            if !apiClient.isChannelStarted {
+                apiClient.startChannel()
+            }
+            
+        } else {
+            let client = DefaultAPIClient(region: region)
+            
+            apiClient = client
+        }
         
         var topicModel: TopicModel?
         if let topicID = options?.topicID {
             topicModel = TopicModel(topicID: topicID)
         }
         
-        let messageDataSource = DefaultMessageDataSource(
+        let messageDataSource = InboxMessageDataSource(
             apiClient: apiClient!,
             authDataSource: authDataSource,
             topicModel: topicModel,
             metadata: options?.metadata ?? [],
             shouldInitializeConversation: options?.shouldInitializeConversation ?? false)
-        let rootCordinator = RootCoordinator(messageDataSource: messageDataSource,
-                                             authDataSource: authDataSource,
-                                             pushPermissionHandler: pushPermissionHandler)
+        let rootCordinator = DefaultRootCoordinator(messageDataSource: messageDataSource,
+                                                    authDataSource: authDataSource,
+                                                    pushPermissionHandler: pushPermissionHandler)
         
         self.rootCordinator = rootCordinator
         let uiConfig = uiConfig ?? SinchSDKConfig.UIConfig.defaultValue
@@ -130,10 +153,9 @@ final class DefaultSinchChat: SinchChat {
         return rootCordinator.getRootViewController(uiConfig: uiConfig, localizationConfig: locConfig )
         
     }
-    
-    func initilize(region: Region, authDataSource: AuthDataSource) {
-        self.authDataSource = authDataSource
-        self.region = region
+
+    func initilize() {
+        _inbox.initilize()
         SinchChatSDK.shared.pushNotificationHandler.registerAddressee(chatNotificationHandler)
         chatNotificationHandler.delegate = self
     }

@@ -112,6 +112,8 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
         SinchChatSDK.shared.eventListenerSubject.send(.didStartChat(chatViewController: self, chatOptions: viewModel.getChatOptions()))
         
         self.title = mainView.localizationConfiguration.navigationBarText
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
+
         refreshControl.beginRefreshing()
         addObservers()
         addNoInternetObservers()
@@ -135,6 +137,8 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
         
         if isModal {
             addCloseButton()
+        } else {
+            addBackButton()
         }
     }
     
@@ -178,7 +182,9 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
         NotificationCenter.default.removeObserver(self, name: UIApplication.didEnterBackgroundNotification, object: nil)
         viewModel.onDisappear()
         player.stop()
-        viewModel.closeChannel()
+        if !viewModel.isStartedFromInbox {
+            viewModel.closeChannel()
+        }
         SinchChatSDK.shared.eventListenerSubject.send(.didCloseChat)
         clearAllFiles()
         monitor.cancel()
@@ -481,9 +487,12 @@ extension StartViewController: ComposeViewDelegate {
         if !SinchChatSDK.shared.disabledFeatures.contains(.sendLocationSharingMessage) {
             
             let action  = UIAlertAction(title: mainView.localizationConfiguration.menuShareLocation, style: .default, handler: { _ in
-                self.cordinator?.presentLocation(viewController: self,
-                                                 uiConfig: self.mainView.uiConfig,
-                                                 localizationConfig: self.mainView.localizationConfiguration)
+
+                guard let locationVC = self.cordinator?.getLocationViewController(uiConfig: self.mainView.uiConfig,
+                                                                                  localizationConfig: self.mainView.localizationConfiguration) else { return }
+                locationVC.delegate = self
+                self.present(locationVC, animated: true)
+
             })
             
             action.setupActionWithImage(mainView.uiConfig.shareLocationMenuImage,
@@ -518,7 +527,7 @@ extension StartViewController: ComposeViewDelegate {
                 }
             })
             
-            action.setupActionWithImage(mainView.uiConfig.shareLocationMenuImage,
+            action.setupActionWithImage(mainView.uiConfig.fileDocumentMenuImage,
                                         textColor:  mainView.uiConfig.menuButtonTextColor)
             
             alert.addAction(action)
@@ -711,13 +720,14 @@ extension StartViewController: StartViewModelDelegate {
     func didReceiveHistoryMessages(_ messages: [Message]) {
 
         var shouldRemoveFirstMessage: Bool = false
-        if messages.isEmpty {
+        DispatchQueue.main.async {
+    
+            if messages.isEmpty {
             self.refreshControl.endRefreshing()
             return
             
         }
         
-        DispatchQueue.main.async {
             CATransaction.begin()
             CATransaction.setCompletionBlock({
                 if let messageSendDate = self.messages.first?.body.sendDate, let olderMessageSendDate = messages.last?.body.sendDate {
@@ -1076,10 +1086,86 @@ extension StartViewController: MessageCellDelegate {
         guard let url = URL(string: url) else {
             return
         }
-        
-        cordinator?.presentDocumentViewerController(viewController: self, cell: cell, uiConfig: mainView.uiConfig, localizationConfig: mainView.localizationConfiguration, url: url)
+        let backImage = mainView.uiConfig.backIcon
+
+        if let cell = cell as? FileMessageCell,
+           let message = cell.message, var messageBody = message.body as? MessageMedia, let fileURL = messageBody.savedUrl {
+            var indexOfFile = 0
+            for (index, file) in fileURLs.enumerated() where file == fileURL {
+                indexOfFile = index
+                break
+            }
+            guard let previewViewController = cordinator?.getDocumentViewerController(viewController: self, cell: cell,
+                                                                                      uiConfig:   mainView.uiConfig,
+                                                                                      localizationConfig: mainView.localizationConfiguration,
+                                                                                      url: url,
+                                                                                      index: indexOfFile ) else { return }
+            previewViewController.navigationItem.hidesBackButton = true
+            previewViewController.navigationItem.leftBarButtonItem = UIBarButtonItem(image: backImage,
+                                                                                     style: .plain,
+                                                                                     target: self,
+                                                                                     action: #selector(backAction))
+            self.navigationController?.pushViewController(previewViewController, animated: true)
+
+        } else {
             
+            let downloadTask = URLSession.shared.downloadTask(with: url) { urlOrNil, responseOrNil, errorOrNil in
+                
+                guard let fileURL = urlOrNil else { return }
+                do {
+                    let fileName = responseOrNil?.suggestedFilename ?? responseOrNil?.url?.lastPathComponent ?? fileURL.lastPathComponent
+
+                    let documentsURL = try
+                    FileManager.default.url(for: .documentDirectory,
+                                            in: .userDomainMask,
+                                            appropriateFor: nil,
+                                            create: false)
+                    let savedURL = documentsURL.appendingPathComponent(fileName)
+                    
+                    if !FileManager().fileExists(atPath: savedURL.relativePath) {
+                        try FileManager.default.moveItem(at: fileURL, to: savedURL)
+                    }
+                    self.fileURLs.append(savedURL.absoluteString)
+
+                    if let cell = cell as? FileMessageCell, var message = cell.message, var messageBody = message.body as? MessageMedia {
+                        messageBody.savedUrl = savedURL.absoluteString
+                        message.body = messageBody
+                        
+                        for (index, messageInArray) in self.messages.reversed().enumerated() where message.entryId == messageInArray.entryId {
+                                
+                            self.messages[self.messages.count - 1 - index] = message
+                                DispatchQueue.main.async {
+                                    UIView.performWithoutAnimation {
+                                        
+                                        self.mainView.collectionView.reloadSections([self.messages.count - 1 - index])
+                                    }
+                                }
+                                break
+                        }
+                        DispatchQueue.main.async {
+                            guard let previewViewController = self.cordinator?.getDocumentViewerController(viewController: self,
+                                                                                                           cell: cell,
+                                                                                                           uiConfig: self.mainView.uiConfig,
+                                                                                                           localizationConfig: self.mainView.localizationConfiguration,
+                                                                                                           url: url,
+                                                                                                           index:  self.fileURLs.count - 1 ) else { return }
+                          
+                           previewViewController.navigationItem.leftBarButtonItem = UIBarButtonItem(image: backImage,
+                                                                                                    style: .plain,
+                                                                                                    target: self,
+                                                                                                    action: #selector(self.backAction))
+                            previewViewController.navigationItem.hidesBackButton = true
+                            self.navigationController?.pushViewController(previewViewController, animated: true)
+                         
+                        }
+                    }
+                } catch {
+                    print ("file error: \(error)")
+                }
+            }
+            downloadTask.resume()
         }
+    }
     
     func clearAllFiles() {
         let fileManager = FileManager.default
@@ -1126,10 +1212,10 @@ extension StartViewController: MessageCellDelegate {
 
     func didTapMedia(with url:URL) {
 
-        cordinator?.presentMediaViewerController(viewController: self,
-                                                 uiConfig: mainView.uiConfig,
-                                                 localizationConfig: mainView.localizationConfiguration,
-                                                 url: url)
+        guard let mediaVc = cordinator?.getMediaViewerController(uiConfig: mainView.uiConfig,
+                                                                 localizationConfig: mainView.localizationConfiguration,
+                                                                 url: url) else { return }
+       self.present(mediaVc, animated: true)
         
     }
     func didTapOnVideo(with url: URL, message: Message) {
@@ -1280,7 +1366,7 @@ extension StartViewController: UIDocumentPickerDelegate {
 }
 extension StartViewController: QLPreviewControllerDataSource, QLPreviewControllerDelegate {
     func numberOfPreviewItems(in controller: QLPreviewController) -> Int {
-        return fileURLs.count
+        return 1
     }
     func previewController(_ controller: QLPreviewController, previewItemAt index: Int) -> QLPreviewItem {
         

@@ -133,4 +133,44 @@ extension Message {
         request.message = contactMessage
         return request
     }
+    var convertToText: String? {
+        
+        var text: String?
+        
+        switch body {
+            
+        case let message as MessageText:
+            
+            text = message.text
+            
+        case _ as MessageMedia:
+            text = "You've got a media message"
+            
+        case _ as MessageLocation:
+            
+            text = "You've got a location message"
+            
+        case _ as MessageChoices:
+            
+            text = "You've got a choice message"
+        
+        case _ as MessageCard:
+            
+            text = "You've got a card message"
+            
+        case _ as MessageCarousel:
+            
+            text = "You've got a carousel message"
+
+        case _ as MessageVoice:
+            text = "You've got a voice message"
+
+        default:
+        
+            break
+        }
+        
+        return text
+    }
+    
 }

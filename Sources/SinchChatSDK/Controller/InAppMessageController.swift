@@ -5,6 +5,8 @@ protocol InAppMessageController {
     var queue: [Message] { get set }
     
     func showInAppMessage(messagePayload: [AnyHashable : Any]) -> Bool
+    func replyToMessage(_ choice: ChoiceText)
+    func closeMessage(_ message: Message)
 }
 
 class DefaultInAppMessageController: InAppMessageController, InAppMessageViewDelegate {
@@ -42,13 +44,12 @@ class DefaultInAppMessageController: InAppMessageController, InAppMessageViewDel
     }
     
     func closeMessage(_ message: Message) {
-        
+        self.queue.removeFirst()
+
         DispatchQueue.main.asyncAfter(deadline: .now() + presentNewInAppMessageAfterInSec) {  [weak self] in
             
             guard let self = self else { return }
-            
-            self.queue.removeFirst()
-            
+                        
             guard let nextMessage = self.queue.first else { return }
             
             self.presentInAppMessage(nextMessage)
@@ -57,7 +58,7 @@ class DefaultInAppMessageController: InAppMessageController, InAppMessageViewDel
     }
     func replyToMessage(_ choice: ChoiceText) {
         
-        pushNotificationHandler.pushRepository?.replyToMessageWithTextChoice(choice: choice) { result in
+        pushNotificationHandler.pushRepository?.replyToMessageWithTextChoice(choice: choice) { _ in
             
         }
     }
@@ -90,23 +91,65 @@ class DefaultInAppMessageController: InAppMessageController, InAppMessageViewDel
     
     func parseMessage(payload: [AnyHashable : Any]) -> Message? {
         
-        guard let inApp: [String : String] = payload["inApp"] as? [String : String] else {
-            return nil
-        }
+            // missing entry id
         
         if let owner: String = payload["owner"] as? String, owner == "sinch" {
             
-            guard let payloadData = inApp["protobufPayload"],
+            guard let payloadData = payload["protobufPayload"] as? String,
                   let serializedData = Data(base64Encoded: payloadData) else {
                 return nil
             }
             
             do {
                 
-                let incomingTextMessage =  try Sinch_Push_Dispatch_V1beta1_Payload(serializedData: serializedData)
-                
-                return handleIncomingMessage(incomingTextMessage)
-                
+                let incomingMessage =  try Sinch_Conversationapi_Type_AppMessage(serializedData: serializedData)
+                switch incomingMessage.message {
+                    
+                case .textMessage(let message):
+                    
+                    return Message(entryId: "", owner: .incoming(nil), body: MessageText(text: message.text))
+                case .mediaMessage(let mediaMessage):
+                    
+                    return Message(entryId: "", owner: .incoming(nil), body: MessageMedia(url: mediaMessage.url))
+                case .locationMessage(let locationMessage):
+                    
+                    return Message(entryId: "", owner: .incoming(nil), body: MessageLocation(label: locationMessage.label,
+                                                                                             title: locationMessage.title,
+                                                                                             latitude: Double(locationMessage.coordinates.latitude),
+                                                                                             longitude: Double(locationMessage.coordinates.longitude)))
+                case .choiceMessage(let choiceMessageObject):
+                    let choicesArray = DefaultMessageDataSource.createChoicesArray(choiceMessageObject.choices, entryID: "")
+                    
+                    return Message(entryId: "", owner: .incoming(nil), body: MessageChoices(text: choiceMessageObject.textMessage.text,
+                                                                                            choices: choicesArray))
+                case .cardMessage(let card):
+                    let choicesArray = DefaultMessageDataSource.createChoicesArray(card.choices, entryID: "")
+                    
+                    return Message(entryId: "", owner: .incoming(nil), body: MessageCard(title: card.title,
+                                                                                         description: card.description_p,
+                                                                                         choices: choicesArray,
+                                                                                         url: card.mediaMessage.url))
+                case .carouselMessage(let carousel):
+                    let choicesArray = DefaultMessageDataSource.createChoicesArray(carousel.choices, entryID: "")
+                    var cardsArray: [MessageCard] = []
+                    
+                    for incomingCardMessage in carousel.cards {
+                        
+                        let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingCardMessage.choices, entryID: "")
+                        
+                        let messageBody = MessageCard(title: incomingCardMessage.title,
+                                                      description: incomingCardMessage.description_p ,
+                                                      choices: choicesArray,
+                                                      url: incomingCardMessage.mediaMessage.url)
+                        
+                        cardsArray.append(messageBody)
+                    }
+
+                    return Message(entryId: "", owner: .incoming(nil), body: MessageCarousel(cards: cardsArray, choices: choicesArray))
+                    
+                default: return nil
+                }
+                                                
             } catch {
                 debugPrint("error")
             }
@@ -252,5 +295,4 @@ class DefaultInAppMessageController: InAppMessageController, InAppMessageViewDel
         
         return nil
     }
-    
 }

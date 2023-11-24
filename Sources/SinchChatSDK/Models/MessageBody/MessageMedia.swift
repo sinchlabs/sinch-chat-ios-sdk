@@ -52,7 +52,7 @@ struct MessageMedia: MessageBody, MessageWithURL {
     var isExpanded: Bool = false
     var size: String?
 
-    init(url: String, sendDate: Int64?, placeholderImage: UIImage? = nil, type: TypeMessageMedia? = nil) {
+    init(url: String, sendDate: Int64? = nil, placeholderImage: UIImage? = nil, type: TypeMessageMedia? = nil) {
         self.url = url
         self.sendDate = sendDate
         self.type = type
