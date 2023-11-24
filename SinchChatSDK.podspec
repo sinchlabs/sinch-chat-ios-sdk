@@ -5,7 +5,7 @@ Pod::Spec.new do |s|
   s.homepage         = 'https://sinch.com'
   s.license          = { :type => 'MIT', :file => 'LICENSE.md' }
   s.author           = { 'Sinch' => '' }
-  s.source           = { :git => 'git@gitlab.com:sinch/sinch-projects/enterprise-and-messaging/rich-messaging/channels/sinch-chat/sdk/ios/sdk.git', :tag => s.version.to_s }
+  s.source           = { :git => 'git@github.com:sinchlabs/sinch-chat-ios-sdk.git', :tag => s.version.to_s }
   s.ios.deployment_target = '13.0'
   s.swift_version = '5.5'
   s.source_files = 'Sources/SinchChatSDK/**/*.swift'
