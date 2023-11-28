@@ -115,7 +115,7 @@ class InboxTableViewCell: UITableViewCell {
         return imageView
     }()
     
-    var conversation: InboxConversation?
+    var conversation: InboxChat?
     private var dotYCentarPosition: NSLayoutConstraint!
     private var dotYNameCenterPosition: NSLayoutConstraint!
 
@@ -190,16 +190,16 @@ class InboxTableViewCell: UITableViewCell {
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    func updateWithData(inboxConversation:InboxConversation, uiConfig: SinchSDKConfig.UIConfig,
+    func updateWithData(inboxChat:InboxChat, uiConfig: SinchSDKConfig.UIConfig,
                         localizationConfig: SinchSDKConfig.LocalizationConfig) {
-        self.conversation = inboxConversation
+        self.conversation = inboxChat
        
         dotView.backgroundColor = uiConfig.inboxUnreadDotColor
         lastMessageLabel.textColor = uiConfig.inboxLastMessageTextColor
-        nameLabel.textColor = uiConfig.inboxConversationNameColor
+        nameLabel.textColor = uiConfig.inboxChatNameColor
         statusLabel.textColor = uiConfig.inboxStatusTextColor
    
-        avatarView.updateWithConversation(inboxConversation, uiConfig: uiConfig)
+        avatarView.updateWithConversation(inboxChat, uiConfig: uiConfig)
 
         //  avatarEmptyView.isHidden = true
         timeLabel.textColor = uiConfig.inboxDateTextColor
@@ -225,8 +225,8 @@ class InboxTableViewCell: UITableViewCell {
 
         nameLabel.text = "Case #1"
      //   statusLabel.text = "Status - Open"
-        lastMessageLabel.text = inboxConversation.text + String("\n")
-        timeLabel.text = inboxConversation.sendDate.getFormattedDate(localizationConfiguration: localizationConfig)
+        lastMessageLabel.text = inboxChat.text + String("\n")
+        timeLabel.text = inboxChat.sendDate.getFormattedDate(localizationConfiguration: localizationConfig)
         
     }
 }

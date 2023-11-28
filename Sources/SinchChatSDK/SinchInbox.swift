@@ -17,34 +17,34 @@ public protocol SinchInbox {
     ///
     ///
     /// 
-    func getInboxConversations(completion: @escaping ([InboxConversation]) -> Void)
+    func getInboxChats(completion: @escaping ([InboxChat]) -> Void)
    
     /// Creating Chat UI. This method may throw
     /// - Parameters:
     ///
-    ///   - inboxConversation: Conversation obtained with getInboxConversations(completion: @escaping ([InboxConversation]) -> Void)
+    ///   - InboxChat: Conversation obtained with getInboxChats(completion: @escaping ([InboxChat]) -> Void)
     ///   - uiConfig: Optionally ui changes might be provided with different settings.
     ///   - localizationConfig: Optionally localization might be provided with different text translation.
 
     /// - Returns: UIViewController which contains chat UI.
     /// - Throws: SinchChatSDKError enum with specific error.
     ///
-    func getChatViewController(inboxConversation: InboxConversation,
+    func getChatViewController(inboxChat: InboxChat,
                                uiConfig: SinchSDKConfig.UIConfig?,
                                localizationConfig: SinchSDKConfig.LocalizationConfig?) throws -> SinchChatViewController
     
 }
 
-public struct InboxConversation: Codable {
+public struct InboxChat: Codable {
     
     // display model
-    var text: String
-    var sendDate: Date
+    public var text: String
+    public var sendDate: Date
     
-    var avatarImage: String?
+    public var avatarImage: String?
     
     // run model
-    var chatOptions: InboxChatOptions?
+    public var chatOptions: InboxChatOptions?
     
     public init(text: String, sendDate: Date, avatarImage: String?, options: InboxChatOptions) {
         self.text = text
@@ -56,8 +56,8 @@ public struct InboxConversation: Codable {
 
 public struct InboxChatOptions: Codable {
     
-    let option: SinchChatOptions?
-    let authModel: AuthModel?
+    public let option: SinchChatOptions?
+    public let authModel: AuthModel?
     
     // those stuff we can get from AuthDataSource + MessageDataSource
 }
@@ -112,7 +112,7 @@ final class DefaultSinchInbox: SinchInbox {
         return inbox
 
     }
-    func getInboxConversations(completion: @escaping ([InboxConversation]) -> Void) {
+    func getInboxChats(completion: @escaping ([InboxChat]) -> Void) {
        
         if let data = UserDefaults.standard.data(forKey: "lastMessage") {
             do {
@@ -120,7 +120,7 @@ final class DefaultSinchInbox: SinchInbox {
                 let decoder = JSONDecoder()
 
                 // Decode Note
-                let conversation = try decoder.decode(InboxConversation.self, from: data)
+                let conversation = try decoder.decode(InboxChat.self, from: data)
                
                 completion([conversation])
             } catch {
@@ -131,12 +131,12 @@ final class DefaultSinchInbox: SinchInbox {
         }
     }
     
-    func getChatViewController(inboxConversation: InboxConversation, uiConfig: SinchSDKConfig.UIConfig? = nil,
+    func getChatViewController(inboxChat: InboxChat, uiConfig: SinchSDKConfig.UIConfig? = nil,
                                localizationConfig: SinchSDKConfig.LocalizationConfig? = nil) throws -> SinchChatViewController {
           
         let options: GetChatViewControllerOptions = .init(topicID:
-                                                            inboxConversation.chatOptions?.option?.topicID,
-                                                          metadata: inboxConversation.chatOptions?.option?.metadata ?? [], shouldInitializeConversation: true)
+                                                            inboxChat.chatOptions?.option?.topicID,
+                                                          metadata: inboxChat.chatOptions?.option?.metadata ?? [], shouldInitializeConversation: true)
         
         return try SinchChatSDK.shared.chat.getChatViewController(uiConfig: rootCoordinator?.uiConfiguration,
                                                                   localizationConfig: rootCoordinator?.localizationConfiguration,

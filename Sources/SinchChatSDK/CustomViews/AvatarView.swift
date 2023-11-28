@@ -58,7 +58,7 @@ final class AvatarView: UIView {
 
     }
 
-    func updateWithConversation(_ conversation: InboxConversation, uiConfig: SinchSDKConfig.UIConfig) {
+    func updateWithConversation(_ conversation: InboxChat, uiConfig: SinchSDKConfig.UIConfig) {
         var name: String?
         var pictureUrlString: String?
         

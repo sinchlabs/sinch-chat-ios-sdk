@@ -107,7 +107,7 @@ class InboxMessageDataSource: MessageDataSource {
             
             // todo
             let date = message.body.sendDate ?? Int64(Date().timeIntervalSince1970)
-            let conversation = InboxConversation(text: messageText, sendDate:  Date(timeIntervalSince1970: TimeInterval(date)),
+            let conversation = InboxChat(text: messageText, sendDate:  Date(timeIntervalSince1970: TimeInterval(date)),
                                                  avatarImage: nil,
                                                  options: InboxChatOptions(option: .init(
                                                                     topicID: self.messageDataSource.topicModel?.topicID,

@@ -2,7 +2,7 @@ import UIKit
 
 final class InboxViewController: SinchViewController<InboxViewModel, InboxView>, SinchChatViewController {
     
-    var conversations : [InboxConversation] = []
+    var conversations : [InboxChat] = []
     lazy var activityIndicator = LoadMoreActivityIndicator(scrollView: mainView.tableView, spacingFromLastCell: 10, spacingFromLastCellOnActionStart: 60)
     
     override func viewDidLoad() {
@@ -26,7 +26,7 @@ final class InboxViewController: SinchViewController<InboxViewModel, InboxView>,
                 let decoder = JSONDecoder()
 
                 // Decode Note
-                let conversation = try decoder.decode(InboxConversation.self, from: data)
+                let conversation = try decoder.decode(InboxChat.self, from: data)
                 conversations = [conversation]
                 mainView.tableView.reloadData()
             } catch {
@@ -70,7 +70,7 @@ extension InboxViewController: UITableViewDataSource {
             return UITableViewCell()
         }
         
-        cell.updateWithData(inboxConversation:conversations[indexPath.row],
+        cell.updateWithData(inboxChat:conversations[indexPath.row],
                             uiConfig: mainView.uiConfig,
                             localizationConfig: mainView.localizationConfiguration)
         
@@ -97,7 +97,7 @@ extension InboxViewController: UITableViewDelegate {
 //            }
 //        }
     }
-    func showChatForConversation(_ conversation: InboxConversation) {
+    func showChatForConversation(_ conversation: InboxChat) {
         
         let options: GetChatViewControllerOptions = .init(topicID: conversation.chatOptions?.option?.topicID,
                                                           metadata: conversation.chatOptions?.option?.metadata ?? [], shouldInitializeConversation: true)

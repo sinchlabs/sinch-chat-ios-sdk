@@ -1,17 +1,17 @@
 Pod::Spec.new do |s|
   s.name             = 'SinchChatSDK'
-  s.version          = '0.11.2'
+  s.version          = '0.11.3'
   s.summary          = 'Sinch Chat SDK which supports In App Chat and Push Notifications'
   s.homepage         = 'https://sinch.com'
-  s.license          = { :type => 'MIT', :file => 'LICENSE.md' }
+  s.license          = { :type => 'MIT', :file => 'README.md' }
   s.author           = { 'Sinch' => '' }
-  s.source           = { :git => 'git@github.com:sinchlabs/sinch-chat-ios-sdk.git', :tag => s.version.to_s }
+  s.source           = { :git => 'https://github.com/sinchlabs/sinch-chat-ios-sdk.git', :tag => s.version.to_s }
   s.ios.deployment_target = '13.0'
   s.swift_version = '5.5'
   s.source_files = 'Sources/SinchChatSDK/**/*.swift'
   s.resource_bundle = { 'SinchChatSDK_SinchChatSDK' => [
-    'iOS/Plugin/SinchChatSDK/Assets.xcassets',
-    'iOS/Plugin/SinchChatSDK/Resources/*.lproj/*.strings',
+    'Sources/SinchChatSDK/Assets.xcassets',
+    'Sources/SinchChatSDK/Resources/*.lproj/*.strings',
   ]}
   s.dependency 'gRPC-Swift', '~> 1.8.0'
   s.dependency 'Kingfisher', '~> 7.10.0'
