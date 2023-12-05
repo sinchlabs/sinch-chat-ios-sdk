@@ -36,10 +36,10 @@ final class DefaultAPIClient: APIClient {
     init?(region: Region) {
         switch region {
         case .EU1:
-            host = "sdk.sinch-chat.unauth.prod.sinch.com"
+            host = "grpc.sinch-chat.prod.sinch.com"
         case .US1:
            
-            host = "sdk.sinch-chat.us1.prod.sinch.com"
+            host = "grpc.sinch-chat.us1.prod.sinch.com"
         case .custom(let host, _):
             self.host = host
         }

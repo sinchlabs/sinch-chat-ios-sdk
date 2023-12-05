@@ -108,7 +108,7 @@ class InboxMessageDataSource: MessageDataSource {
             // todo
             let date = message.body.sendDate ?? Int64(Date().timeIntervalSince1970)
             let conversation = InboxChat(text: messageText, sendDate:  Date(timeIntervalSince1970: TimeInterval(date)),
-                                                 avatarImage: nil,
+                                         avatarImage: nil, status: "",
                                                  options: InboxChatOptions(option: .init(
                                                                     topicID: self.messageDataSource.topicModel?.topicID,
                                                                     metadata: self.messageDataSource.metadata,
@@ -273,6 +273,16 @@ final class DefaultMessageDataSource: MessageDataSource {
                 }
                 switch result {
                 case .success(let result):
+                    // On first entry if there is no history send conversation_start message
+                    if shouldInitializeConversation {
+                        if self.nextPageToken == nil && result.entries.isEmpty {
+                       
+                            self.sendMessage(.fallbackMessage("conversation_start")) { _ in
+                                
+                                debugPrint("*********SEND CONVERSATION START MESSAGE **********")
+                            }
+                        }
+                    }
                     
                     self.nextPageToken = result.nextPageToken
                     var messages: [Message] = []
@@ -551,9 +561,6 @@ final class DefaultMessageDataSource: MessageDataSource {
             
             self.subscription = subscription
             
-            if shouldInitializeConversation {
-                self.sendMessage(.fallbackMessage("conversation_start")) { _ in }
-            }
             
             self.subscription?.status.whenComplete({ [weak self] response in
                 

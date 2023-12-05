@@ -22,10 +22,23 @@ extension Date {
             return  DateFormatter.localizedString(from: self, dateStyle: .medium, timeStyle: .none)
         }
     }
-    
+    func getInboxFormattedDate(localizationConfiguration: SinchSDKConfig.LocalizationConfig) -> String {
+        
+        if Calendar.current.isDateInToday(self) {
+            let dateFormat = DateFormatter()
+            dateFormat.dateFormat = "HH:mm"
+            
+            return dateFormat.string(from: self)
+        } else if Calendar.current.isDateInYesterday(self) {
+            return  localizationConfiguration.yesterday
+            
+        } else {
+            //"short"   "none"    10/10/17
+            return  DateFormatter.localizedString(from: self, dateStyle: .short, timeStyle: .none)
+        }
+    }
     static func - (lhs: Date, rhs: Date) -> TimeInterval {
         return lhs.timeIntervalSinceReferenceDate - rhs.timeIntervalSinceReferenceDate
-        
         
     }
 }

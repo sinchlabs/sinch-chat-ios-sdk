@@ -9,10 +9,12 @@ public extension Bundle {
         ]
         
         let bundleName = "SinchChatSDK_SinchChatSDK"
+        let bundleNameSecond = "SinchChatSdk-SinchChatSDK_SinchChatSDK"
         
         for candidate in candidates {
             let bundlePath = candidate?.appendingPathComponent(bundleName + ".bundle")
-            if let bundle = bundlePath.flatMap(Bundle.init(url:)) {
+            let bundlePathSecond = candidate?.appendingPathComponent(bundleNameSecond + ".bundle")
+            if let bundle = bundlePath.flatMap(Bundle.init(url:)) ?? bundlePathSecond.flatMap(Bundle.init(url:)) {
                 return bundle
             }
         }

@@ -226,7 +226,7 @@ class InboxTableViewCell: UITableViewCell {
         nameLabel.text = "Case #1"
      //   statusLabel.text = "Status - Open"
         lastMessageLabel.text = inboxChat.text + String("\n")
-        timeLabel.text = inboxChat.sendDate.getFormattedDate(localizationConfiguration: localizationConfig)
+        timeLabel.text = inboxChat.sendDate.getInboxFormattedDate(localizationConfiguration: localizationConfig)
         
     }
 }

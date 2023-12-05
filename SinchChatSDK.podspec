@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'SinchChatSDK'
-  s.version          = '0.11.3'
+  s.version          = '0.11.4'
   s.summary          = 'Sinch Chat SDK which supports In App Chat and Push Notifications'
   s.homepage         = 'https://sinch.com'
   s.license          = { :type => 'MIT', :file => 'README.md' }
@@ -9,7 +9,7 @@ Pod::Spec.new do |s|
   s.ios.deployment_target = '13.0'
   s.swift_version = '5.5'
   s.source_files = 'Sources/SinchChatSDK/**/*.swift'
-  s.resource_bundle = { 'SinchChatSDK_SinchChatSDK' => [
+  s.resource_bundle = { 'SinchChatSdk-SinchChatSDK_SinchChatSDK' => [
     'Sources/SinchChatSDK/Assets.xcassets',
     'Sources/SinchChatSDK/Resources/*.lproj/*.strings',
   ]}

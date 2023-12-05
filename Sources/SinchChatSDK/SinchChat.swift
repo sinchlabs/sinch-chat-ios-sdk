@@ -121,7 +121,9 @@ final class DefaultSinchChat: SinchChat {
         if let apiClient = self.apiClient {
             
             if !apiClient.isChannelStarted {
-                apiClient.startChannel()
+                let client = DefaultAPIClient(region: region)
+                
+                self.apiClient = client
             }
             
         } else {

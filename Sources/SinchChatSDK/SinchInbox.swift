@@ -42,15 +42,17 @@ public struct InboxChat: Codable {
     public var sendDate: Date
     
     public var avatarImage: String?
-    
+    public var status: String
+
     // run model
     public var chatOptions: InboxChatOptions?
     
-    public init(text: String, sendDate: Date, avatarImage: String?, options: InboxChatOptions) {
+    public init(text: String, sendDate: Date, avatarImage: String?, status: String, options: InboxChatOptions) {
         self.text = text
         self.sendDate = sendDate
         self.avatarImage = avatarImage
         self.chatOptions = options
+        self.status = status
     }
 }
 
