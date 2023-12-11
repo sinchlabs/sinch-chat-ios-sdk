@@ -383,23 +383,51 @@ final class DefaultStartViewModel: StartViewModel {
         askForNotifications()
         error = nil
         
-        dataSource.sendMessage(message) { [weak self] result in
-            guard let self = self else {
+        processMessageBeforeSending(messagePayload: message) { [weak self] messageToSend in
+            guard let self = self, let messageToSend = messageToSend else {
+                completion(.success(nil))
                 return
             }
-            
-            switch result {
+            dataSource.sendMessage(messageToSend) { [weak self] result in
+                guard let self = self else {
+                    return
+                }
                 
-            case .success(let entryId):
-                self.isMessageSent = true
-                completion(.success(self.createMessage(entryId: entryId, messageType: message)))
-            case .failure(let error):
-                Logger.verbose(error)
-                self.error = error
-                completion(.failure(error))
+                switch result {
+                    
+                case .success(let entryId):
+                    self.isMessageSent = true
+                    completion(.success(self.createMessage(entryId: entryId, messageType: messageToSend)))
+                case .failure(let error):
+                    Logger.verbose(error)
+                    self.error = error
+                    completion(.failure(error))
+                }
             }
         }
     }
+    
+    private func processMessageBeforeSending(messagePayload: MessageType, callback: @escaping (MessageType?) -> Void) {
+        guard let message = self.createMessage(entryId: UUID().uuidString, messageType: messagePayload) else {
+            callback(nil)
+            return
+        }
+        
+        processPluginMessage(message) { processedMessage in
+            guard let processedMessage = processedMessage else {
+                callback(nil)
+                return
+            }
+            
+            if let textMessage = processedMessage.body as? MessageText {
+                callback(.text(textMessage.text))
+                return
+            }
+            
+            callback(messagePayload)
+        }
+    }
+    
     func createMessage(entryId: String, messageType: MessageType) -> Message? {
         
         var messageBody: MessageBody

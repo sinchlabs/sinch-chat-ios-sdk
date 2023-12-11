@@ -290,7 +290,7 @@ final class DefaultMessageDataSource: MessageDataSource {
                     self.dispatchQueue.async {
                         
                         for entry in result.entries {
-                            let message = self.handleIncomingMessage(entry)
+                            let message = handleIncomingMessage(entry)
                             
                             if let body = message?.body, let event = body as? MessageEvent {
 
@@ -352,6 +352,7 @@ final class DefaultMessageDataSource: MessageDataSource {
                 completion(.failure(.unknownTypeOfMessage))
                 return
             }
+            
             if let topicModel = topicModel {
                 message.topicID = topicModel.topicID
             }
@@ -523,7 +524,7 @@ final class DefaultMessageDataSource: MessageDataSource {
                     return
                 }
                 
-                let message = self.handleIncomingMessage(response.entry)
+                let message = handleIncomingMessage(response.entry)
                 
                 guard var message = message else { return }
                 
@@ -711,234 +712,6 @@ final class DefaultMessageDataSource: MessageDataSource {
         task.resume()
     }
     
-    // swiftlint:disable function_body_length cyclomatic_complexity
-    private func handleIncomingMessage(_ entry: Sinch_Chat_Sdk_V1alpha2_Entry) -> Message? {
-        
-        if entry.hasDeliveryTime {
-            
-            // MARK: - Outgoing messages
-            
-            let outgoingText = entry.contactMessage.textMessage.text
-            if !outgoingText.isEmpty {
-                return Message(entryId: entry.entryID, owner: .outgoing, body: MessageText(text: outgoingText, sendDate: entry.deliveryTime.seconds))
-            }
-            
-            let outgoingUrl = entry.contactMessage.mediaMessage.url
-            if !outgoingUrl.isEmpty {
-                
-                return Message(entryId: entry.entryID, owner: .outgoing, body: MessageMedia(url: outgoingUrl, sendDate: entry.deliveryTime.seconds))
-            }
-            // MARK: - Incoming messages
-            
-            let incomingText = entry.appMessage.textMessage.text
-            if !incomingText.isEmpty {
-                if entry.appMessage.hasAgent {
-                    let agent = entry.appMessage.agent
-                    
-                    return Message(entryId: entry.entryID,
-                                   owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue, pictureUrl: agent.pictureURL)),
-                                   body: MessageText(text: incomingText, sendDate: entry.deliveryTime.seconds, isExpanded: false))
-                } else {
-                    
-                    return Message(entryId: entry.entryID, owner: .incoming(nil),
-                                   body: MessageText(text: incomingText,
-                                                     sendDate: entry.deliveryTime.seconds))
-                }
-            }
-            let outgoingLocationMessage = entry.contactMessage.locationMessage
-            if outgoingLocationMessage.hasCoordinates {
-                let messageBody = MessageLocation(label: outgoingLocationMessage.label,
-                                                  title: outgoingLocationMessage.title,
-                                                  latitude: Double(outgoingLocationMessage.coordinates.latitude),
-                                                  longitude: Double(outgoingLocationMessage.coordinates.longitude),
-                                                  sendDate: entry.deliveryTime.seconds)
-                
-                return Message(entryId: entry.entryID, owner: .outgoing, body: messageBody)
-            }
-            
-            if !entry.contactMessage.fallbackMessage.rawMessage.isEmpty {
-                return Message(entryId: entry.entryID, owner: .system, body: MessageEvent(type: .fallbackMessage(
-                    payload: entry.contactMessage.fallbackMessage.rawMessage
-                )))
-            }
-            
-            let incomingLocationMessage = entry.appMessage.locationMessage
-            if incomingLocationMessage.hasCoordinates {
-                let messageBody = MessageLocation(label: incomingLocationMessage.label,
-                                                  title: incomingLocationMessage.title,
-                                                  latitude: Double(incomingLocationMessage.coordinates.latitude),
-                                                  longitude: Double(incomingLocationMessage.coordinates.longitude),
-                                                  sendDate: entry.deliveryTime.seconds)
-                
-                if entry.appMessage.hasAgent {
-                    let agent = entry.appMessage.agent
-                    
-                    return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName,
-                                                                                  type: agent.type.rawValue)),
-                                   body:  messageBody)
-                } else {
-                    
-                    return Message(entryId: entry.entryID, owner: .incoming(nil), body: messageBody)
-                }
-            }
-            
-            let incomingChoiceMessage = entry.appMessage.choiceMessage
-            if incomingChoiceMessage.hasTextMessage {
-                
-                // EntryID is messageID in case od message types.
-                let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingChoiceMessage.choices, entryID: entry.entryID)
-                
-                let messageBody = MessageChoices(text: incomingChoiceMessage.textMessage.text,
-                                                 choices: choicesArray,
-                                                 sendDate: entry.deliveryTime.seconds)
-                
-                if entry.appMessage.hasAgent {
-                    let agent = entry.appMessage.agent
-                    
-                    return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
-                                   body:  messageBody)
-                } else {
-                    
-                    return Message(entryId: entry.entryID, owner: .incoming(nil), body: messageBody)
-                }
-            }
-            let incomingCardMessage = entry.appMessage.cardMessage
-            
-            if incomingCardMessage.hasMediaMessage {
-                
-                // EntryID is messageID in case od message types.
-                let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingCardMessage.choices, entryID: entry.entryID)
-                
-                let messageBody = MessageCard(title: incomingCardMessage.title,
-                                              description: incomingCardMessage.description_p,
-                                              choices: choicesArray,
-                                              url: incomingCardMessage.mediaMessage.url,
-                                              sendDate: entry.deliveryTime.seconds)
-                
-                if entry.appMessage.hasAgent {
-                    let agent = entry.appMessage.agent
-                    
-                    return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
-                                   body:  messageBody)
-                } else {
-                    
-                    return Message(entryId: entry.entryID, owner: .incoming(nil), body: messageBody)
-                }
-            }
-            
-            let incomingCarouselMessage = entry.appMessage.carouselMessage
-            
-            if !incomingCarouselMessage.cards.isEmpty {
-                
-                let carouselChoicesArray = DefaultMessageDataSource.createChoicesArray(incomingCarouselMessage.choices, entryID: entry.entryID)
-                var cardsArray: [MessageCard] = []
-                
-                for incomingCardMessage in incomingCarouselMessage.cards {
-                    
-                    let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingCardMessage.choices, entryID: entry.entryID)
-                    let messageBody = MessageCard(title: incomingCardMessage.title,
-                                                  description: incomingCardMessage.description_p ,
-                                                  choices: choicesArray,
-                                                  url: incomingCardMessage.mediaMessage.url,
-                                                  sendDate: entry.deliveryTime.seconds)
-                    
-                    cardsArray.append(messageBody)
-                    
-                }
-                
-                let messageBody = MessageCarousel(cards: cardsArray, choices: carouselChoicesArray, sendDate: entry.deliveryTime.seconds)
-                
-                if entry.appMessage.hasAgent {
-                    let agent = entry.appMessage.agent
-                    
-                    return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
-                                   body:  messageBody)
-                } else {
-                    
-                    return Message(entryId: entry.entryID, owner: .incoming(nil), body: messageBody)
-                }
-            }
-            
-            let incomingUrl = entry.appMessage.mediaMessage.url
-            
-            if !incomingUrl.isEmpty {
-                if entry.appMessage.hasAgent {
-                    let agent = entry.appMessage.agent
-                    
-                    return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
-                                   body: MessageMedia(url: incomingUrl,
-                                                      sendDate: entry.deliveryTime.seconds, placeholderImage: nil))
-                } else {
-                    return Message(entryId: entry.entryID, owner: .incoming(nil),
-                                   body: MessageMedia(url: incomingUrl,
-                                                      sendDate: entry.deliveryTime.seconds, placeholderImage: nil))
-                }
-            }
-            
-            // MARK: - Events
-            
-            if entry.appEvent.agentLeftEvent.hasAgent {
-                
-                let agentThatLeft = entry.appEvent.agentLeftEvent.agent
-                
-                return Message(entryId: entry.entryID, owner: .system,
-                               body: MessageEvent(type: .left(Agent(name: agentThatLeft.displayName,
-                                                                    type: agentThatLeft.type.rawValue,
-                                                                    pictureUrl: agentThatLeft.pictureURL)),
-                                                  sendDate: entry.deliveryTime.seconds))
-                
-            }
-            
-            if entry.appEvent.agentJoinedEvent.hasAgent {
-                
-                let agentThatJoined = entry.appEvent.agentJoinedEvent.agent
-                
-                return Message(entryId: entry.entryID, owner: .system,
-                               body: MessageEvent(type: .joined(Agent(name: agentThatJoined.displayName,
-                                                                      type: agentThatJoined.type.rawValue,
-                                                                      pictureUrl: agentThatJoined.pictureURL)),
-                                                  sendDate: entry.deliveryTime.seconds))
-                
-            }
-            
-            // TODO: NEEDs attenchion - Skipping clicks on buttons on christmas BOT.
-            if entry.contactMessage.choiceResponseMessage.postbackData != ""
-                || entry.contactMessage.fallbackMessage.rawMessage.isEmpty == false {
-                return nil
-            }
-
-            if case .composingEvent(_)? =  entry.appEvent.event {
-                return Message(entryId: entry.entryID, owner: .system,
-                               body: MessageEvent(type: .composeStarted,
-                                                  sendDate: entry.deliveryTime.seconds))
-
-            } else if case .composingEndEvent(_)? =  entry.appEvent.event {
-                return Message(entryId: entry.entryID, owner: .system,
-                               body: MessageEvent(type: .composeEnd,
-                                                  sendDate: entry.deliveryTime.seconds))
-                
-            } else if case .composingEvent(_)? =  entry.contactEvent.event {
-                return nil
-            
-            } else if case .composingEndEvent(_)? =  entry.contactEvent.event {
-                return nil
-            }
-
-            if !entry.contactEvent.unknownFields.data.isEmpty {
-                return nil
-
-            }
-
-            if entry.appEvent.event != nil {
-                return nil
-            }
-
-            return Message(entryId: entry.entryID, owner: .incoming(nil), body: MessageUnsupported(sendDate: entry.deliveryTime.seconds))
-        }
-        
-        return nil
-    }
-    
     private func convertSinchMetadataToMetadataJson(metadata: SinchMetadataArray) -> String? {
         if metadata.isEmpty, SinchChatSDK.shared.additionalMetadata.isEmpty {
             return nil
@@ -991,4 +764,232 @@ final class DefaultMessageDataSource: MessageDataSource {
 struct TopicModel {
     let topicID: String
     
+}
+
+// swiftlint:disable function_body_length cyclomatic_complexity
+func handleIncomingMessage(_ entry: Sinch_Chat_Sdk_V1alpha2_Entry) -> Message? {
+    
+    if entry.hasDeliveryTime {
+        
+        // MARK: - Outgoing messages
+        
+        let outgoingText = entry.contactMessage.textMessage.text
+        if !outgoingText.isEmpty {
+            return Message(entryId: entry.entryID, owner: .outgoing, body: MessageText(text: outgoingText, sendDate: entry.deliveryTime.seconds))
+        }
+        
+        let outgoingUrl = entry.contactMessage.mediaMessage.url
+        if !outgoingUrl.isEmpty {
+            
+            return Message(entryId: entry.entryID, owner: .outgoing, body: MessageMedia(url: outgoingUrl, sendDate: entry.deliveryTime.seconds))
+        }
+        // MARK: - Incoming messages
+        
+        let incomingText = entry.appMessage.textMessage.text
+        if !incomingText.isEmpty {
+            if entry.appMessage.hasAgent {
+                let agent = entry.appMessage.agent
+                
+                return Message(entryId: entry.entryID,
+                               owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue, pictureUrl: agent.pictureURL)),
+                               body: MessageText(text: incomingText, sendDate: entry.deliveryTime.seconds, isExpanded: false))
+            } else {
+                
+                return Message(entryId: entry.entryID, owner: .incoming(nil),
+                               body: MessageText(text: incomingText,
+                                                 sendDate: entry.deliveryTime.seconds))
+            }
+        }
+        let outgoingLocationMessage = entry.contactMessage.locationMessage
+        if outgoingLocationMessage.hasCoordinates {
+            let messageBody = MessageLocation(label: outgoingLocationMessage.label,
+                                              title: outgoingLocationMessage.title,
+                                              latitude: Double(outgoingLocationMessage.coordinates.latitude),
+                                              longitude: Double(outgoingLocationMessage.coordinates.longitude),
+                                              sendDate: entry.deliveryTime.seconds)
+            
+            return Message(entryId: entry.entryID, owner: .outgoing, body: messageBody)
+        }
+        
+        if !entry.contactMessage.fallbackMessage.rawMessage.isEmpty {
+            return Message(entryId: entry.entryID, owner: .system, body: MessageEvent(type: .fallbackMessage(
+                payload: entry.contactMessage.fallbackMessage.rawMessage
+            )))
+        }
+        
+        let incomingLocationMessage = entry.appMessage.locationMessage
+        if incomingLocationMessage.hasCoordinates {
+            let messageBody = MessageLocation(label: incomingLocationMessage.label,
+                                              title: incomingLocationMessage.title,
+                                              latitude: Double(incomingLocationMessage.coordinates.latitude),
+                                              longitude: Double(incomingLocationMessage.coordinates.longitude),
+                                              sendDate: entry.deliveryTime.seconds)
+            
+            if entry.appMessage.hasAgent {
+                let agent = entry.appMessage.agent
+                
+                return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName,
+                                                                              type: agent.type.rawValue)),
+                               body:  messageBody)
+            } else {
+                
+                return Message(entryId: entry.entryID, owner: .incoming(nil), body: messageBody)
+            }
+        }
+        
+        let incomingChoiceMessage = entry.appMessage.choiceMessage
+        if incomingChoiceMessage.hasTextMessage {
+            
+            // EntryID is messageID in case od message types.
+            let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingChoiceMessage.choices, entryID: entry.entryID)
+            
+            let messageBody = MessageChoices(text: incomingChoiceMessage.textMessage.text,
+                                             choices: choicesArray,
+                                             sendDate: entry.deliveryTime.seconds)
+            
+            if entry.appMessage.hasAgent {
+                let agent = entry.appMessage.agent
+                
+                return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
+                               body:  messageBody)
+            } else {
+                
+                return Message(entryId: entry.entryID, owner: .incoming(nil), body: messageBody)
+            }
+        }
+        let incomingCardMessage = entry.appMessage.cardMessage
+        
+        if incomingCardMessage.hasMediaMessage {
+            
+            // EntryID is messageID in case od message types.
+            let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingCardMessage.choices, entryID: entry.entryID)
+            
+            let messageBody = MessageCard(title: incomingCardMessage.title,
+                                          description: incomingCardMessage.description_p,
+                                          choices: choicesArray,
+                                          url: incomingCardMessage.mediaMessage.url,
+                                          sendDate: entry.deliveryTime.seconds)
+            
+            if entry.appMessage.hasAgent {
+                let agent = entry.appMessage.agent
+                
+                return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
+                               body:  messageBody)
+            } else {
+                
+                return Message(entryId: entry.entryID, owner: .incoming(nil), body: messageBody)
+            }
+        }
+        
+        let incomingCarouselMessage = entry.appMessage.carouselMessage
+        
+        if !incomingCarouselMessage.cards.isEmpty {
+            
+            let carouselChoicesArray = DefaultMessageDataSource.createChoicesArray(incomingCarouselMessage.choices, entryID: entry.entryID)
+            var cardsArray: [MessageCard] = []
+            
+            for incomingCardMessage in incomingCarouselMessage.cards {
+                
+                let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingCardMessage.choices, entryID: entry.entryID)
+                let messageBody = MessageCard(title: incomingCardMessage.title,
+                                              description: incomingCardMessage.description_p ,
+                                              choices: choicesArray,
+                                              url: incomingCardMessage.mediaMessage.url,
+                                              sendDate: entry.deliveryTime.seconds)
+                
+                cardsArray.append(messageBody)
+                
+            }
+            
+            let messageBody = MessageCarousel(cards: cardsArray, choices: carouselChoicesArray, sendDate: entry.deliveryTime.seconds)
+            
+            if entry.appMessage.hasAgent {
+                let agent = entry.appMessage.agent
+                
+                return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
+                               body:  messageBody)
+            } else {
+                
+                return Message(entryId: entry.entryID, owner: .incoming(nil), body: messageBody)
+            }
+        }
+        
+        let incomingUrl = entry.appMessage.mediaMessage.url
+        
+        if !incomingUrl.isEmpty {
+            if entry.appMessage.hasAgent {
+                let agent = entry.appMessage.agent
+                
+                return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue)),
+                               body: MessageMedia(url: incomingUrl,
+                                                  sendDate: entry.deliveryTime.seconds, placeholderImage: nil))
+            } else {
+                return Message(entryId: entry.entryID, owner: .incoming(nil),
+                               body: MessageMedia(url: incomingUrl,
+                                                  sendDate: entry.deliveryTime.seconds, placeholderImage: nil))
+            }
+        }
+        
+        // MARK: - Events
+        
+        if entry.appEvent.agentLeftEvent.hasAgent {
+            
+            let agentThatLeft = entry.appEvent.agentLeftEvent.agent
+            
+            return Message(entryId: entry.entryID, owner: .system,
+                           body: MessageEvent(type: .left(Agent(name: agentThatLeft.displayName,
+                                                                type: agentThatLeft.type.rawValue,
+                                                                pictureUrl: agentThatLeft.pictureURL)),
+                                              sendDate: entry.deliveryTime.seconds))
+            
+        }
+        
+        if entry.appEvent.agentJoinedEvent.hasAgent {
+            
+            let agentThatJoined = entry.appEvent.agentJoinedEvent.agent
+            
+            return Message(entryId: entry.entryID, owner: .system,
+                           body: MessageEvent(type: .joined(Agent(name: agentThatJoined.displayName,
+                                                                  type: agentThatJoined.type.rawValue,
+                                                                  pictureUrl: agentThatJoined.pictureURL)),
+                                              sendDate: entry.deliveryTime.seconds))
+            
+        }
+        
+        // TODO: NEEDs attenchion - Skipping clicks on buttons on christmas BOT.
+        if entry.contactMessage.choiceResponseMessage.postbackData != ""
+            || entry.contactMessage.fallbackMessage.rawMessage.isEmpty == false {
+            return nil
+        }
+
+        if case .composingEvent(_)? =  entry.appEvent.event {
+            return Message(entryId: entry.entryID, owner: .system,
+                           body: MessageEvent(type: .composeStarted,
+                                              sendDate: entry.deliveryTime.seconds))
+
+        } else if case .composingEndEvent(_)? =  entry.appEvent.event {
+            return Message(entryId: entry.entryID, owner: .system,
+                           body: MessageEvent(type: .composeEnd,
+                                              sendDate: entry.deliveryTime.seconds))
+            
+        } else if case .composingEvent(_)? =  entry.contactEvent.event {
+            return nil
+        
+        } else if case .composingEndEvent(_)? =  entry.contactEvent.event {
+            return nil
+        }
+
+        if !entry.contactEvent.unknownFields.data.isEmpty {
+            return nil
+
+        }
+
+        if entry.appEvent.event != nil {
+            return nil
+        }
+
+        return Message(entryId: entry.entryID, owner: .incoming(nil), body: MessageUnsupported(sendDate: entry.deliveryTime.seconds))
+    }
+    
+    return nil
 }
