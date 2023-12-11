@@ -1,3 +1,4 @@
+// swiftlint:disable file_length type_body_length
 import Foundation
 import UIKit
 
@@ -551,7 +552,7 @@ final class DefaultStartViewModel: StartViewModel {
         }
     }
     
-    private func convertCallBackWithMessageToAsync(message: Message, callback: (Message, (Message?) -> Void) -> Void) async -> Message? {
+    private func convertCallBackWithMessageToAsync(message: Message, callback: (Message, @escaping (Message?) -> Void) -> Void) async -> Message? {
         await withCheckedContinuation { continuation in
             callback(message) { processedMessage in
                 continuation.resume(returning: processedMessage)
@@ -567,3 +568,4 @@ extension DefaultStartViewModel: MessageDataSourceDelegate {
         subscribeForMessages()
     }
 }
+// swiftlint:enable file_length type_body_length

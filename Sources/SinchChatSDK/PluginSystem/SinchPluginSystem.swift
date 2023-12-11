@@ -9,7 +9,7 @@ public protocol SinchPluginAvailablePluginMethods: AnyObject {
     var eventListenerSubject: PassthroughSubject<SinchPluginEvent, Never> { get }
     
     var customMessageTypeHandlers: [(_ model: Message) -> Message?] { get set }
-    var customMessageTypeHandlersAsync: [(_ model: Message, _ callback: (Message?) -> Void) -> Void] { get set }
+    var customMessageTypeHandlersAsync: [(_ model: Message, _ callback: @escaping (Message?) -> Void) -> Void] { get set }
     
     var additionalMetadata: SinchMetadataArray { get set }
     
