@@ -1,6 +1,6 @@
 import UIKit
 
-enum TypeMessageMedia: Codable, Equatable {
+public enum TypeMessageMedia: Codable, Equatable {
     case image
     case audio
     case video
@@ -8,7 +8,7 @@ enum TypeMessageMedia: Codable, Equatable {
     case unsupported
     
 }
-enum FileType: String, Codable {
+public enum FileType: String, Codable {
     case pdf = "PDF"
     case doc = "DOC"
     case docx = "DOCX"
@@ -43,21 +43,23 @@ enum FileType: String, Codable {
     }
     
 }
-struct MessageMedia: MessageBody, MessageWithURL {
-    
-    var url: String
-    var savedUrl: String?
-    var sendDate: Int64?
-    var type: TypeMessageMedia?
-    var isExpanded: Bool = false
-    var size: String?
 
-    init(url: String, sendDate: Int64? = nil, placeholderImage: UIImage? = nil, type: TypeMessageMedia? = nil) {
+public struct MessageMedia: MessageBody, MessageWithURL {
+    
+    public var url: String
+    public var savedUrl: String?
+    public var sendDate: Int64?
+    public var type: TypeMessageMedia?
+    public var isExpanded: Bool = false
+    public var size: String?
+
+    public init(url: String, sendDate: Int64? = nil, placeholderImage: UIImage? = nil, type: TypeMessageMedia? = nil) {
         self.url = url
         self.sendDate = sendDate
         self.type = type
     }
-    func convertStringToImage(strBase64: String) -> UIImage? {
+    
+    public func convertStringToImage(strBase64: String) -> UIImage? {
         
         if let data = Data(base64Encoded: strBase64, options: .ignoreUnknownCharacters) {
             return UIImage(data: data)

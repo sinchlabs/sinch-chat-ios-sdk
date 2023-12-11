@@ -4,7 +4,7 @@ import UIKit
 protocol StartViewModel: MessageDataSourceDelegate {
     var delegate: StartViewModelDelegate? { get }
     var isStartedFromInbox: Bool { get set }
-
+    
     func setInternetConnectionState(_ state: InternetConnectionState)
     func sendMedia(_ media: MediaType, completion: @escaping (Result<Message, Error>) -> Void)
     func sendMessage(_ message: MessageType, completion: @escaping (Result<Message?, Error>) -> Void)
@@ -19,7 +19,7 @@ protocol StartViewModel: MessageDataSourceDelegate {
     func processNewMessages(_ message: Message) -> [Message]
     func sendEvent(_ event: EventType )
     func getChatOptions() -> SinchChatOptions
-
+    
 }
 
 protocol StartViewModelDelegate: AnyObject {
@@ -31,7 +31,7 @@ protocol StartViewModelDelegate: AnyObject {
     func didChangeInternetState(_ state: InternetConnectionState)
     func setVisibleRefreshActivityIndicator(_ isVisible: Bool)
     func setVisibleTypingIndicator(_ isVisible: Bool, animated: Bool)
-
+    
 }
 
 final class DefaultStartViewModel: StartViewModel {
@@ -45,7 +45,7 @@ final class DefaultStartViewModel: StartViewModel {
     var isEventSent = false
     var isTypingIndicatorVisible = false
     var isStartedFromInbox = false
-
+    
     var error: Error?
     var state: InternetConnectionState = .notDetermined {
         willSet {
@@ -58,13 +58,13 @@ final class DefaultStartViewModel: StartViewModel {
     }
     var timeOfLastReceivedMessage: Date?
     var timer: Timer?
-
+    
     init(messageDataSource: InboxMessageDataSource, notificationPermission: PushNofiticationPermissionHandler, startedFromInbox: Bool = false) {
         dataSource = messageDataSource
         
         self.notificationPermission = notificationPermission
         self.isStartedFromInbox = startedFromInbox
-
+        
     }
     
     deinit {
@@ -128,41 +128,54 @@ final class DefaultStartViewModel: StartViewModel {
             shouldInitializeConversation: dataSource.shouldInitializeConversation
         )
     }
-
+    
     func setInternetConnectionState(_ state: InternetConnectionState) {
         self.state = state
     }
     
-    func processHistoryMessages(_ messages: [Message]) -> [Message] {
+    func processHistoryMessages(_ messages: [Message], callback: @escaping ([Message]) -> Void) {
         
-        var array: [[Message]] = []
-        for notProcessedMessage in messages.reversed() {
-            guard let message = self.processPluginMessage(notProcessedMessage) else {
-                continue
-            }
-            if let msgEvent = message.body as? MessageEvent,
-               msgEvent.text?.isEmpty ?? true {
-                continue
-            }
+        Task(priority: .userInitiated) {
             
-            if messagesArrays.isEmpty {
-                messagesArrays.append([message])
-                array.append([message])
-            } else {
+            var array: [[Message]] = []
+            for notProcessedMessage in messages.reversed() {
                 
-                if let messageFromHistory = messagesArrays.first?.first,
-                   let dateFromHistory = messageFromHistory.body.sendDate,
-                   let date = message.body.sendDate {
+                guard let message = await processPluginMessageAsync(notProcessedMessage) else {
+                    continue
+                }
+                if let msgEvent = message.body as? MessageEvent,
+                   msgEvent.text?.isEmpty ?? true {
+                    continue
+                }
+                
+                if messagesArrays.isEmpty {
+                    messagesArrays.append([message])
+                    array.append([message])
+                } else {
                     
-                    if dateFromHistory.isSameDay(date) {
-                        messagesArrays[0].insert(message, at: 0)
-                        if array.isEmpty {
-                            array.append([message])
-                        } else {
-                            array[0].insert(message, at: 0)
-                            
-                        }
+                    if let messageFromHistory = messagesArrays.first?.first,
+                       let dateFromHistory = messageFromHistory.body.sendDate,
+                       let date = message.body.sendDate {
                         
+                        if dateFromHistory.isSameDay(date) {
+                            messagesArrays[0].insert(message, at: 0)
+                            if array.isEmpty {
+                                array.append([message])
+                            } else {
+                                array[0].insert(message, at: 0)
+                                
+                            }
+                            
+                        } else {
+                            messagesArrays.insert([message], at: 0)
+                            
+                            if array.isEmpty {
+                                array.append([message])
+                            } else {
+                                array.insert([message], at: 0)
+                                
+                            }
+                        }
                     } else {
                         messagesArrays.insert([message], at: 0)
                         
@@ -173,20 +186,12 @@ final class DefaultStartViewModel: StartViewModel {
                             
                         }
                     }
-                } else {
-                    messagesArrays.insert([message], at: 0)
-                    
-                    if array.isEmpty {
-                        array.append([message])
-                    } else {
-                        array.insert([message], at: 0)
-                        
-                    }
                 }
+                
             }
+            callback(createArrayWithDateMessage(array))
         }
         
-        return createArrayWithDateMessage(array)
     }
     
     func processNewMessages(_ message: Message) -> [Message] {
@@ -284,46 +289,48 @@ final class DefaultStartViewModel: StartViewModel {
             
             switch result {
             case .success(let message):
-                guard let processedMessageByPlugins = self.processPluginMessage(message) else {
-                    return
-                }
-                
-                if let event = processedMessageByPlugins.body as? MessageEvent {
+                self.processPluginMessage(message) { processedMessageByPlugins in
+                    guard let processedMessageByPlugins = processedMessageByPlugins else {
+                        return
+                    }
                     
-                    switch event.type {
-                    case .composeStarted:
-                        if self.shouldHandleTypingIndicator() {
-                            self.isTypingIndicatorVisible = true
-                            self.delegate?.setVisibleTypingIndicator( self.isTypingIndicatorVisible, animated: true)
-                            DispatchQueue.main.async {
-                                
-                                self.timer?.invalidate()
-                                self.timer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: false) { [weak self] _ in
+                    if let event = processedMessageByPlugins.body as? MessageEvent {
+                        
+                        switch event.type {
+                        case .composeStarted:
+                            if self.shouldHandleTypingIndicator() {
+                                self.isTypingIndicatorVisible = true
+                                self.delegate?.setVisibleTypingIndicator( self.isTypingIndicatorVisible, animated: true)
+                                DispatchQueue.main.async {
                                     
-                                    guard let self = self else { return }
-                                    self.isTypingIndicatorVisible = false
-                                    self.delegate?.setVisibleTypingIndicator(self.isTypingIndicatorVisible, animated: true)
-                                    
+                                    self.timer?.invalidate()
+                                    self.timer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: false) { [weak self] _ in
+                                        
+                                        guard let self = self else { return }
+                                        self.isTypingIndicatorVisible = false
+                                        self.delegate?.setVisibleTypingIndicator(self.isTypingIndicatorVisible, animated: true)
+                                        
+                                    }
                                 }
                             }
+                            return
+                        case .composeEnd :
+                            self.timer?.invalidate()
+                            self.isTypingIndicatorVisible = false
+                            self.delegate?.setVisibleTypingIndicator(self.isTypingIndicatorVisible, animated: true)
+                            
+                            return
+                        default:
+                            break
                         }
-                        return
-                    case .composeEnd :
-                        self.timer?.invalidate()
-                        self.isTypingIndicatorVisible = false
-                        self.delegate?.setVisibleTypingIndicator(self.isTypingIndicatorVisible, animated: true)
-                        
-                        return
-                    default:
-                        break
+                    }
+                    let messages = self.processNewMessages(processedMessageByPlugins)
+                    if !messages.isEmpty {
+                        self.timeOfLastReceivedMessage = Date()
+                        self.delegate?.didReceiveMessages(messages)
                     }
                 }
-                let messages = self.processNewMessages(processedMessageByPlugins)
-                if !messages.isEmpty {
-                    self.timeOfLastReceivedMessage = Date()
-                    self.delegate?.didReceiveMessages(messages)
-                }
-
+                
             case .failure(let error):
                 Logger.verbose(error)
                 self.error = error
@@ -333,7 +340,7 @@ final class DefaultStartViewModel: StartViewModel {
     
     func loadHistory() {
         error = nil
-
+        
         dataSource.getMessageHistory { [weak self] messages in
             
             guard let self = self else {
@@ -342,14 +349,18 @@ final class DefaultStartViewModel: StartViewModel {
             switch messages {
                 
             case .success(let messages):
-                let processedMessages = self.processHistoryMessages(messages)
-                
-                if self.dataSource.isFirstPage() {
-                    self.delegate?.didReceiveHistoryFirstMessages(processedMessages)
+                self.processHistoryMessages(messages) { [weak self] processedMessages in
+                    guard let self = self else {
+                        return
+                    }
                     
-                } else {
-                    
-                    self.delegate?.didReceiveHistoryMessages(processedMessages)
+                    if self.dataSource.isFirstPage() {
+                        self.delegate?.didReceiveHistoryFirstMessages(processedMessages)
+                        
+                    } else {
+                        
+                        self.delegate?.didReceiveHistoryMessages(processedMessages)
+                    }
                 }
             case .failure(let error):
                 Logger.verbose(error)
@@ -363,14 +374,14 @@ final class DefaultStartViewModel: StartViewModel {
     func sendMessage(_ message: MessageType, completion: @escaping (Result<Message?, Error>) -> Void) {
         
         isMessageSent = false
-       
+        
         if state == .isOff {
             self.delegate?.errorSendingMessage(error: .noInternetConnection)
             return
         }
         askForNotifications()
         error = nil
-
+        
         dataSource.sendMessage(message) { [weak self] result in
             guard let self = self else {
                 return
@@ -403,12 +414,12 @@ final class DefaultStartViewModel: StartViewModel {
             
             if let messageContent = message.body as? MessageMedia {
                 messageBody = messageContent
-
+                
             } else {
                 messageBody = MessageMedia(url: "", sendDate: date)
-
+                
             }
-        
+            
         case let .location(latitude, longitude, localizationConfig):
             messageBody = MessageLocation(label: localizationConfig.outgoingLocationMessageButtonTitle,
                                           title: localizationConfig.outgoingLocationMessageTitle,
@@ -426,14 +437,14 @@ final class DefaultStartViewModel: StartViewModel {
     }
     
     func sendEvent(_ event: EventType ) {
-
+        
         isEventSent = false
-       
+        
         if state == .isOff {
             self.delegate?.errorSendingMessage(error: .noInternetConnection)
             return
         }
-
+        
         dataSource.sendEvent(event) { [weak self] result in
             
             guard let self = self else {
@@ -441,10 +452,10 @@ final class DefaultStartViewModel: StartViewModel {
             }
             
             switch result {
-
+                
             case .success():
                 self.isEventSent = true
-
+                
             case .failure(let error):
                 self.isEventSent = false
                 Logger.verbose(error)
@@ -453,13 +464,13 @@ final class DefaultStartViewModel: StartViewModel {
         }
     }
     func sendMedia(_ media: MediaType, completion: @escaping (Result<Message, Error>) -> Void) {
-
+        
         if state == .isOff {
             self.delegate?.errorSendingMessage(error: .noInternetConnection)
             return
         }
         error = nil
-
+        
         dataSource.uploadMedia(media) { [weak self] result in
             
             guard let self = self else {
@@ -508,16 +519,47 @@ final class DefaultStartViewModel: StartViewModel {
         return Message(entryId: "-1", owner: .outgoing, body: messageBody, status: .sending)
     }
     
-    private func processPluginMessage(_ message: Message) -> Message? {
-        var processedMessage: Message? = message
-        SinchChatSDK.shared.customMessageTypeHandlers.forEach { handler in
-            if let msg = processedMessage {
-                processedMessage = handler(msg)
+    private func processPluginMessage(_ message: Message, callback: @escaping (Message?) -> Void) {
+        Task(priority: .utility) {
+            var processedMessage: Message? = message
+            SinchChatSDK.shared.customMessageTypeHandlers.forEach { handler in
+                if let msg = processedMessage {
+                    processedMessage = handler(msg)
+                }
+            }
+            
+            if processedMessage == nil {
+                callback(processedMessage)
+                return
+            }
+            
+            for handler in SinchChatSDK.shared.customMessageTypeHandlersAsync {
+                if let msg = processedMessage {
+                    processedMessage = await convertCallBackWithMessageToAsync(message: msg, callback: handler)
+                }
+            }
+            
+            callback(processedMessage)
+        }
+    }
+    
+    private func processPluginMessageAsync(_ message: Message) async -> Message? {
+        await withCheckedContinuation { continuation in
+            processPluginMessage(message) { processed in
+                continuation.resume(returning: processed)
             }
         }
-        return processedMessage
+    }
+    
+    private func convertCallBackWithMessageToAsync(message: Message, callback: (Message, (Message?) -> Void) -> Void) async -> Message? {
+        await withCheckedContinuation { continuation in
+            callback(message) { processedMessage in
+                continuation.resume(returning: processedMessage)
+            }
+        }
     }
 }
+
 extension DefaultStartViewModel: MessageDataSourceDelegate {
     
     func subscriptionError() {

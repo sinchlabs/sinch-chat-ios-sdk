@@ -33,6 +33,7 @@ public final class SinchChatSDK {
     public var additionalMetadata: SinchMetadataArray = []
     public lazy var eventListenerSubject = PassthroughSubject<SinchPluginEvent, Never>()
     public lazy var customMessageTypeHandlers: [(_ model: Message) -> Message?] = []
+    public lazy var customMessageTypeHandlersAsync: [(Message, (Message?) -> Void) -> Void] = []
     
     private init() {}
     

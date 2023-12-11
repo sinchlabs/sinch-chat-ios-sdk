@@ -1,13 +1,12 @@
 import UIKit
 
-struct MessageVoice: MessageBody, MessageWithURL {
-    var url: String
-    var sendDate: Int64?
-    var isExpanded: Bool = false
+public struct MessageVoice: MessageBody, MessageWithURL {
+    public var url: String
+    public var sendDate: Int64?
+    public var isExpanded: Bool = false
 
-    init(url: String, sendDate: Int64?, placeholderImage: UIImage?) {
+    public  init(url: String, sendDate: Int64?, placeholderImage: UIImage?) {
         self.url = url
         self.sendDate = sendDate
-
     }
 }

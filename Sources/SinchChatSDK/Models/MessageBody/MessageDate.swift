@@ -1,8 +1,8 @@
 import Foundation
 
-struct MessageDate: MessageBody {
+public struct MessageDate: MessageBody {
     
-    var sendDate: Int64?
-    var isExpanded: Bool = false
+    public var sendDate: Int64?
+    public var isExpanded: Bool = false
 
 }

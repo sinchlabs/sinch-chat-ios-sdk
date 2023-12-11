@@ -1,13 +1,13 @@
-struct MessageLocation: MessageBody {
+public struct MessageLocation: MessageBody {
     
-    var label: String
-    var title: String
-    var latitude: Double
-    var longitude: Double
-    var sendDate: Int64?
-    var isExpanded: Bool = false
+    public var label: String
+    public var title: String
+    public var latitude: Double
+    public var longitude: Double
+    public var sendDate: Int64?
+    public var isExpanded: Bool = false
 
-    func getReadMore(maxCount: Int, textToAdd: String ) -> String {
+    public func getReadMore(maxCount: Int, textToAdd: String ) -> String {
         
         if title.count > maxCount && !isExpanded {
            

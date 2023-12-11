@@ -1,14 +1,15 @@
 import Foundation
 
-struct MessageText: MessageBody, MessageWithText {
-    var text: String
-    var sendDate: Int64?
-    var isExpanded: Bool = false
+public struct MessageText: MessageBody, MessageWithText {
+    public var text: String
+    public var sendDate: Int64?
+    public var isExpanded: Bool = false
 
-    func getText() -> String {
+    public func getText() -> String {
         return text
     }
-    func getReadMore(maxCount: Int, textToAdd: String ) -> String {
+    
+    public func getReadMore(maxCount: Int, textToAdd: String ) -> String {
         
         if text.count > maxCount && !isExpanded {
            
