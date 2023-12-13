@@ -2,6 +2,8 @@ import UIKit
 
 final class InboxViewController: SinchViewController<InboxViewModel, InboxView>, SinchChatViewController {
     
+    var customOptions: GetChatViewControllerOptions =  .init(metadata: [], shouldInitializeConversation: true)
+    
     var conversations : [InboxChat] = []
     lazy var activityIndicator = LoadMoreActivityIndicator(scrollView: mainView.tableView, spacingFromLastCell: 10, spacingFromLastCellOnActionStart: 60)
     
@@ -99,14 +101,14 @@ extension InboxViewController: UITableViewDelegate {
     }
     func showChatForConversation(_ conversation: InboxChat) {
         
-        let options: GetChatViewControllerOptions = .init(topicID: conversation.chatOptions?.option?.topicID,
+       customOptions = .init(topicID: conversation.chatOptions?.option?.topicID,
                                                           metadata: conversation.chatOptions?.option?.metadata ?? [], shouldInitializeConversation: true)
         SinchChatSDK.shared._chat.apiClient = viewModel.apiClient
         
         guard let chatViewController = (try? SinchChatSDK.shared.chat.getChatViewController(
             uiConfig: mainView.uiConfig,
             localizationConfig: mainView.localizationConfiguration,
-            options: options)
+            options: customOptions)
         ) as? StartViewController else {
             return
         }
@@ -117,12 +119,11 @@ extension InboxViewController: UITableViewDelegate {
     
     func showChat() {
         
-        let options: GetChatViewControllerOptions = .init(metadata: [], shouldInitializeConversation: true)
         SinchChatSDK.shared._chat.apiClient = viewModel.apiClient
         guard let chatViewController = (try? SinchChatSDK.shared.chat.getChatViewController(
             uiConfig: mainView.uiConfig,
             localizationConfig: mainView.localizationConfiguration,
-            options: options)
+            options: customOptions)
         ) as? StartViewController else {
             return
         }

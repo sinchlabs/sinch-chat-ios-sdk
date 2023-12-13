@@ -2,7 +2,7 @@ protocol InboxRootCoordinator: AnyObject {
     var uiConfiguration: SinchSDKConfig.UIConfig { get }
     var localizationConfiguration: SinchSDKConfig.LocalizationConfig { get }
     
-    func getRootViewController(apiClient: APIClient) -> InboxViewController
+    func getRootViewController(apiClient: APIClient, options: GetChatViewControllerOptions?) -> InboxViewController
     
 }
 
@@ -26,12 +26,16 @@ final class DefaultInboxRootCoordinator: InboxRootCoordinator {
         self.pushPermissionHandler = pushPermissionHandler
     }
     
-    func getRootViewController(apiClient: APIClient) -> InboxViewController {
+    func getRootViewController(apiClient: APIClient, options: GetChatViewControllerOptions? = nil) -> InboxViewController {
         
         let inboxViewModel = DefaultInboxViewModel(pushPermissionHandler: pushPermissionHandler, apiClient: apiClient, authDataSource: authDataSource)
         let inboxView = InboxView(uiConfiguration: uiConfiguration, localizationConfiguration: localizationConfiguration)
         
         let inboxViewController = InboxViewController(viewModel: inboxViewModel, view: inboxView)
+        
+        if let options = options {
+            inboxViewController.customOptions = options
+        }
         
         return inboxViewController
     }

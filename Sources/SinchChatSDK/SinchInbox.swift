@@ -11,7 +11,8 @@ public protocol SinchInbox {
     /// - Returns: UIViewController which contains inbox UI.
     /// - Throws: SinchInboxSDKError enum with specific error.
     func getInboxViewController(uiConfig: SinchSDKConfig.UIConfig?,
-                                localizationConfig: SinchSDKConfig.LocalizationConfig?) throws -> SinchChatViewController
+                                localizationConfig: SinchSDKConfig.LocalizationConfig?,
+                                options: GetChatViewControllerOptions?) throws -> SinchChatViewController
     /// Get latest conversations
     /// - Returns: array of latest conversations
     ///
@@ -31,7 +32,8 @@ public protocol SinchInbox {
     ///
     func getChatViewController(inboxChat: InboxChat,
                                uiConfig: SinchSDKConfig.UIConfig?,
-                               localizationConfig: SinchSDKConfig.LocalizationConfig?) throws -> SinchChatViewController
+                               localizationConfig: SinchSDKConfig.LocalizationConfig?
+    ) throws -> SinchChatViewController
     
 }
 
@@ -67,8 +69,9 @@ public struct InboxChatOptions: Codable {
 public extension SinchInbox {
     
     func getInboxViewController(uiConfig: SinchSDKConfig.UIConfig? = nil,
-                                localizationConfig: SinchSDKConfig.LocalizationConfig? = nil) throws -> SinchChatViewController {
-        try getInboxViewController(uiConfig: uiConfig, localizationConfig: localizationConfig)
+                                localizationConfig: SinchSDKConfig.LocalizationConfig? = nil,
+                                options: GetChatViewControllerOptions? = nil) throws -> SinchChatViewController {
+        try getInboxViewController(uiConfig: uiConfig, localizationConfig: localizationConfig, options: options)
     }
 }
 
@@ -77,7 +80,7 @@ public enum SinchInboxSDKError: Error {
 }
 
 final class DefaultSinchInbox: SinchInbox {
-         
+    
     var lastChatOptions: GetChatViewControllerOptions?
         
     internal var authDataSource: AuthDataSource?
@@ -94,7 +97,8 @@ final class DefaultSinchInbox: SinchInbox {
     }
         
     public func getInboxViewController(uiConfig: SinchSDKConfig.UIConfig? = nil,
-                                       localizationConfig: SinchSDKConfig.LocalizationConfig? = nil) throws -> SinchChatViewController {
+                                       localizationConfig: SinchSDKConfig.LocalizationConfig? = nil,
+                                       options: GetChatViewControllerOptions? = nil) throws -> SinchChatViewController {
        
        guard let authDataSource = authDataSource, let region = region else {
             throw SinchChatSDKError.unavailable
@@ -109,7 +113,7 @@ final class DefaultSinchInbox: SinchInbox {
                                                          localizationConfiguration: localizationConfig ?? .defaultValue,
                                                          authDataSource: authDataSource, pushPermissionHandler: pushPermissionHandler)
         self.rootCoordinator =  rootCordinator
-        let inbox =  rootCordinator.getRootViewController(apiClient: client)
+        let inbox =  rootCordinator.getRootViewController(apiClient: client, options: options)
     
         return inbox
 
