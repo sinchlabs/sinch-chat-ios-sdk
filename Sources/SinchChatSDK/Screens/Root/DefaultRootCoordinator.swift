@@ -8,29 +8,28 @@ import QuickLook
 
 protocol RootCoordinator: AnyObject {
     
-    func getRootViewController(uiConfig: SinchSDKConfig.UIConfig, localizationConfig: SinchSDKConfig.LocalizationConfig) -> StartViewController
+    func getRootViewController(uiConfig: SinchSDKConfig.UIConfig, localizationConfig: SinchSDKConfig.LocalizationConfig, sendDocumentAsText: Bool) -> StartViewController
     
     func getMediaViewerController(uiConfig: SinchSDKConfig.UIConfig,
-                                      localizationConfig: SinchSDKConfig.LocalizationConfig, url: URL) -> UINavigationController
+                                  localizationConfig: SinchSDKConfig.LocalizationConfig, url: URL) -> UINavigationController
     
     func getLocationViewController(uiConfig: SinchSDKConfig.UIConfig,
-                     localizationConfig: SinchSDKConfig.LocalizationConfig) -> LocationViewController
+                                   localizationConfig: SinchSDKConfig.LocalizationConfig) -> LocationViewController
     
     func getDocumentViewerController(viewController: StartViewController, cell: UICollectionViewCell,
-                                      uiConfig: SinchSDKConfig.UIConfig,
-                                      localizationConfig: SinchSDKConfig.LocalizationConfig, url: URL, index: Int) -> PreviewViewController
-
+                                     uiConfig: SinchSDKConfig.UIConfig,
+                                     localizationConfig: SinchSDKConfig.LocalizationConfig, url: URL, index: Int) -> PreviewViewController
+    
 }
 
-
 final class DefaultRootCoordinator: RootCoordinator {
-          
+    
     private var messageDataSource: InboxMessageDataSource
-
+    
     private let pushPermissionHandler: PushNofiticationPermissionHandler
     private let authDataSource: AuthDataSource
     lazy var locationManager = CLLocationManager()
-
+    
     init(messageDataSource: InboxMessageDataSource,
          authDataSource: AuthDataSource,
          pushPermissionHandler: PushNofiticationPermissionHandler) {
@@ -40,9 +39,17 @@ final class DefaultRootCoordinator: RootCoordinator {
         self.pushPermissionHandler = pushPermissionHandler
     }
     
-    func getRootViewController(uiConfig: SinchSDKConfig.UIConfig, localizationConfig: SinchSDKConfig.LocalizationConfig) -> StartViewController {
-
-        let startViewModel: StartViewModel = DefaultStartViewModel(messageDataSource: messageDataSource, notificationPermission: pushPermissionHandler)
+    func getRootViewController(
+        uiConfig: SinchSDKConfig.UIConfig,
+        localizationConfig: SinchSDKConfig.LocalizationConfig,
+        sendDocumentAsText: Bool = false
+    ) -> StartViewController {
+        
+        let startViewModel: StartViewModel = DefaultStartViewModel(
+            messageDataSource: messageDataSource,
+            notificationPermission: pushPermissionHandler,
+            sendDocumentAsText: sendDocumentAsText
+        )
         messageDataSource.delegate = startViewModel
         let startViewController = StartViewController(viewModel: startViewModel, view: .init(uiConfiguration: uiConfig, localizationConfiguration: localizationConfig))
         startViewController.cordinator = self
@@ -50,7 +57,7 @@ final class DefaultRootCoordinator: RootCoordinator {
     }
     
     func getMediaViewerController(uiConfig: SinchSDKConfig.UIConfig,
-                                      localizationConfig: SinchSDKConfig.LocalizationConfig, url: URL) -> UINavigationController {
+                                  localizationConfig: SinchSDKConfig.LocalizationConfig, url: URL) -> UINavigationController {
         
         let mediaViewController = MediaViewerController(
             viewModel: DefaultMediaViewerViewModel(url: url),
@@ -63,8 +70,8 @@ final class DefaultRootCoordinator: RootCoordinator {
         return mediaNavigationController
     }
     func getDocumentViewerController(viewController: StartViewController, cell: UICollectionViewCell,
-                                      uiConfig: SinchSDKConfig.UIConfig,
-                                         localizationConfig: SinchSDKConfig.LocalizationConfig, url: URL, index: Int) -> PreviewViewController {
+                                     uiConfig: SinchSDKConfig.UIConfig,
+                                     localizationConfig: SinchSDKConfig.LocalizationConfig, url: URL, index: Int) -> PreviewViewController {
         
         let quickLookViewController = PreviewViewController()
         quickLookViewController.uiConfig = uiConfig
@@ -78,7 +85,7 @@ final class DefaultRootCoordinator: RootCoordinator {
     }
     
     func getLocationViewController(uiConfig: SinchSDKConfig.UIConfig, localizationConfig: SinchSDKConfig.LocalizationConfig) -> LocationViewController {
-
+        
         let locationViewController = LocationViewController(
             viewModel: DefaultLocationViewModel(),
             view: .init(uiConfiguration: uiConfig, localizationConfiguration: localizationConfig))

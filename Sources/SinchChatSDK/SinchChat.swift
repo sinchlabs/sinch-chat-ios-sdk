@@ -152,7 +152,7 @@ final class DefaultSinchChat: SinchChat {
         let locConfig = localizationConfig ?? SinchSDKConfig.LocalizationConfig.defaultValue
         
         lastChatOptions = options
-        return rootCordinator.getRootViewController(uiConfig: uiConfig, localizationConfig: locConfig )
+        return rootCordinator.getRootViewController(uiConfig: uiConfig, localizationConfig: locConfig, sendDocumentAsText: options?.sendDocumentAsTextMessage ?? false)
         
     }
 
@@ -186,11 +186,18 @@ public struct GetChatViewControllerOptions {
     let topicID: String?
     let metadata: SinchMetadataArray
     let shouldInitializeConversation: Bool
+    let sendDocumentAsTextMessage: Bool
     
-    public init(topicID: String? = nil, metadata: SinchMetadataArray, shouldInitializeConversation: Bool = false) {
+    public init(
+        topicID: String? = nil,
+        metadata: SinchMetadataArray,
+        shouldInitializeConversation: Bool = false,
+        sendDocumentAsTextMessage: Bool = false
+    ) {
         self.topicID = topicID
         self.metadata = metadata
         self.shouldInitializeConversation = shouldInitializeConversation
+        self.sendDocumentAsTextMessage = sendDocumentAsTextMessage
     }
 }
 

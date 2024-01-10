@@ -5,6 +5,7 @@ import UIKit
 protocol StartViewModel: MessageDataSourceDelegate {
     var delegate: StartViewModelDelegate? { get }
     var isStartedFromInbox: Bool { get set }
+    var sendDocumentAsText: Bool { get }
     
     func setInternetConnectionState(_ state: InternetConnectionState)
     func sendMedia(_ media: MediaType, completion: @escaping (Result<Message, Error>) -> Void)
@@ -46,6 +47,7 @@ final class DefaultStartViewModel: StartViewModel {
     var isEventSent = false
     var isTypingIndicatorVisible = false
     var isStartedFromInbox = false
+    var sendDocumentAsText = false
     
     var error: Error?
     var state: InternetConnectionState = .notDetermined {
@@ -60,12 +62,15 @@ final class DefaultStartViewModel: StartViewModel {
     var timeOfLastReceivedMessage: Date?
     var timer: Timer?
     
-    init(messageDataSource: InboxMessageDataSource, notificationPermission: PushNofiticationPermissionHandler, startedFromInbox: Bool = false) {
+    init(
+        messageDataSource: InboxMessageDataSource,
+        notificationPermission: PushNofiticationPermissionHandler,
+        sendDocumentAsText: Bool = false
+    ) {
         dataSource = messageDataSource
         
+        self.sendDocumentAsText = sendDocumentAsText
         self.notificationPermission = notificationPermission
-        self.isStartedFromInbox = startedFromInbox
-        
     }
     
     deinit {
@@ -508,8 +513,11 @@ final class DefaultStartViewModel: StartViewModel {
             switch result {
                 
             case .success(let urlString):
-                
-                completion(.success(self.createMediaMessage(urlString: urlString, mediaType: media)))
+                if sendDocumentAsText {
+                    completion(.success(Message(entryId: "-1", owner: .outgoing, body: MessageText(text: urlString), status: .sending)))
+                } else {
+                    completion(.success(self.createMediaMessage(urlString: urlString, mediaType: media)))
+                }
                 
             case .failure(let error):
                 Logger.verbose(error)

@@ -1009,7 +1009,6 @@ func handleIncomingMessage(_ entry: Sinch_Chat_Sdk_V1alpha2_Entry) -> Message? {
             
         }
         
-    
         if entry.contactMessage.choiceResponseMessage.postbackData != ""
             || entry.contactMessage.fallbackMessage.rawMessage.isEmpty == false {
             return nil

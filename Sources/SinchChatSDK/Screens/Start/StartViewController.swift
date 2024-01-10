@@ -311,14 +311,21 @@ extension StartViewController: ImagePickerDelegate {
             })
         }
     }
+    
     func sendMedia(_ media: MediaType) {
         
         self.viewModel.sendMedia(media) { [weak self] result in
             guard let self = self else { return }
             switch result {
             case .success(let message):
-                self.messageSent(message)
-                self.sendMessage(.media(message:message))
+                if viewModel.sendDocumentAsText {
+                    if let textMessage = message.body as? MessageText {
+                        self.sendMessage(.text(textMessage.text))
+                    }
+                } else {
+                    self.messageSent(message)
+                    self.sendMessage(.media(message:message))
+                }
                 
             case .failure(let error):
                 self.errorSendingMessage(error: error as! MessageDataSourceError)
