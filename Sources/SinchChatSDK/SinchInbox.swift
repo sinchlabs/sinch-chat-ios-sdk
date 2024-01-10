@@ -137,15 +137,17 @@ final class DefaultSinchInbox: SinchInbox {
         }
     }
     
-    func getChatViewController(inboxChat: InboxChat, uiConfig: SinchSDKConfig.UIConfig? = nil,
-                               localizationConfig: SinchSDKConfig.LocalizationConfig? = nil) throws -> SinchChatViewController {
+    func getChatViewController(
+        inboxChat: InboxChat,
+        uiConfig: SinchSDKConfig.UIConfig? = nil,
+        localizationConfig: SinchSDKConfig.LocalizationConfig? = nil) throws -> SinchChatViewController {
           
         let options: GetChatViewControllerOptions = .init(topicID:
                                                             inboxChat.chatOptions?.option?.topicID,
                                                           metadata: inboxChat.chatOptions?.option?.metadata ?? [], shouldInitializeConversation: true)
         
-        return try SinchChatSDK.shared.chat.getChatViewController(uiConfig: rootCoordinator?.uiConfiguration,
-                                                                  localizationConfig: rootCoordinator?.localizationConfiguration,
+        return try SinchChatSDK.shared.chat.getChatViewController(uiConfig: uiConfig ?? rootCoordinator?.uiConfiguration,
+                                                                  localizationConfig: localizationConfig ?? rootCoordinator?.localizationConfiguration,
                                                                   options:options)
         
     }
