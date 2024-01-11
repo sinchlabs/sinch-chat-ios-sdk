@@ -45,8 +45,10 @@ protocol MessageDataSource {
 class InboxMessageDataSource: MessageDataSource {
     
     private let messageDataSource: DefaultMessageDataSource
+    private let sendDocumentAsText: Bool
     
-    init(apiClient: APIClient, authDataSource: AuthDataSource, topicModel: TopicModel? = nil, metadata: SinchMetadataArray = [], shouldInitializeConversation: Bool = false) {
+    init(apiClient: APIClient, authDataSource: AuthDataSource, topicModel: TopicModel? = nil, metadata: SinchMetadataArray = [], shouldInitializeConversation: Bool = false, sendDocumentAsText: Bool = false) {
+        self.sendDocumentAsText = sendDocumentAsText
         messageDataSource = DefaultMessageDataSource(
             apiClient: apiClient,
             authDataSource: authDataSource,
@@ -108,13 +110,18 @@ class InboxMessageDataSource: MessageDataSource {
             
             // todo
             let date = message.body.sendDate ?? Int64(Date().timeIntervalSince1970)
-            let conversation = InboxChat(text: messageText, sendDate:  Date(timeIntervalSince1970: TimeInterval(date)),
-                                         avatarImage: nil, status: "",
-                                         options: InboxChatOptions(option: .init(
-                                            topicID: self.messageDataSource.topicModel?.topicID,
-                                            metadata: self.messageDataSource.metadata,
-                                            shouldInitializeConversation: self.messageDataSource.shouldInitializeConversation),
-                                                                   authModel:auth))
+            let conversation = InboxChat(
+                text: messageText,
+                sendDate:  Date(timeIntervalSince1970: TimeInterval(date)),
+                avatarImage: nil,
+                status: "",
+                options: InboxChatOptions(option: .init(
+                    topicID: self.messageDataSource.topicModel?.topicID,
+                    metadata: self.messageDataSource.metadata,
+                    shouldInitializeConversation: self.messageDataSource.shouldInitializeConversation,
+                    sendDocumentAsText: self.sendDocumentAsText
+                ),
+                                          authModel:auth))
             
             do {
                 // Create JSON Encoder

@@ -142,7 +142,8 @@ final class DefaultSinchChat: SinchChat {
             authDataSource: authDataSource,
             topicModel: topicModel,
             metadata: options?.metadata ?? [],
-            shouldInitializeConversation: options?.shouldInitializeConversation ?? false)
+            shouldInitializeConversation: options?.shouldInitializeConversation ?? false,
+            sendDocumentAsText: options?.sendDocumentAsTextMessage ?? false)
         let rootCordinator = DefaultRootCoordinator(messageDataSource: messageDataSource,
                                                     authDataSource: authDataSource,
                                                     pushPermissionHandler: pushPermissionHandler)

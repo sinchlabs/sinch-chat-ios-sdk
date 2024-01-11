@@ -25,7 +25,8 @@ extension SinchChatSDK: SinchPluginAvailablePluginMethods {
             authDataSource: authDataSource,
             topicModel: topicModel,
             metadata: chatOptions?.metadata ?? [],
-            shouldInitializeConversation: chatOptions?.shouldInitializeConversation ?? false
+            shouldInitializeConversation: chatOptions?.shouldInitializeConversation ?? false,
+            sendDocumentAsText: chatOptions?.sendDocumentAsText ?? false
         )
         
         messageDataSource.sendMessage(message) { result in

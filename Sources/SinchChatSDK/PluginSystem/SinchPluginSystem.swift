@@ -38,10 +38,12 @@ public struct SinchChatOptions: Codable, Equatable {
     public var topicID: String?
     public var metadata: SinchMetadataArray?
     public var shouldInitializeConversation: Bool?
+    public var sendDocumentAsText: Bool?
     
     public static func == (lhs: SinchChatOptions, rhs: SinchChatOptions) -> Bool {
         lhs.topicID == rhs.topicID &&
         lhs.metadata == rhs.metadata &&
-        lhs.shouldInitializeConversation == lhs.shouldInitializeConversation
+        lhs.shouldInitializeConversation == lhs.shouldInitializeConversation &&
+        lhs.sendDocumentAsText == rhs.sendDocumentAsText
     }
 }

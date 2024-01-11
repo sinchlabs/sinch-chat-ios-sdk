@@ -101,8 +101,12 @@ extension InboxViewController: UITableViewDelegate {
     }
     func showChatForConversation(_ conversation: InboxChat) {
         
-       customOptions = .init(topicID: conversation.chatOptions?.option?.topicID,
-                                                          metadata: conversation.chatOptions?.option?.metadata ?? [], shouldInitializeConversation: true)
+        customOptions = .init(
+            topicID: conversation.chatOptions?.option?.topicID,
+            metadata: conversation.chatOptions?.option?.metadata ?? [],
+            shouldInitializeConversation: conversation.chatOptions?.option?.shouldInitializeConversation ?? false,
+            sendDocumentAsTextMessage: conversation.chatOptions?.option?.sendDocumentAsText ?? false
+        )
         SinchChatSDK.shared._chat.apiClient = viewModel.apiClient
         
         guard let chatViewController = (try? SinchChatSDK.shared.chat.getChatViewController(
