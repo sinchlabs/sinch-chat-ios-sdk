@@ -413,6 +413,12 @@ final class DefaultStartViewModel: StartViewModel {
     }
     
     private func processMessageBeforeSending(messagePayload: MessageType, callback: @escaping (MessageType?) -> Void) {
+        switch messagePayload {
+        case .choiceResponseMessage:
+            callback(messagePayload)
+            return
+        default: break
+        }
         guard let message = self.createMessage(entryId: UUID().uuidString, messageType: messagePayload) else {
             callback(nil)
             return
