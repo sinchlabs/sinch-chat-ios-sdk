@@ -24,7 +24,7 @@ public protocol SinchChat {
     
 }
 
-public class SinchChatViewController: StartViewController {
+public protocol SinchChatViewController: UIViewController {
 }
 
 public extension SinchChat {
