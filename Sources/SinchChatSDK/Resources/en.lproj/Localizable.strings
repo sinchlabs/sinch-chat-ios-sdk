@@ -25,14 +25,14 @@
 "menu_button_title_gallery" = "Gallery";
 "button_title_share_location" = "Share Location";
 "button_title_cancel" = "Cancel";
-"button_title_collapsed_text_message_button" = "Reed more";
+"button_title_collapsed_text_message_button" = "Read more";
 "alert_title_location_disabled" = "Turn On Location Services to Allow this app to Determine Your Location";
 "alert_message_location_disabled" = "We need Location Services to be able to send your location on the chat. Please go to Settings > Privacy > Location Services to use this feature.";
 "alert_title_microphone_disabled" = "We need access to Microphone to Allow this app to record Voice message. Please go to Settings and Allow access to Camera.";
-"alert_message_camera_disabled" = "We need access to Camera to be able to make photo and send it as a message. Please go to Settings and Allow access to Camera.";
+"alert_message_camera_disabled" = "We need access to the Camera to be able to take a photo and send it as a message. Please go to Settings and Allow access to Camera.";
 "unsupported_message_explanation" = "Whoops! Sorry. We are not yet supporting this type of message...";
 
-"alert_title_app_location_status_denied" = "We need access to your location to be able to send message with your current position. To enable access, tap Settings > Location";
+"alert_title_app_location_status_denied" = "We need access to your location to be able to send a message with your current position. To enable access, tap Settings > Location";
 
 "alert_button_title_not_now" = "Not Now";
 "alert_button_title_settings" = "Settings";
@@ -51,5 +51,4 @@
 "sent_status" = "Sent";
 "delivered_status" = "Delivered";
 "seen_status" = "Seen";
-
 "inbox_title" = "Message Center";
