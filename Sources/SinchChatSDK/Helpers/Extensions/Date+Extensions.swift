@@ -5,7 +5,8 @@ extension Date {
     func getFormattedTime() -> String {
         
         let dateFormat = DateFormatter()
-        dateFormat.dateFormat = "HH:mm"
+        dateFormat.timeStyle = .short
+        dateFormat.dateStyle = .none
         
         return dateFormat.string(from: self)
     }
@@ -26,14 +27,14 @@ extension Date {
         
         if Calendar.current.isDateInToday(self) {
             let dateFormat = DateFormatter()
-            dateFormat.dateFormat = "HH:mm"
+            dateFormat.timeStyle = .short
             
             return dateFormat.string(from: self)
         } else if Calendar.current.isDateInYesterday(self) {
             return  localizationConfiguration.yesterday
             
         } else {
-            //"short"   "none"    10/10/17
+            // "short"   "none"    10/10/17
             return  DateFormatter.localizedString(from: self, dateStyle: .short, timeStyle: .none)
         }
     }
