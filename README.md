@@ -1,9 +1,6 @@
 
 # iOS Sinch SDK - Getting Started
 
-  
-
-  
 
 This is documentation how to easily implement our SDK for chat and for push features.
 
@@ -39,74 +36,16 @@ This is documentation how to easily implement our SDK for chat and for push feat
 
 1. Initialize SDK as soon as application is starting.
 
-  
-
 2. SetIdentity as soon as you can authenticate the user using your internal ********UserID******** and sign it using algorithm on ********the backend side.******** (You can sign it on mobile but it is ********NOT RECOMMENDED********) ← this method can be called multiple times.
 
 3. Setup push notifications.
 
 4. Show chat.
 
-  
 
-## Info.plist permissions
-
-  
-
-### Push notifications permission 
-
-- Capability → `Push Notifications`
-
-- Capability → `background modes` → `Remote notifications` + explanation in info.plist:
-
-
-********Example:********
-
-```swift
-
-<dict>
-
-<key>UIBackgroundModes</key>
-
-<array>
-
-<string>remote-notification</string>
-
-</array>
-
-</dict>
-
-  
-```
-
-### Other permissions
-
-If you keep [enabled](#disable-some-of-the-features) the option to send voice messages, you will need to add the `NSMicrophoneUsageDescription` permission.  
- Likewise, if you keep [enabled](#disable-some-of-the-features) the Share Location option, you may also need to add location permissions `NSLocationAlwaysAndWhenInUseUsageDescription` and `NSLocationWhenInUseUsageDescription` based on your use case.
-
-********Example:********
-
-```swift
-
-<dict>
-
-<key>NSMicrophoneUsageDescription</key>
-<string>Enabling microphone access lets you send voice messages in the chat.</string>
-
-<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-<string>Enabling location services will allow you to share your location with others through the chat.</string>
-
-<key>NSLocationWhenInUseUsageDescription</key>
-<string>Enabling location services will allow you to share your location with others through the chat.</string>
-
-</dict>
-
-  
-```
 
 ## Initialize
 
-  
 
 ```swift
 
@@ -289,11 +228,126 @@ debugPrint("remove identity error")
 }
 
 ```
-        
 
-# Chat
+## Info.plist permissions
 
   
+
+### Push notifications permission 
+
+- Capability → `Push Notifications`
+
+- Capability → `background modes` → `Remote notifications` + explanation in info.plist:
+
+
+********Example:********
+
+```swift
+
+<dict>
+
+<key>UIBackgroundModes</key>
+
+<array>
+
+<string>remote-notification</string>
+
+</array>
+
+</dict>
+
+  
+```
+
+### Other permissions
+
+If you keep [enabled](#disable-some-of-the-features) the option to send voice messages, you will need to add the `NSMicrophoneUsageDescription` permission.  
+ Likewise, if you keep [enabled](#disable-some-of-the-features) the Share Location option, you may also need to add location permissions `NSLocationAlwaysAndWhenInUseUsageDescription` and `NSLocationWhenInUseUsageDescription` based on your use case.
+
+********Example:********
+
+```swift
+
+<dict>
+
+<key>NSMicrophoneUsageDescription</key>
+<string>Enabling microphone access lets you send voice messages in the chat.</string>
+
+<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+<string>Enabling location services will allow you to share your location with others through the chat.</string>
+
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>Enabling location services will allow you to share your location with others through the chat.</string>
+
+</dict>
+
+  
+```
+
+## Privacy manifest files
+
+In SDK source code there is `PrivacyInfo.xcprivacy` that describe the data SDK collects and the reasons required APIs it uses. 
+
+See more at https://developer.apple.com/documentation/bundleresources/privacy_manifest_files
+
+### Describing data use in privacy manifests
+
+Record the categories of data that your app or third-party SDK collects about the person using the app, and the reasons it collects the data. 
+
+If you keep [enabled](#disable-some-of-the-features) the option to send voice messages, you will ********need to add******** add the `NSPrivacyCollectedDataTypeAudioData` data type to your `PrivacyInfo` file.  
+Likewise, if you keep [enabled](#disable-some-of-the-features) the Share Location option, you may also ********need to add******** `NSPrivacyCollectedDataTypePreciseLocation` data type to your `PrivacyInfo` file. 
+If you keep [enabled](#disable-some-of-the-features) the option to send photo or video messages, you will ********need to add******** the `NSPrivacyCollectedDataTypePhotosorVideos` data type to your `PrivacyInfo` file.
+
+See more at  https://developer.apple.com/documentation/bundleresources/privacy_manifest_files/describing_data_use_in_privacy_manifests
+
+********Example:********
+
+
+```swift
+
+    <key>NSPrivacyCollectedDataTypes</key>
+    <array>
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypeAudioData</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>User can send voice message to the other user using chat.</string>
+            </array>
+        </dict>
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypePhotosorVideos</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>User can send his photos or videos to the other user using chat.</string>
+            </array>
+        </dict>
+        <dict>
+            <key>NSPrivacyCollectedDataType</key>
+            <string>NSPrivacyCollectedDataTypePreciseLocation</string>
+            <key>NSPrivacyCollectedDataTypeLinked</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypeTracking</key>
+            <false/>
+            <key>NSPrivacyCollectedDataTypePurposes</key>
+            <array>
+                <string>User can send his location to the other using chat.</string>
+            </array>
+        </dict>
+    </array>
+
+```
+
+# Chat
 
 
 ## Check chat availability
