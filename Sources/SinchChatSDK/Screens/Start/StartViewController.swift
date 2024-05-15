@@ -13,7 +13,7 @@ enum PlayingItem {
     case mediaMessage(message: Message)
 }
 
-class StartViewController: SinchViewController<StartViewModel, StartView >, SinchChatViewController {
+class StartViewController: SinchViewController<StartViewModel, StartView >, SinchChatViewController, ChatViewProtocol {
     
     var imagePickerHelper: ImagePickerHelper!
     weak var cordinator: RootCoordinator?
@@ -431,7 +431,7 @@ extension StartViewController: ComposeViewDelegate {
     
     func sendChoiceResponseMessage(postbackData: String, entryID: String) {
         
-        viewModel.sendMessage(.choiceResponseMessage(postbackData: postbackData, entryID: entryID), completion: { _ in 
+        viewModel.sendMessage(.choiceResponseMessage(postbackData: postbackData, entryID: entryID), completion: { _ in
                 // todo
                 debugPrint("successful")
                     
@@ -647,19 +647,25 @@ extension StartViewController: StartViewModelDelegate {
             refreshControl.endRefreshing()
         }
     }
-    
+    func didChangeErrorState(_ state: ChatErrorState) {
+        mainView.setErrorViewState(state)
+    }
     func didChangeInternetState(_ state: InternetConnectionState) {
+        var chatErrorState: ChatErrorState = .none
+        
         switch state {
             
         case .isOn:
             debugPrint("ON ***********")
-            
+            chatErrorState = .isInternetOn
             mainView.collectionView.refreshControl = refreshControl
             setVisibleRefreshActivityIndicator(true)
             
             viewModel.onInternetOn()
         case .isOff:
             debugPrint("OFF ***********")
+            chatErrorState = .isInternetOff
+
             setVisibleRefreshActivityIndicator(false)
             mainView.collectionView.refreshControl = nil
             viewModel.onInternetLost()
@@ -668,7 +674,7 @@ extension StartViewController: StartViewModelDelegate {
             break
         }
         
-        mainView.setErrorViewState(state)
+        mainView.setErrorViewState(chatErrorState)
     }
     
     func errorSendingMessage(error: MessageDataSourceError) {
@@ -709,8 +715,6 @@ extension StartViewController: StartViewModelDelegate {
             self.mainView.messageComposeView.scrollToBottomButton.isHidden = true
             if messages.isEmpty {
                 self.refreshControl.endRefreshing()
-
-                return
                 
             }
             CATransaction.begin()
@@ -731,7 +735,6 @@ extension StartViewController: StartViewModelDelegate {
     
             if messages.isEmpty {
             self.refreshControl.endRefreshing()
-            return
             
         }
         

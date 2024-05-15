@@ -25,12 +25,24 @@ public protocol SinchPluginAvailablePluginMethods: AnyObject {
 public protocol SinchPluginListener {
     func cancel()
 }
-
+public protocol ChatViewProtocol: UIViewController {
+    func didChangeErrorState(_ state: ChatErrorState)
+}
 public enum SinchPluginEvent {
     case didSetIdentity(AuthModel)
-    case didStartChat(chatViewController: UIViewController, chatOptions: SinchChatOptions)
+    case didStartChat(chatViewController: ChatViewProtocol, chatOptions: SinchChatOptions)
     case didCloseChat
     case didRemoveIdentity
+    case didChangeInternetState(isOn: Bool)
+
+}
+public enum ChatErrorState {
+
+    case none
+    case isInternetOff
+    case isInternetOn
+    case agentNotInChat
+    case agentInChat
 
 }
 
@@ -43,7 +55,7 @@ public struct SinchChatOptions: Codable, Equatable {
     public static func == (lhs: SinchChatOptions, rhs: SinchChatOptions) -> Bool {
         lhs.topicID == rhs.topicID &&
         lhs.metadata == rhs.metadata &&
-        lhs.shouldInitializeConversation == lhs.shouldInitializeConversation &&
+        lhs.shouldInitializeConversation == rhs.shouldInitializeConversation &&
         lhs.sendDocumentAsText == rhs.sendDocumentAsText
     }
 }

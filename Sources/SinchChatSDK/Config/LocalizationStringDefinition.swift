@@ -20,6 +20,9 @@ public extension SinchSDKConfig {
         public var noInternetConnection = NSLocalizedString("label_no_internet_connection", bundle: Bundle.staticBundle, comment: "")
         public var alertMessageCouldNotLoadHistory = NSLocalizedString("alert_could_not_load_history", bundle: Bundle.staticBundle, comment: "")
         public var collapsedTextMessageButtonTitle = NSLocalizedString("button_title_collapsed_text_message_button", bundle: Bundle.staticBundle, comment: "")
+        
+        public var agentHasNotJoined = NSLocalizedString("label_agent_has_not_joined", bundle: Bundle.staticBundle, comment: "")
+        public var agentHasJoined = NSLocalizedString("label_agent_has_joined", bundle: Bundle.staticBundle, comment: "")
 
         public var alertMessageNotSent = NSLocalizedString("alert_message_not_sent", bundle: Bundle.staticBundle, comment: "")
         public var alertTitleError = NSLocalizedString("alert_title_error", bundle: Bundle.staticBundle, comment: "")

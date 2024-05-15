@@ -7,6 +7,8 @@
 "label_connected" = "Connected";
 "label_no_internet_connection" = "No internet connection";
 "label_disabled_chat_messages" = "Sending messages is disabled";
+"label_agent_has_not_joined" = "Agent has not joined the conversation yet";
+"label_agent_has_joined" = "Agent has joined the conversation";
 
 "alert_could_not_load_history" = "Conversation history loading failed. Please try again!";
 "alert_message_not_sent" = "Message not sent. Please try again later!";
