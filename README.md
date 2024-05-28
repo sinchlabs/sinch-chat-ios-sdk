@@ -516,6 +516,24 @@ let viewControler = try SinchChatSDK.shared.chat.getChatViewController(uiConfig:
   
   
 ```
+### Override media store
+
+You can upload media to your repository and provide url string 
+
+********Example:********
+
+
+```swift
+
+        SinchChatSDK.shared.overrideMediaStore =  {(file, completion) in
+            
+            // upload media to your media store and return back URL string
+            
+            return completion(.success("{url string}"))
+        }
+
+```
+
 
 ### Disable sending messages
 

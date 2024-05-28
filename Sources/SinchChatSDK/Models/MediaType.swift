@@ -2,11 +2,11 @@ import UIKit
 import AVFoundation
 import MobileCoreServices
 
-enum MediaType {
+public enum MediaType {
     case image(UIImage)
     case video(URL)
     case audio(URL)
-    case file(URL,FileType?)
+    case file(URL, FileType?)
     
     var convertToSinchMedia: Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest? {
         var request = Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest()
@@ -35,13 +35,15 @@ enum MediaType {
             } catch {
                 mimeType = "video/mp4"
             }
-        case .file(let url, let type ):
+        case .file(let url, _ ):
             do {
                 data =  try Data(contentsOf: url)
                
                     let pathExtension = url.pathExtension
 
-                if let uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, pathExtension as NSString, nil)?.takeRetainedValue(),  let mimetype = UTTypeCopyPreferredTagWithClass(uti, kUTTagClassMIMEType)?.takeRetainedValue() {
+                if let uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension,
+                                                                   pathExtension as NSString, nil)?.takeRetainedValue(),
+                   let mimetype = UTTypeCopyPreferredTagWithClass(uti, kUTTagClassMIMEType)?.takeRetainedValue() {
                     mimeType =  mimetype as String
                     fileName = url.lastPathComponent
                 } else {
