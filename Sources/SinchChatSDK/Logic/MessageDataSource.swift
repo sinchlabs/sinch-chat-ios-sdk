@@ -360,10 +360,9 @@ final class DefaultMessageDataSource: MessageDataSource {
             let service = try getService()
             
             var isConversationStarted = false
-            switch message {
-            case .fallbackMessage(let event):
-                isConversationStarted = event == "conversation_start"
-            default: break
+
+            if case .fallbackMessage(let event) = message, event == "conversation_start" {
+                isConversationStarted = true
             }
             
             guard var message = message.convertToSinchMessage else {
@@ -487,30 +486,44 @@ final class DefaultMessageDataSource: MessageDataSource {
         }
     }
     func uploadMedia(_ media: MediaType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void) {
-        do {
-            
-            guard let request = media.convertToSinchMedia else {
-                completion(.failure(.unknownTypeOfMedia))
-                return
-            }
-            
-            let service = try getService()
-            let call = service.uploadMedia(request)
-            
-            call.response.whenComplete({ result in
-                
-                switch result {
-                case .success(let response):
-                    completion(.success(response.url))
+       
+            if let override = SinchChatSDK.shared.overrideMediaStore {
+                override(media, { result in
                     
-                case .failure(let err):
-                    completion(.failure(.unknown(err)))
+                    switch result {
+                    case .success(let responseURLString):
+                        completion(.success(responseURLString))
+                        
+                    case .failure(let err):
+                        completion(.failure(.unknown(err)))
+                    }
+                })
+                
+            } else {
+                do {
+                    guard let request = media.convertToSinchMedia else {
+                        completion(.failure(.unknownTypeOfMedia))
+                        return
+                    }
+                    
+                    let service = try getService()
+                    let call = service.uploadMedia(request)
+                    
+                    call.response.whenComplete({ result in
+                        
+                        switch result {
+                        case .success(let response):
+                            completion(.success(response.url))
+                            
+                        case .failure(let err):
+                            completion(.failure(.unknown(err)))
+                        }
+                    })
+                    
+                } catch {
+                    completion(.failure(.notLoggedIn))
                 }
-            })
-            
-        } catch {
-            completion(.failure(.notLoggedIn))
-        }
+            }
     }
     
     func subscribeForMessages(completion: @escaping (Result<Message, MessageDataSourceError>) -> Void) {
@@ -565,7 +578,6 @@ final class DefaultMessageDataSource: MessageDataSource {
                         completion(.success(message))
                         
                     }
-                    
                 }
                 
                 self.subscription = subscription
@@ -720,29 +732,6 @@ final class DefaultMessageDataSource: MessageDataSource {
         })
         
         task.resume()
-    }
-    
-    private func cssonvertSinchMetadataToMetadataJson(metadata: SinchMetadataArray) -> String? {
-        if metadata.isEmpty, SinchChatSDK.shared.additionalMetadata.isEmpty {
-            return nil
-        }
-        var dictMetadata: [String: String] = [:]
-        
-        SinchChatSDK.shared.additionalMetadata.forEach({
-            let tuple = $0.getKeyValue()
-            dictMetadata[tuple.key] = tuple.value
-        })
-        
-        metadata.forEach({
-            let tuple = $0.getKeyValue()
-            dictMetadata[tuple.key] = tuple.value
-        })
-        
-        guard let encodedMetadata = try? JSONEncoder().encode(dictMetadata) else {
-            return nil
-        }
-        
-        return String(data: encodedMetadata, encoding: .utf8)
     }
     
     static func createChoicesArray(_ choices: [Sinch_Conversationapi_Type_Choice], entryID: String) -> [ChoiceMessageType] {
