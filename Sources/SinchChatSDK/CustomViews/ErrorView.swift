@@ -11,7 +11,7 @@ final class ErrorView: SinchView {
     var textLabel: UILabel = UILabel()
     var imageView: UIImageView = UIImageView()
     var stackView: UIStackView = UIStackView()
-    
+
     override func setupSubviews() {
         
         imageView.contentMode = .scaleAspectFit
@@ -41,21 +41,31 @@ final class ErrorView: SinchView {
         NSLayoutConstraint.activate([stackViewHeight, stackViewXCenter, stackViewYCenter])
 
     }
-    func updateToState(_ state: InternetConnectionState) {
+    func updateToState(_ state: ChatErrorState) {
 
         switch state {
-        case .isOn:
+        case .isInternetOn:
             textLabel.text = localizationConfiguration.connected
             imageView.image = UIImage(named: "connectedIcon", in: Bundle.staticBundle, compatibleWith: nil)
             backgroundColor = UIColor(named: "connectedColor", in: Bundle.staticBundle, compatibleWith: nil)
-        case .isOff:
+        case .isInternetOff:
             textLabel.text = localizationConfiguration.noInternetConnection
             imageView.image = UIImage(named: "disconnectedIcon", in: Bundle.staticBundle, compatibleWith: nil)
             backgroundColor = UIColor(named: "primaryRedColor", in: Bundle.staticBundle, compatibleWith: nil)
 
-        case .notDetermined:
+        case .none:
             break
+        case .agentNotInChat:
+            textLabel.text = localizationConfiguration.agentHasNotJoined
+            imageView.image = UIImage(named: "disconnectedIcon", in: Bundle.staticBundle, compatibleWith: nil)
+            backgroundColor = UIColor(named: "primaryRedColor", in: Bundle.staticBundle, compatibleWith: nil)
+            
+        case .agentInChat:
+            textLabel.text = localizationConfiguration.agentHasJoined
+            imageView.image = UIImage(named: "connectedIcon", in: Bundle.staticBundle, compatibleWith: nil)
+            backgroundColor = UIColor(named: "connectedColor", in: Bundle.staticBundle, compatibleWith: nil)
         }
+        
         layoutIfNeeded()
     }
     

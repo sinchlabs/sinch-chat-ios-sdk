@@ -9,8 +9,11 @@ internal extension StartViewController {
             DispatchQueue.main.async { [weak self] in
                 if path.status == .satisfied {
                     self?.viewModel.setInternetConnectionState(.isOn)
+                    SinchChatSDK.shared.eventListenerSubject.send(.didChangeInternetState(isOn:true))
                 } else {
                     self?.viewModel.setInternetConnectionState(.isOff)
+                    SinchChatSDK.shared.eventListenerSubject.send(.didChangeInternetState(isOn:false))
+
                 }
             }
         }
@@ -22,7 +25,7 @@ internal extension StartViewController {
         NotificationCenter.default.addObserver(self, selector: #selector(StartViewController.handleKeyboardDidChangeState(_:)),
                                                name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(StartViewController.handleTextViewDidBeginEditing(_:)),
-                                               name: UITextView.textDidBeginEditingNotification, object: nil)        
+                                               name: UITextView.textDidBeginEditingNotification, object: nil)
     }
     
     func removeKeyboardObservers() {
@@ -44,7 +47,7 @@ internal extension StartViewController {
         if mainView.collectionView.contentOffset.y >=
             (mainView.collectionView.contentSize.height - mainView.collectionView.frame.size.height) {
             mainView.collectionView.scrollToLastItem()
-        }        
+        }
     }
     @objc
     private func handleKeyboardDidChangeState(_ notification: Notification) {
