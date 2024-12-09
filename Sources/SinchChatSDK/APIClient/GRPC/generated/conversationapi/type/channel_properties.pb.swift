@@ -102,6 +102,20 @@ enum Sinch_Conversationapi_Type_ChannelPropertyKeys: SwiftProtobuf.Enum {
   /// Max character limit: 100 chars
   /// This property does not have default value.
   case lineVideoTrackingID // = 13
+
+  /// SMS max number of message parts. If text message must be delivered as multiple SMS messages
+  ///(because text length exceed single SMS message limit) this property defines how many parts
+  ///maximum the Customer allows. 
+  case smsMaxNumberOfMessageParts // = 14
+
+  /// Defines if message should be checked for required split before sending. 
+  case splitEnabled // = 15
+
+  /// Defines if Apple Business Messages message should be encoded as RSA type 
+  case applebcRsaEnabled // = 16
+
+  /// Messenger notification messages token. Allows to send notification messages for users that opted in 
+  case messengerNotificationMessagesToken // = 17
   case UNRECOGNIZED(Int)
 
   init() {
@@ -124,6 +138,10 @@ enum Sinch_Conversationapi_Type_ChannelPropertyKeys: SwiftProtobuf.Enum {
     case 11: self = .mmsStrictValidation
     case 12: self = .kakaotalkAuthentication
     case 13: self = .lineVideoTrackingID
+    case 14: self = .smsMaxNumberOfMessageParts
+    case 15: self = .splitEnabled
+    case 16: self = .applebcRsaEnabled
+    case 17: self = .messengerNotificationMessagesToken
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -144,6 +162,10 @@ enum Sinch_Conversationapi_Type_ChannelPropertyKeys: SwiftProtobuf.Enum {
     case .mmsStrictValidation: return 11
     case .kakaotalkAuthentication: return 12
     case .lineVideoTrackingID: return 13
+    case .smsMaxNumberOfMessageParts: return 14
+    case .splitEnabled: return 15
+    case .applebcRsaEnabled: return 16
+    case .messengerNotificationMessagesToken: return 17
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -154,7 +176,7 @@ enum Sinch_Conversationapi_Type_ChannelPropertyKeys: SwiftProtobuf.Enum {
 
 extension Sinch_Conversationapi_Type_ChannelPropertyKeys: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static var allCases: [Sinch_Conversationapi_Type_ChannelPropertyKeys] = [
+  static let allCases: [Sinch_Conversationapi_Type_ChannelPropertyKeys] = [
     .propertyKeyUndefined,
     .messengerMessagingType,
     .messengerMessageTag,
@@ -169,6 +191,10 @@ extension Sinch_Conversationapi_Type_ChannelPropertyKeys: CaseIterable {
     .mmsStrictValidation,
     .kakaotalkAuthentication,
     .lineVideoTrackingID,
+    .smsMaxNumberOfMessageParts,
+    .splitEnabled,
+    .applebcRsaEnabled,
+    .messengerNotificationMessagesToken,
   ]
 }
 
@@ -196,5 +222,9 @@ extension Sinch_Conversationapi_Type_ChannelPropertyKeys: SwiftProtobuf._ProtoNa
     11: .same(proto: "MMS_STRICT_VALIDATION"),
     12: .same(proto: "KAKAOTALK_AUTHENTICATION"),
     13: .same(proto: "LINE_VIDEO_TRACKING_ID"),
+    14: .same(proto: "SMS_MAX_NUMBER_OF_MESSAGE_PARTS"),
+    15: .same(proto: "SPLIT_ENABLED"),
+    16: .same(proto: "APPLEBC_RSA_ENABLED"),
+    17: .same(proto: "MESSENGER_NOTIFICATION_MESSAGES_TOKEN"),
   ]
 }

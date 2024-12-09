@@ -63,11 +63,26 @@ struct Sinch_Conversationapi_Type_Conversation {
   /// Up to 1024 characters long. 
   var metadata: String = String()
 
+  /// An arbitrary data set by the Conversation API clients or SendMessage API client.
+  var metadataJson: SwiftProtobuf.Google_Protobuf_Struct {
+    get {return _metadataJson ?? SwiftProtobuf.Google_Protobuf_Struct()}
+    set {_metadataJson = newValue}
+  }
+  /// Returns true if `metadataJson` has been explicitly set.
+  var hasMetadataJson: Bool {return self._metadataJson != nil}
+  /// Clears the value of `metadataJson`. Subsequent reads from it will return its default value.
+  mutating func clearMetadataJson() {self._metadataJson = nil}
+
+  /// Optional. Arbitrary correlation ID related to the MT message set by the
+  /// Conversation API user.
+  var correlationID: String = String()
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
   fileprivate var _lastReceived: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+  fileprivate var _metadataJson: SwiftProtobuf.Google_Protobuf_Struct? = nil
 }
 
 #if swift(>=5.5) && canImport(_Concurrency)
@@ -88,6 +103,8 @@ extension Sinch_Conversationapi_Type_Conversation: SwiftProtobuf.Message, SwiftP
     5: .standard(proto: "active_channel"),
     6: .same(proto: "active"),
     7: .same(proto: "metadata"),
+    8: .standard(proto: "metadata_json"),
+    9: .standard(proto: "correlation_id"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -103,6 +120,8 @@ extension Sinch_Conversationapi_Type_Conversation: SwiftProtobuf.Message, SwiftP
       case 5: try { try decoder.decodeSingularEnumField(value: &self.activeChannel) }()
       case 6: try { try decoder.decodeSingularBoolField(value: &self.active) }()
       case 7: try { try decoder.decodeSingularStringField(value: &self.metadata) }()
+      case 8: try { try decoder.decodeSingularMessageField(value: &self._metadataJson) }()
+      case 9: try { try decoder.decodeSingularStringField(value: &self.correlationID) }()
       default: break
       }
     }
@@ -134,6 +153,12 @@ extension Sinch_Conversationapi_Type_Conversation: SwiftProtobuf.Message, SwiftP
     if !self.metadata.isEmpty {
       try visitor.visitSingularStringField(value: self.metadata, fieldNumber: 7)
     }
+    try { if let v = self._metadataJson {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+    } }()
+    if !self.correlationID.isEmpty {
+      try visitor.visitSingularStringField(value: self.correlationID, fieldNumber: 9)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -145,6 +170,8 @@ extension Sinch_Conversationapi_Type_Conversation: SwiftProtobuf.Message, SwiftP
     if lhs.activeChannel != rhs.activeChannel {return false}
     if lhs.active != rhs.active {return false}
     if lhs.metadata != rhs.metadata {return false}
+    if lhs._metadataJson != rhs._metadataJson {return false}
+    if lhs.correlationID != rhs.correlationID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

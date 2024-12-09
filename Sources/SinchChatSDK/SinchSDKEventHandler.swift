@@ -20,7 +20,7 @@ extension SinchChatSDK: SinchPluginAvailablePluginMethods {
             topicModel = TopicModel(topicID: topicID)
         }
         
-        let messageDataSource = InboxMessageDataSource(
+        let messageDataSource = DefaultMessageDataSource(
             apiClient: client,
             authDataSource: authDataSource,
             topicModel: topicModel,

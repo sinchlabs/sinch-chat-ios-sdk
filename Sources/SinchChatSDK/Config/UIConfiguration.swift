@@ -103,7 +103,6 @@ public extension SinchSDKConfig {
         
         // MARK: - Inbox
         
-        public var inboxUnreadDotColor = UIColor(named: "secondaryPageControlColor", in: Bundle.staticBundle, compatibleWith: nil)
         public var inboxChatNameColor = UIColor(named: "primaryTextColor", in: Bundle.staticBundle, compatibleWith: nil)
         public var inboxStatusTextColor = UIColor(named: "primaryTextColor", in: Bundle.staticBundle, compatibleWith: nil)
         public var inboxLastMessageTextColor = UIColor(named: "primaryDescriptionText", in: Bundle.staticBundle, compatibleWith: nil)

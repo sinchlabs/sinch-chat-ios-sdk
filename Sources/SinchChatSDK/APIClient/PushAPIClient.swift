@@ -27,7 +27,6 @@ final class DefaultPushAPIClient: PushAPIClient {
             host = "grpc.sinch-push.prod.sinch.com"
         case .US1:
             host = "grpc.sinch-push.us1.prod.sinch.com"
-
         case .custom(_, let host):
             self.host = host
         }

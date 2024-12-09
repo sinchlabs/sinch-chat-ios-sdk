@@ -1,6 +1,5 @@
 import UIKit
 
-//TODO
 open class SinchView: UIView {
     
     public var uiConfig = SinchSDKConfig.UIConfig.defaultValue

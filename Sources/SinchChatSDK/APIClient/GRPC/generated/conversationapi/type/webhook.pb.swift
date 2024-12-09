@@ -55,7 +55,7 @@ enum Sinch_Conversationapi_Type_WebhookTargetType: SwiftProtobuf.Enum {
 
 extension Sinch_Conversationapi_Type_WebhookTargetType: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static var allCases: [Sinch_Conversationapi_Type_WebhookTargetType] = [
+  static let allCases: [Sinch_Conversationapi_Type_WebhookTargetType] = [
     .dismiss,
     .grpc,
     .http,
@@ -112,6 +112,24 @@ enum Sinch_Conversationapi_Type_WebhookTrigger: SwiftProtobuf.Enum {
 
   /// Subscribe to get an event when a conversation is deleted
   case conversationDelete // = 14
+
+  /// Subscribe to an event that is triggered when a contact has been updated.
+  case contactUpdate // = 16
+
+  /// Subscribe to direct channel event.
+  case channelEvent // = 17
+
+  /// Subscribe to Smart conversation analysis.
+  case smartConversation // = 18
+
+  /// Subscribe to Record Notifications.
+  case recordNotification // = 19
+
+  /// Subscribe to message submit Notifications.
+  case messageSubmit // = 20
+
+  /// Subscribe to contact identity duplications found during event/message processing chain.
+  case contactIdentitiesDuplication // = 21
   case UNRECOGNIZED(Int)
 
   init() {
@@ -135,6 +153,12 @@ enum Sinch_Conversationapi_Type_WebhookTrigger: SwiftProtobuf.Enum {
     case 12: self = .optOut
     case 13: self = .capability
     case 14: self = .conversationDelete
+    case 16: self = .contactUpdate
+    case 17: self = .channelEvent
+    case 18: self = .smartConversation
+    case 19: self = .recordNotification
+    case 20: self = .messageSubmit
+    case 21: self = .contactIdentitiesDuplication
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -156,6 +180,12 @@ enum Sinch_Conversationapi_Type_WebhookTrigger: SwiftProtobuf.Enum {
     case .optOut: return 12
     case .capability: return 13
     case .conversationDelete: return 14
+    case .contactUpdate: return 16
+    case .channelEvent: return 17
+    case .smartConversation: return 18
+    case .recordNotification: return 19
+    case .messageSubmit: return 20
+    case .contactIdentitiesDuplication: return 21
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -166,7 +196,7 @@ enum Sinch_Conversationapi_Type_WebhookTrigger: SwiftProtobuf.Enum {
 
 extension Sinch_Conversationapi_Type_WebhookTrigger: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static var allCases: [Sinch_Conversationapi_Type_WebhookTrigger] = [
+  static let allCases: [Sinch_Conversationapi_Type_WebhookTrigger] = [
     .unspecifiedTrigger,
     .messageDelivery,
     .eventDelivery,
@@ -182,6 +212,12 @@ extension Sinch_Conversationapi_Type_WebhookTrigger: CaseIterable {
     .optOut,
     .capability,
     .conversationDelete,
+    .contactUpdate,
+    .channelEvent,
+    .smartConversation,
+    .recordNotification,
+    .messageSubmit,
+    .contactIdentitiesDuplication,
   ]
 }
 
@@ -289,6 +325,12 @@ extension Sinch_Conversationapi_Type_WebhookTrigger: SwiftProtobuf._ProtoNamePro
     12: .same(proto: "OPT_OUT"),
     13: .same(proto: "CAPABILITY"),
     14: .same(proto: "CONVERSATION_DELETE"),
+    16: .same(proto: "CONTACT_UPDATE"),
+    17: .same(proto: "CHANNEL_EVENT"),
+    18: .same(proto: "SMART_CONVERSATION"),
+    19: .same(proto: "RECORD_NOTIFICATION"),
+    20: .same(proto: "MESSAGE_SUBMIT"),
+    21: .same(proto: "CONTACT_IDENTITIES_DUPLICATION"),
   ]
 }
 

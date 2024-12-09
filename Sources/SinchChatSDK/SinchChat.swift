@@ -53,6 +53,7 @@ public enum SinchSDKChatAvailability {
 
 public enum SinchChatSDKError: Error {
     case unavailable
+    case error(String)
 }
 
 public enum SinchChatState {
@@ -137,13 +138,14 @@ final class DefaultSinchChat: SinchChat {
             topicModel = TopicModel(topicID: topicID)
         }
         
-        let messageDataSource = InboxMessageDataSource(
+        let messageDataSource = DefaultMessageDataSource(
             apiClient: apiClient!,
             authDataSource: authDataSource,
             topicModel: topicModel,
             metadata: options?.metadata ?? [],
             shouldInitializeConversation: options?.shouldInitializeConversation ?? false,
             sendDocumentAsText: options?.sendDocumentAsTextMessage ?? false)
+
         let rootCordinator = DefaultRootCoordinator(messageDataSource: messageDataSource,
                                                     authDataSource: authDataSource,
                                                     pushPermissionHandler: pushPermissionHandler)
@@ -183,12 +185,12 @@ public enum SinchMetadataMode: Codable {
     case withEachMessage
 }
 
-public struct GetChatViewControllerOptions {
-    let topicID: String?
+public struct GetChatViewControllerOptions: Codable {
+    var topicID: String?
     let metadata: SinchMetadataArray
     let shouldInitializeConversation: Bool
     let sendDocumentAsTextMessage: Bool
-    
+
     public init(
         topicID: String? = nil,
         metadata: SinchMetadataArray,

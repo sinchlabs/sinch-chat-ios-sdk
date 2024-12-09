@@ -7,7 +7,6 @@ extension Date {
         let dateFormat = DateFormatter()
         dateFormat.timeStyle = .short
         dateFormat.dateStyle = .none
-        
         return dateFormat.string(from: self)
     }
     

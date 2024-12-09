@@ -114,7 +114,6 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
         self.title = mainView.localizationConfiguration.navigationBarText
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
 
-        refreshControl.beginRefreshing()
         addObservers()
         addNoInternetObservers()
         
@@ -431,7 +430,7 @@ extension StartViewController: ComposeViewDelegate {
     
     func sendChoiceResponseMessage(postbackData: String, entryID: String) {
         
-        viewModel.sendMessage(.choiceResponseMessage(postbackData: postbackData, entryID: entryID), completion: { _ in
+        viewModel.sendMessage(.choiceResponseMessage(postbackData: postbackData, entryID: entryID), completion: { _ in 
                 // todo
                 debugPrint("successful")
                     

@@ -55,7 +55,7 @@ enum Sinch_Conversationapi_Type_OptOutStatus: SwiftProtobuf.Enum {
 
 extension Sinch_Conversationapi_Type_OptOutStatus: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static var allCases: [Sinch_Conversationapi_Type_OptOutStatus] = [
+  static let allCases: [Sinch_Conversationapi_Type_OptOutStatus] = [
     .unspecified,
     .optOutSucceeded,
     .optOutFailed,
@@ -69,7 +69,7 @@ struct Sinch_Conversationapi_Type_OptOutNotification {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// Required. The contact for the channel identities.
+  /// Optional. The contact for the channel identities. Will not be present for messages sent in Dispatch Mode.
   var contactID: String = String()
 
   /// Required. The channel of the opt-out.
@@ -93,6 +93,9 @@ struct Sinch_Conversationapi_Type_OptOutNotification {
 
   /// Output only. ID generated when submitting the opt out request.
   var requestID: String = String()
+
+  /// Required. The processing mode.
+  var processingMode: Sinch_Conversationapi_Type_ProcessingMode = .conversation
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -141,6 +144,7 @@ extension Sinch_Conversationapi_Type_OptOutNotification: SwiftProtobuf.Message, 
     4: .same(proto: "status"),
     5: .standard(proto: "error_details"),
     6: .standard(proto: "request_id"),
+    7: .standard(proto: "processing_mode"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -155,6 +159,7 @@ extension Sinch_Conversationapi_Type_OptOutNotification: SwiftProtobuf.Message, 
       case 4: try { try decoder.decodeSingularEnumField(value: &self.status) }()
       case 5: try { try decoder.decodeSingularMessageField(value: &self._errorDetails) }()
       case 6: try { try decoder.decodeSingularStringField(value: &self.requestID) }()
+      case 7: try { try decoder.decodeSingularEnumField(value: &self.processingMode) }()
       default: break
       }
     }
@@ -183,6 +188,9 @@ extension Sinch_Conversationapi_Type_OptOutNotification: SwiftProtobuf.Message, 
     if !self.requestID.isEmpty {
       try visitor.visitSingularStringField(value: self.requestID, fieldNumber: 6)
     }
+    if self.processingMode != .conversation {
+      try visitor.visitSingularEnumField(value: self.processingMode, fieldNumber: 7)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -193,6 +201,7 @@ extension Sinch_Conversationapi_Type_OptOutNotification: SwiftProtobuf.Message, 
     if lhs.status != rhs.status {return false}
     if lhs._errorDetails != rhs._errorDetails {return false}
     if lhs.requestID != rhs.requestID {return false}
+    if lhs.processingMode != rhs.processingMode {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -249,12 +249,23 @@ struct Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest {
   /// Clears the value of `topicID`. Subsequent reads from it will return its default value.
   mutating func clearTopicID() {self._topicID = nil}
 
+  /// Default 60000 ms (60s)
+  var userUnavailableDelayMs: Int32 {
+    get {return _userUnavailableDelayMs ?? 0}
+    set {_userUnavailableDelayMs = newValue}
+  }
+  /// Returns true if `userUnavailableDelayMs` has been explicitly set.
+  var hasUserUnavailableDelayMs: Bool {return self._userUnavailableDelayMs != nil}
+  /// Clears the value of `userUnavailableDelayMs`. Subsequent reads from it will return its default value.
+  mutating func clearUserUnavailableDelayMs() {self._userUnavailableDelayMs = nil}
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
   fileprivate var _startTime: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
   fileprivate var _topicID: String? = nil
+  fileprivate var _userUnavailableDelayMs: Int32? = nil
 }
 
 struct Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamResponse {
@@ -345,6 +356,113 @@ struct Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse {
   init() {}
 }
 
+struct Sinch_Chat_Sdk_V1alpha2_IssueRtcAccessTokenRequest {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+struct Sinch_Chat_Sdk_V1alpha2_IssueRtcAccessTokenResponse {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var accessToken: String = String()
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+struct Sinch_Chat_Sdk_V1alpha2_GetChannelsRequest {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var pageSize: Int32 {
+    get {return _pageSize ?? 0}
+    set {_pageSize = newValue}
+  }
+  /// Returns true if `pageSize` has been explicitly set.
+  var hasPageSize: Bool {return self._pageSize != nil}
+  /// Clears the value of `pageSize`. Subsequent reads from it will return its default value.
+  mutating func clearPageSize() {self._pageSize = nil}
+
+  var pageToken: String {
+    get {return _pageToken ?? String()}
+    set {_pageToken = newValue}
+  }
+  /// Returns true if `pageToken` has been explicitly set.
+  var hasPageToken: Bool {return self._pageToken != nil}
+  /// Clears the value of `pageToken`. Subsequent reads from it will return its default value.
+  mutating func clearPageToken() {self._pageToken = nil}
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _pageSize: Int32? = nil
+  fileprivate var _pageToken: String? = nil
+}
+
+struct Sinch_Chat_Sdk_V1alpha2_GetChannelsResponse {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var channels: [Sinch_Chat_Sdk_V1alpha2_Channel] = []
+
+  var nextPageToken: String {
+    get {return _nextPageToken ?? String()}
+    set {_nextPageToken = newValue}
+  }
+  /// Returns true if `nextPageToken` has been explicitly set.
+  var hasNextPageToken: Bool {return self._nextPageToken != nil}
+  /// Clears the value of `nextPageToken`. Subsequent reads from it will return its default value.
+  mutating func clearNextPageToken() {self._nextPageToken = nil}
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _nextPageToken: String? = nil
+}
+
+struct Sinch_Chat_Sdk_V1alpha2_SubscribeToChannelsStreamRequest {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+struct Sinch_Chat_Sdk_V1alpha2_SubscribeToChannelsStreamResponse {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var channel: Sinch_Chat_Sdk_V1alpha2_Channel {
+    get {return _channel ?? Sinch_Chat_Sdk_V1alpha2_Channel()}
+    set {_channel = newValue}
+  }
+  /// Returns true if `channel` has been explicitly set.
+  var hasChannel: Bool {return self._channel != nil}
+  /// Clears the value of `channel`. Subsequent reads from it will return its default value.
+  mutating func clearChannel() {self._channel = nil}
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _channel: Sinch_Chat_Sdk_V1alpha2_Channel? = nil
+}
+
 #if swift(>=5.5) && canImport(_Concurrency)
 extension Sinch_Chat_Sdk_V1alpha2_GetClientRequest: @unchecked Sendable {}
 extension Sinch_Chat_Sdk_V1alpha2_IssueAnonymousTokenRequest: @unchecked Sendable {}
@@ -361,6 +479,12 @@ extension Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamResponse: @unchecked Sendable
 extension Sinch_Chat_Sdk_V1alpha2_SubscribeToPushRequest: @unchecked Sendable {}
 extension Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest: @unchecked Sendable {}
 extension Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_IssueRtcAccessTokenRequest: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_IssueRtcAccessTokenResponse: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_GetChannelsRequest: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_GetChannelsResponse: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_SubscribeToChannelsStreamRequest: @unchecked Sendable {}
+extension Sinch_Chat_Sdk_V1alpha2_SubscribeToChannelsStreamResponse: @unchecked Sendable {}
 #endif  // swift(>=5.5) && canImport(_Concurrency)
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -743,6 +867,7 @@ extension Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest: SwiftProtobuf.Messag
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "start_time"),
     2: .standard(proto: "topic_id"),
+    3: .standard(proto: "user_unavailable_delay_ms"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -753,6 +878,7 @@ extension Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest: SwiftProtobuf.Messag
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularMessageField(value: &self._startTime) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self._topicID) }()
+      case 3: try { try decoder.decodeSingularInt32Field(value: &self._userUnavailableDelayMs) }()
       default: break
       }
     }
@@ -769,12 +895,16 @@ extension Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest: SwiftProtobuf.Messag
     try { if let v = self._topicID {
       try visitor.visitSingularStringField(value: v, fieldNumber: 2)
     } }()
+    try { if let v = self._userUnavailableDelayMs {
+      try visitor.visitSingularInt32Field(value: v, fieldNumber: 3)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest, rhs: Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest) -> Bool {
     if lhs._startTime != rhs._startTime {return false}
     if lhs._topicID != rhs._topicID {return false}
+    if lhs._userUnavailableDelayMs != rhs._userUnavailableDelayMs {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -953,6 +1083,196 @@ extension Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse: SwiftProtobuf.Message, Sw
   static func ==(lhs: Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse, rhs: Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse) -> Bool {
     if lhs.url != rhs.url {return false}
     if lhs.contentLength != rhs.contentLength {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Sinch_Chat_Sdk_V1alpha2_IssueRtcAccessTokenRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".IssueRtcAccessTokenRequest"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Chat_Sdk_V1alpha2_IssueRtcAccessTokenRequest, rhs: Sinch_Chat_Sdk_V1alpha2_IssueRtcAccessTokenRequest) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Sinch_Chat_Sdk_V1alpha2_IssueRtcAccessTokenResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".IssueRtcAccessTokenResponse"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "access_token"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.accessToken) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.accessToken.isEmpty {
+      try visitor.visitSingularStringField(value: self.accessToken, fieldNumber: 1)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Chat_Sdk_V1alpha2_IssueRtcAccessTokenResponse, rhs: Sinch_Chat_Sdk_V1alpha2_IssueRtcAccessTokenResponse) -> Bool {
+    if lhs.accessToken != rhs.accessToken {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Sinch_Chat_Sdk_V1alpha2_GetChannelsRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".GetChannelsRequest"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "page_size"),
+    2: .standard(proto: "page_token"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularInt32Field(value: &self._pageSize) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self._pageToken) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._pageSize {
+      try visitor.visitSingularInt32Field(value: v, fieldNumber: 1)
+    } }()
+    try { if let v = self._pageToken {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Chat_Sdk_V1alpha2_GetChannelsRequest, rhs: Sinch_Chat_Sdk_V1alpha2_GetChannelsRequest) -> Bool {
+    if lhs._pageSize != rhs._pageSize {return false}
+    if lhs._pageToken != rhs._pageToken {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Sinch_Chat_Sdk_V1alpha2_GetChannelsResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".GetChannelsResponse"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "channels"),
+    2: .standard(proto: "next_page_token"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.channels) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self._nextPageToken) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.channels.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.channels, fieldNumber: 1)
+    }
+    try { if let v = self._nextPageToken {
+      try visitor.visitSingularStringField(value: v, fieldNumber: 2)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Chat_Sdk_V1alpha2_GetChannelsResponse, rhs: Sinch_Chat_Sdk_V1alpha2_GetChannelsResponse) -> Bool {
+    if lhs.channels != rhs.channels {return false}
+    if lhs._nextPageToken != rhs._nextPageToken {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Sinch_Chat_Sdk_V1alpha2_SubscribeToChannelsStreamRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".SubscribeToChannelsStreamRequest"
+  static let _protobuf_nameMap = SwiftProtobuf._NameMap()
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let _ = try decoder.nextFieldNumber() {
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Chat_Sdk_V1alpha2_SubscribeToChannelsStreamRequest, rhs: Sinch_Chat_Sdk_V1alpha2_SubscribeToChannelsStreamRequest) -> Bool {
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Sinch_Chat_Sdk_V1alpha2_SubscribeToChannelsStreamResponse: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".SubscribeToChannelsStreamResponse"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "channel"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._channel) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._channel {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Chat_Sdk_V1alpha2_SubscribeToChannelsStreamResponse, rhs: Sinch_Chat_Sdk_V1alpha2_SubscribeToChannelsStreamResponse) -> Bool {
+    if lhs._channel != rhs._channel {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

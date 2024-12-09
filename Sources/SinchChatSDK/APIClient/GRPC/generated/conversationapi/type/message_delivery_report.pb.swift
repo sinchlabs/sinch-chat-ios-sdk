@@ -31,7 +31,7 @@ struct Sinch_Conversationapi_Type_MessageDeliveryReport {
   /// Required. The ID of the message.
   var messageID: String = String()
 
-  /// Required. The conversation ID this message belongs to.
+  /// Optional. The conversation ID this message belongs to. Will not be present for messages sent in Dispatch Mode.
   var conversationID: String = String()
 
   /// Required. The delivery status.
@@ -47,7 +47,7 @@ struct Sinch_Conversationapi_Type_MessageDeliveryReport {
   /// Clears the value of `channelIdentity`. Subsequent reads from it will return its default value.
   mutating func clearChannelIdentity() {self._channelIdentity = nil}
 
-  /// Required. The ID of the contact.
+  /// Optional. The ID of the contact. Will not be present for messages sent in Dispatch Mode.
   var contactID: String = String()
 
   /// Optional. A reason will be present if the status is FAILED or SWITCHING_CHANNEL.
@@ -60,9 +60,13 @@ struct Sinch_Conversationapi_Type_MessageDeliveryReport {
   /// Clears the value of `reason`. Subsequent reads from it will return its default value.
   mutating func clearReason() {self._reason = nil}
 
-  /// Optional. Eventual metadata specified when sending the message.
-  /// Up to 1024 characters long. 
+  /// Optional. Metadata specified when sending the message.
+  /// Up to 1024 characters long.
+  /// This corresponds to the message_metadata field in SendMessageRequest.
   var metadata: String = String()
+
+  /// Required. The processing mode of the original message.
+  var processingMode: Sinch_Conversationapi_Type_ProcessingMode = .conversation
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -90,6 +94,7 @@ extension Sinch_Conversationapi_Type_MessageDeliveryReport: SwiftProtobuf.Messag
     6: .standard(proto: "contact_id"),
     7: .same(proto: "reason"),
     8: .same(proto: "metadata"),
+    9: .standard(proto: "processing_mode"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -105,6 +110,7 @@ extension Sinch_Conversationapi_Type_MessageDeliveryReport: SwiftProtobuf.Messag
       case 6: try { try decoder.decodeSingularStringField(value: &self.contactID) }()
       case 7: try { try decoder.decodeSingularMessageField(value: &self._reason) }()
       case 8: try { try decoder.decodeSingularStringField(value: &self.metadata) }()
+      case 9: try { try decoder.decodeSingularEnumField(value: &self.processingMode) }()
       default: break
       }
     }
@@ -136,6 +142,9 @@ extension Sinch_Conversationapi_Type_MessageDeliveryReport: SwiftProtobuf.Messag
     if !self.metadata.isEmpty {
       try visitor.visitSingularStringField(value: self.metadata, fieldNumber: 8)
     }
+    if self.processingMode != .conversation {
+      try visitor.visitSingularEnumField(value: self.processingMode, fieldNumber: 9)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -147,6 +156,7 @@ extension Sinch_Conversationapi_Type_MessageDeliveryReport: SwiftProtobuf.Messag
     if lhs.contactID != rhs.contactID {return false}
     if lhs._reason != rhs._reason {return false}
     if lhs.metadata != rhs.metadata {return false}
+    if lhs.processingMode != rhs.processingMode {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

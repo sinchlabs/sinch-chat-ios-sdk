@@ -20,6 +20,132 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
+/// Status reflecting how payment flow goes
+enum Sinch_Conversationapi_Type_PaymentStatus: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+
+  /// The status value was not set. Treat it as null or not present field.
+  case unknown // = 0
+
+  /// The partner sent an order_details message but the user didn’t start a payment yet
+  case new // = 1
+
+  /// The user started the payment process and the payment object was created
+  case pending // = 2
+
+  /// The payment was captured
+  case captured // = 3
+
+  /// The payment was canceled by the user and no retry is possible
+  case canceled // = 4
+
+  /// The payment attempt failed but the user can retry
+  case failed // = 5
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .unknown
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .unknown
+    case 1: self = .new
+    case 2: self = .pending
+    case 3: self = .captured
+    case 4: self = .canceled
+    case 5: self = .failed
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .unknown: return 0
+    case .new: return 1
+    case .pending: return 2
+    case .captured: return 3
+    case .canceled: return 4
+    case .failed: return 5
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Sinch_Conversationapi_Type_PaymentStatus: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static let allCases: [Sinch_Conversationapi_Type_PaymentStatus] = [
+    .unknown,
+    .new,
+    .pending,
+    .captured,
+    .canceled,
+    .failed,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
+/// Group of statuses of the user-initiated transaction changes
+enum Sinch_Conversationapi_Type_PaymentTransactionStatus: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+
+  /// The transaction status value was not set. Treat it as null or not present field.
+  case paymentStatusTransactionUnknown // = 0
+
+  /// The transaction started
+  case paymentStatusTransactionPending // = 1
+  case paymentStatusTransactionFailed // = 2
+  case paymentStatusTransactionSuccess // = 3
+  case paymentStatusTransactionCanceled // = 4
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .paymentStatusTransactionUnknown
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .paymentStatusTransactionUnknown
+    case 1: self = .paymentStatusTransactionPending
+    case 2: self = .paymentStatusTransactionFailed
+    case 3: self = .paymentStatusTransactionSuccess
+    case 4: self = .paymentStatusTransactionCanceled
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .paymentStatusTransactionUnknown: return 0
+    case .paymentStatusTransactionPending: return 1
+    case .paymentStatusTransactionFailed: return 2
+    case .paymentStatusTransactionSuccess: return 3
+    case .paymentStatusTransactionCanceled: return 4
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Sinch_Conversationapi_Type_PaymentTransactionStatus: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static let allCases: [Sinch_Conversationapi_Type_PaymentTransactionStatus] = [
+    .paymentStatusTransactionUnknown,
+    .paymentStatusTransactionPending,
+    .paymentStatusTransactionFailed,
+    .paymentStatusTransactionSuccess,
+    .paymentStatusTransactionCanceled,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
 /// Conversation Event
 ///
 /// An event on a particular channel.
@@ -51,7 +177,21 @@ struct Sinch_Conversationapi_Type_ConversationEvent {
     set {event = .contactEvent(newValue)}
   }
 
-  /// Required. The ID of the contact.
+  var contactMessageEvent: Sinch_Conversationapi_Type_ContactMessageEvent {
+    get {
+      if case .contactMessageEvent(let v)? = event {return v}
+      return Sinch_Conversationapi_Type_ContactMessageEvent()
+    }
+    set {event = .contactMessageEvent(newValue)}
+  }
+
+  /// Required. The ID of the event.
+  var id: String = String()
+
+  /// Optional. The ID of the event's conversation. Will not be present for apps in Dispatch Mode.
+  var conversationID: String = String()
+
+  /// Optional. The ID of the contact. Will not be present for apps in Dispatch Mode.
   var contactID: String = String()
 
   /// Required. The channel and contact channel identity of the event.
@@ -74,12 +214,16 @@ struct Sinch_Conversationapi_Type_ConversationEvent {
   /// Clears the value of `acceptTime`. Subsequent reads from it will return its default value.
   mutating func clearAcceptTime() {self._acceptTime = nil}
 
+  /// Required. The processing mode.
+  var processingMode: Sinch_Conversationapi_Type_ProcessingMode = .conversation
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   /// The content of the event.
   enum OneOf_Event: Equatable {
     case appEvent(Sinch_Conversationapi_Type_AppEvent)
     case contactEvent(Sinch_Conversationapi_Type_ContactEvent)
+    case contactMessageEvent(Sinch_Conversationapi_Type_ContactMessageEvent)
 
   #if !swift(>=4.1)
     static func ==(lhs: Sinch_Conversationapi_Type_ConversationEvent.OneOf_Event, rhs: Sinch_Conversationapi_Type_ConversationEvent.OneOf_Event) -> Bool {
@@ -93,6 +237,10 @@ struct Sinch_Conversationapi_Type_ConversationEvent {
       }()
       case (.contactEvent, .contactEvent): return {
         guard case .contactEvent(let l) = lhs, case .contactEvent(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.contactMessageEvent, .contactMessageEvent): return {
+        guard case .contactMessageEvent(let l) = lhs, case .contactMessageEvent(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -155,6 +303,14 @@ struct Sinch_Conversationapi_Type_AppEvent {
     set {event = .agentLeftEvent(newValue)}
   }
 
+  var genericEvent: Sinch_Conversationapi_Type_GenericEvent {
+    get {
+      if case .genericEvent(let v)? = event {return v}
+      return Sinch_Conversationapi_Type_GenericEvent()
+    }
+    set {event = .genericEvent(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_Event: Equatable {
@@ -163,6 +319,7 @@ struct Sinch_Conversationapi_Type_AppEvent {
     case commentReplyEvent(Sinch_Conversationapi_Type_CommentReplyEvent)
     case agentJoinedEvent(Sinch_Conversationapi_Type_AgentJoinedEvent)
     case agentLeftEvent(Sinch_Conversationapi_Type_AgentLeftEvent)
+    case genericEvent(Sinch_Conversationapi_Type_GenericEvent)
 
   #if !swift(>=4.1)
     static func ==(lhs: Sinch_Conversationapi_Type_AppEvent.OneOf_Event, rhs: Sinch_Conversationapi_Type_AppEvent.OneOf_Event) -> Bool {
@@ -188,6 +345,10 @@ struct Sinch_Conversationapi_Type_AppEvent {
       }()
       case (.agentLeftEvent, .agentLeftEvent): return {
         guard case .agentLeftEvent(let l) = lhs, case .agentLeftEvent(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.genericEvent, .genericEvent): return {
+        guard case .genericEvent(let l) = lhs, case .genericEvent(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -239,6 +400,14 @@ struct Sinch_Conversationapi_Type_ContactEvent {
     set {event = .commentEvent(newValue)}
   }
 
+  var genericEvent: Sinch_Conversationapi_Type_GenericEvent {
+    get {
+      if case .genericEvent(let v)? = event {return v}
+      return Sinch_Conversationapi_Type_GenericEvent()
+    }
+    set {event = .genericEvent(newValue)}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   enum OneOf_Event: Equatable {
@@ -246,6 +415,7 @@ struct Sinch_Conversationapi_Type_ContactEvent {
     case composingEndEvent(Sinch_Conversationapi_Type_ComposingEndEvent)
     case conversationDeletedEvent(Sinch_Conversationapi_Type_ConversationDeletedEvent)
     case commentEvent(Sinch_Conversationapi_Type_CommentEvent)
+    case genericEvent(Sinch_Conversationapi_Type_GenericEvent)
 
   #if !swift(>=4.1)
     static func ==(lhs: Sinch_Conversationapi_Type_ContactEvent.OneOf_Event, rhs: Sinch_Conversationapi_Type_ContactEvent.OneOf_Event) -> Bool {
@@ -267,6 +437,10 @@ struct Sinch_Conversationapi_Type_ContactEvent {
       }()
       case (.commentEvent, .commentEvent): return {
         guard case .commentEvent(let l) = lhs, case .commentEvent(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.genericEvent, .genericEvent): return {
+        guard case .genericEvent(let l) = lhs, case .genericEvent(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -322,6 +496,15 @@ struct Sinch_Conversationapi_Type_CommentEvent {
 
   /// Required. The text of the comment.
   var text: String = String()
+
+  /// Optional. The type of the comment.
+  var commentType: String = String()
+
+  /// Optional. The origin of the comment
+  var commentedOn: String = String()
+
+  /// Optional. The user that triggered the comment event
+  var user: String = String()
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -386,7 +569,92 @@ struct Sinch_Conversationapi_Type_AgentLeftEvent {
   fileprivate var _agent: Sinch_Conversationapi_Type_Agent? = nil
 }
 
+/// Generic event with flexible structure
+struct Sinch_Conversationapi_Type_GenericEvent {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var payload: SwiftProtobuf.Google_Protobuf_Struct {
+    get {return _payload ?? SwiftProtobuf.Google_Protobuf_Struct()}
+    set {_payload = newValue}
+  }
+  /// Returns true if `payload` has been explicitly set.
+  var hasPayload: Bool {return self._payload != nil}
+  /// Clears the value of `payload`. Subsequent reads from it will return its default value.
+  mutating func clearPayload() {self._payload = nil}
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _payload: SwiftProtobuf.Google_Protobuf_Struct? = nil
+}
+
+struct Sinch_Conversationapi_Type_ContactMessageEvent {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var event: Sinch_Conversationapi_Type_ContactMessageEvent.OneOf_Event? = nil
+
+  var paymentStatusUpdateEvent: Sinch_Conversationapi_Type_PaymentStatusUpdateEvent {
+    get {
+      if case .paymentStatusUpdateEvent(let v)? = event {return v}
+      return Sinch_Conversationapi_Type_PaymentStatusUpdateEvent()
+    }
+    set {event = .paymentStatusUpdateEvent(newValue)}
+  }
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  enum OneOf_Event: Equatable {
+    case paymentStatusUpdateEvent(Sinch_Conversationapi_Type_PaymentStatusUpdateEvent)
+
+  #if !swift(>=4.1)
+    static func ==(lhs: Sinch_Conversationapi_Type_ContactMessageEvent.OneOf_Event, rhs: Sinch_Conversationapi_Type_ContactMessageEvent.OneOf_Event) -> Bool {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch (lhs, rhs) {
+      case (.paymentStatusUpdateEvent, .paymentStatusUpdateEvent): return {
+        guard case .paymentStatusUpdateEvent(let l) = lhs, case .paymentStatusUpdateEvent(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      }
+    }
+  #endif
+  }
+
+  init() {}
+}
+
+/// Message specific only for Payments feature to reflect current state of particular Payment Flow
+struct Sinch_Conversationapi_Type_PaymentStatusUpdateEvent {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// This is the partner supplied ID to identify the order for payments
+  var referenceID: String = String()
+
+  /// Status reflecting how payment flow goes
+  var paymentStatus: Sinch_Conversationapi_Type_PaymentStatus = .unknown
+
+  /// Status reflecting payment transaction status changes
+  var paymentTransactionStatus: Sinch_Conversationapi_Type_PaymentTransactionStatus = .paymentStatusTransactionUnknown
+
+  /// Unique id of the transaction for which one of the transaction payment_transaction_status is present in event
+  var paymentTransactionID: String = String()
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
 #if swift(>=5.5) && canImport(_Concurrency)
+extension Sinch_Conversationapi_Type_PaymentStatus: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_PaymentTransactionStatus: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_ConversationEvent: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_ConversationEvent.OneOf_Event: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_AppEvent: @unchecked Sendable {}
@@ -400,11 +668,36 @@ extension Sinch_Conversationapi_Type_CommentEvent: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_CommentReplyEvent: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_AgentJoinedEvent: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_AgentLeftEvent: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_GenericEvent: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ContactMessageEvent: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ContactMessageEvent.OneOf_Event: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_PaymentStatusUpdateEvent: @unchecked Sendable {}
 #endif  // swift(>=5.5) && canImport(_Concurrency)
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "sinch.conversationapi.type"
+
+extension Sinch_Conversationapi_Type_PaymentStatus: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "PAYMENT_STATUS_UNKNOWN"),
+    1: .same(proto: "PAYMENT_STATUS_NEW"),
+    2: .same(proto: "PAYMENT_STATUS_PENDING"),
+    3: .same(proto: "PAYMENT_STATUS_CAPTURED"),
+    4: .same(proto: "PAYMENT_STATUS_CANCELED"),
+    5: .same(proto: "PAYMENT_STATUS_FAILED"),
+  ]
+}
+
+extension Sinch_Conversationapi_Type_PaymentTransactionStatus: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "PAYMENT_STATUS_TRANSACTION_UNKNOWN"),
+    1: .same(proto: "PAYMENT_STATUS_TRANSACTION_PENDING"),
+    2: .same(proto: "PAYMENT_STATUS_TRANSACTION_FAILED"),
+    3: .same(proto: "PAYMENT_STATUS_TRANSACTION_SUCCESS"),
+    4: .same(proto: "PAYMENT_STATUS_TRANSACTION_CANCELED"),
+  ]
+}
 
 extension Sinch_Conversationapi_Type_ConversationEvent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".ConversationEvent"
@@ -412,9 +705,13 @@ extension Sinch_Conversationapi_Type_ConversationEvent: SwiftProtobuf.Message, S
     1: .same(proto: "direction"),
     2: .standard(proto: "app_event"),
     3: .standard(proto: "contact_event"),
+    10: .standard(proto: "contact_message_event"),
+    8: .same(proto: "id"),
+    9: .standard(proto: "conversation_id"),
     4: .standard(proto: "contact_id"),
     5: .standard(proto: "channel_identity"),
     6: .standard(proto: "accept_time"),
+    7: .standard(proto: "processing_mode"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -453,6 +750,22 @@ extension Sinch_Conversationapi_Type_ConversationEvent: SwiftProtobuf.Message, S
       case 4: try { try decoder.decodeSingularStringField(value: &self.contactID) }()
       case 5: try { try decoder.decodeSingularMessageField(value: &self._channelIdentity) }()
       case 6: try { try decoder.decodeSingularMessageField(value: &self._acceptTime) }()
+      case 7: try { try decoder.decodeSingularEnumField(value: &self.processingMode) }()
+      case 8: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 9: try { try decoder.decodeSingularStringField(value: &self.conversationID) }()
+      case 10: try {
+        var v: Sinch_Conversationapi_Type_ContactMessageEvent?
+        var hadOneofValue = false
+        if let current = self.event {
+          hadOneofValue = true
+          if case .contactMessageEvent(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.event = .contactMessageEvent(v)
+        }
+      }()
       default: break
       }
     }
@@ -475,7 +788,7 @@ extension Sinch_Conversationapi_Type_ConversationEvent: SwiftProtobuf.Message, S
       guard case .contactEvent(let v)? = self.event else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
     }()
-    case nil: break
+    default: break
     }
     if !self.contactID.isEmpty {
       try visitor.visitSingularStringField(value: self.contactID, fieldNumber: 4)
@@ -486,15 +799,30 @@ extension Sinch_Conversationapi_Type_ConversationEvent: SwiftProtobuf.Message, S
     try { if let v = self._acceptTime {
       try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
     } }()
+    if self.processingMode != .conversation {
+      try visitor.visitSingularEnumField(value: self.processingMode, fieldNumber: 7)
+    }
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 8)
+    }
+    if !self.conversationID.isEmpty {
+      try visitor.visitSingularStringField(value: self.conversationID, fieldNumber: 9)
+    }
+    try { if case .contactMessageEvent(let v)? = self.event {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Sinch_Conversationapi_Type_ConversationEvent, rhs: Sinch_Conversationapi_Type_ConversationEvent) -> Bool {
     if lhs.direction != rhs.direction {return false}
     if lhs.event != rhs.event {return false}
+    if lhs.id != rhs.id {return false}
+    if lhs.conversationID != rhs.conversationID {return false}
     if lhs.contactID != rhs.contactID {return false}
     if lhs._channelIdentity != rhs._channelIdentity {return false}
     if lhs._acceptTime != rhs._acceptTime {return false}
+    if lhs.processingMode != rhs.processingMode {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -508,6 +836,7 @@ extension Sinch_Conversationapi_Type_AppEvent: SwiftProtobuf.Message, SwiftProto
     3: .standard(proto: "comment_reply_event"),
     4: .standard(proto: "agent_joined_event"),
     5: .standard(proto: "agent_left_event"),
+    6: .standard(proto: "generic_event"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -581,6 +910,19 @@ extension Sinch_Conversationapi_Type_AppEvent: SwiftProtobuf.Message, SwiftProto
           self.event = .agentLeftEvent(v)
         }
       }()
+      case 6: try {
+        var v: Sinch_Conversationapi_Type_GenericEvent?
+        var hadOneofValue = false
+        if let current = self.event {
+          hadOneofValue = true
+          if case .genericEvent(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.event = .genericEvent(v)
+        }
+      }()
       default: break
       }
     }
@@ -612,6 +954,10 @@ extension Sinch_Conversationapi_Type_AppEvent: SwiftProtobuf.Message, SwiftProto
       guard case .agentLeftEvent(let v)? = self.event else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
     }()
+    case .genericEvent?: try {
+      guard case .genericEvent(let v)? = self.event else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    }()
     case nil: break
     }
     try unknownFields.traverse(visitor: &visitor)
@@ -631,6 +977,7 @@ extension Sinch_Conversationapi_Type_ContactEvent: SwiftProtobuf.Message, SwiftP
     2: .standard(proto: "composing_end_event"),
     3: .standard(proto: "conversation_deleted_event"),
     4: .standard(proto: "comment_event"),
+    5: .standard(proto: "generic_event"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -691,6 +1038,19 @@ extension Sinch_Conversationapi_Type_ContactEvent: SwiftProtobuf.Message, SwiftP
           self.event = .commentEvent(v)
         }
       }()
+      case 5: try {
+        var v: Sinch_Conversationapi_Type_GenericEvent?
+        var hadOneofValue = false
+        if let current = self.event {
+          hadOneofValue = true
+          if case .genericEvent(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.event = .genericEvent(v)
+        }
+      }()
       default: break
       }
     }
@@ -717,6 +1077,10 @@ extension Sinch_Conversationapi_Type_ContactEvent: SwiftProtobuf.Message, SwiftP
     case .commentEvent?: try {
       guard case .commentEvent(let v)? = self.event else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    }()
+    case .genericEvent?: try {
+      guard case .genericEvent(let v)? = self.event else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
     }()
     case nil: break
     }
@@ -792,6 +1156,9 @@ extension Sinch_Conversationapi_Type_CommentEvent: SwiftProtobuf.Message, SwiftP
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "id"),
     2: .same(proto: "text"),
+    3: .standard(proto: "comment_type"),
+    4: .standard(proto: "commented_on"),
+    5: .same(proto: "user"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -802,6 +1169,9 @@ extension Sinch_Conversationapi_Type_CommentEvent: SwiftProtobuf.Message, SwiftP
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.text) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.commentType) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.commentedOn) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.user) }()
       default: break
       }
     }
@@ -814,12 +1184,24 @@ extension Sinch_Conversationapi_Type_CommentEvent: SwiftProtobuf.Message, SwiftP
     if !self.text.isEmpty {
       try visitor.visitSingularStringField(value: self.text, fieldNumber: 2)
     }
+    if !self.commentType.isEmpty {
+      try visitor.visitSingularStringField(value: self.commentType, fieldNumber: 3)
+    }
+    if !self.commentedOn.isEmpty {
+      try visitor.visitSingularStringField(value: self.commentedOn, fieldNumber: 4)
+    }
+    if !self.user.isEmpty {
+      try visitor.visitSingularStringField(value: self.user, fieldNumber: 5)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Sinch_Conversationapi_Type_CommentEvent, rhs: Sinch_Conversationapi_Type_CommentEvent) -> Bool {
     if lhs.id != rhs.id {return false}
     if lhs.text != rhs.text {return false}
+    if lhs.commentType != rhs.commentType {return false}
+    if lhs.commentedOn != rhs.commentedOn {return false}
+    if lhs.user != rhs.user {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -924,6 +1306,140 @@ extension Sinch_Conversationapi_Type_AgentLeftEvent: SwiftProtobuf.Message, Swif
 
   static func ==(lhs: Sinch_Conversationapi_Type_AgentLeftEvent, rhs: Sinch_Conversationapi_Type_AgentLeftEvent) -> Bool {
     if lhs._agent != rhs._agent {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Sinch_Conversationapi_Type_GenericEvent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".GenericEvent"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "payload"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularMessageField(value: &self._payload) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if let v = self._payload {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Conversationapi_Type_GenericEvent, rhs: Sinch_Conversationapi_Type_GenericEvent) -> Bool {
+    if lhs._payload != rhs._payload {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Sinch_Conversationapi_Type_ContactMessageEvent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".ContactMessageEvent"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "payment_status_update_event"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try {
+        var v: Sinch_Conversationapi_Type_PaymentStatusUpdateEvent?
+        var hadOneofValue = false
+        if let current = self.event {
+          hadOneofValue = true
+          if case .paymentStatusUpdateEvent(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.event = .paymentStatusUpdateEvent(v)
+        }
+      }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    try { if case .paymentStatusUpdateEvent(let v)? = self.event {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Conversationapi_Type_ContactMessageEvent, rhs: Sinch_Conversationapi_Type_ContactMessageEvent) -> Bool {
+    if lhs.event != rhs.event {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Sinch_Conversationapi_Type_PaymentStatusUpdateEvent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".PaymentStatusUpdateEvent"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "reference_id"),
+    2: .standard(proto: "payment_status"),
+    3: .standard(proto: "payment_transaction_status"),
+    4: .standard(proto: "payment_transaction_id"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.referenceID) }()
+      case 2: try { try decoder.decodeSingularEnumField(value: &self.paymentStatus) }()
+      case 3: try { try decoder.decodeSingularEnumField(value: &self.paymentTransactionStatus) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.paymentTransactionID) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.referenceID.isEmpty {
+      try visitor.visitSingularStringField(value: self.referenceID, fieldNumber: 1)
+    }
+    if self.paymentStatus != .unknown {
+      try visitor.visitSingularEnumField(value: self.paymentStatus, fieldNumber: 2)
+    }
+    if self.paymentTransactionStatus != .paymentStatusTransactionUnknown {
+      try visitor.visitSingularEnumField(value: self.paymentTransactionStatus, fieldNumber: 3)
+    }
+    if !self.paymentTransactionID.isEmpty {
+      try visitor.visitSingularStringField(value: self.paymentTransactionID, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Conversationapi_Type_PaymentStatusUpdateEvent, rhs: Sinch_Conversationapi_Type_PaymentStatusUpdateEvent) -> Bool {
+    if lhs.referenceID != rhs.referenceID {return false}
+    if lhs.paymentStatus != rhs.paymentStatus {return false}
+    if lhs.paymentTransactionStatus != rhs.paymentTransactionStatus {return false}
+    if lhs.paymentTransactionID != rhs.paymentTransactionID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

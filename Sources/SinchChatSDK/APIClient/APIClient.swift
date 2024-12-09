@@ -1,7 +1,7 @@
 import Foundation
 import GRPC
 import Logging
-
+import NIO
 public enum Region: Codable, Equatable {
     case EU1
     case US1
@@ -26,9 +26,10 @@ final class DefaultAPIClient: APIClient {
         return logger
     }()
     private static let group = PlatformSupport.makeEventLoopGroup(loopCount: 1, networkPreference: .best, logger: logger)
-
+   // private var group: EventLoopGroup
     private let host: String
     private let port = 443
+    private let transportSecurity: GRPCChannelPool.Configuration.TransportSecurity = .tls(.makeClientConfigurationBackedByNIOSSL())
     var isChannelStarted = false
     
     private var channel: GRPCChannel
@@ -48,10 +49,11 @@ final class DefaultAPIClient: APIClient {
             interval: .seconds(10),
             timeout: .seconds(5)
         )
+      //  group = PlatformSupport.makeEventLoopGroup(loopCount: 1, networkPreference: .best, logger: DefaultAPIClient.logger)
         do {
             channel = try GRPCChannelPool
                 .with(target: .hostAndPort(host, port),
-                      transportSecurity: .tls(.makeClientConfigurationBackedByNIOSSL()),
+                      transportSecurity: transportSecurity,
                       eventLoopGroup: DefaultAPIClient.group) {
                     $0.keepalive = keepalive
                 }
@@ -61,16 +63,21 @@ final class DefaultAPIClient: APIClient {
             return nil
         }
     }
+    deinit {
+        closeChannel()
+    }
+    
     func startChannel() {
         let keepalive = ClientConnectionKeepalive(
             interval: .seconds(10),
             timeout: .seconds(5)
         )
-        
+        //group = PlatformSupport.makeEventLoopGroup(loopCount: 1, networkPreference: .best, logger: DefaultAPIClient.logger)
+
         do {
             channel = try GRPCChannelPool
                 .with(target: .hostAndPort(host, port),
-                      transportSecurity: .tls(.makeClientConfigurationBackedByNIOSSL()),
+                      transportSecurity: transportSecurity,
                       eventLoopGroup: DefaultAPIClient.group) {
                     $0.keepalive = keepalive
                 }
@@ -86,6 +93,12 @@ final class DefaultAPIClient: APIClient {
     }
     
     func closeChannel() {
+//        do {
+//            try group.syncShutdownGracefully()
+//        } catch let error {
+//            Logger.error("error during closing GRPCChannelPool", error.localizedDescription)
+//        }
+        
         _ = channel.close()
         isChannelStarted = false
         debugPrint("*********CLOSE CHANEL************")

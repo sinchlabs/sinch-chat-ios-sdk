@@ -25,7 +25,7 @@ internal extension StartViewController {
         NotificationCenter.default.addObserver(self, selector: #selector(StartViewController.handleKeyboardDidChangeState(_:)),
                                                name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(StartViewController.handleTextViewDidBeginEditing(_:)),
-                                               name: UITextView.textDidBeginEditingNotification, object: nil)
+                                               name: UITextView.textDidBeginEditingNotification, object: nil)        
     }
     
     func removeKeyboardObservers() {
@@ -47,7 +47,7 @@ internal extension StartViewController {
         if mainView.collectionView.contentOffset.y >=
             (mainView.collectionView.contentSize.height - mainView.collectionView.frame.size.height) {
             mainView.collectionView.scrollToLastItem()
-        }
+        }        
     }
     @objc
     private func handleKeyboardDidChangeState(_ notification: Notification) {

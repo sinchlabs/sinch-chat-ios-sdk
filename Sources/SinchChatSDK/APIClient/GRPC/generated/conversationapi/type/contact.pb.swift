@@ -51,7 +51,7 @@ enum Sinch_Conversationapi_Type_ConversationMergeStrategy: SwiftProtobuf.Enum {
 
 extension Sinch_Conversationapi_Type_ConversationMergeStrategy: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static var allCases: [Sinch_Conversationapi_Type_ConversationMergeStrategy] = [
+  static let allCases: [Sinch_Conversationapi_Type_ConversationMergeStrategy] = [
     .merge,
   ]
 }
@@ -297,7 +297,7 @@ enum Sinch_Conversationapi_Type_ContactLanguage: SwiftProtobuf.Enum {
 
 extension Sinch_Conversationapi_Type_ContactLanguage: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static var allCases: [Sinch_Conversationapi_Type_ContactLanguage] = [
+  static let allCases: [Sinch_Conversationapi_Type_ContactLanguage] = [
     .unspecified,
     .af,
     .sq,

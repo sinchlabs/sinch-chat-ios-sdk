@@ -20,31 +20,77 @@ fileprivate struct _GeneratedWithProtocGenSwiftVersion: SwiftProtobuf.ProtobufAP
   typealias Version = _2
 }
 
+enum Sinch_Push_Dispatch_V1beta1_Importance: SwiftProtobuf.Enum {
+  typealias RawValue = Int
+  case unspecified // = 0
+  case low // = 1
+  case high // = 2
+  case critical // = 3
+  case UNRECOGNIZED(Int)
+
+  init() {
+    self = .unspecified
+  }
+
+  init?(rawValue: Int) {
+    switch rawValue {
+    case 0: self = .unspecified
+    case 1: self = .low
+    case 2: self = .high
+    case 3: self = .critical
+    default: self = .UNRECOGNIZED(rawValue)
+    }
+  }
+
+  var rawValue: Int {
+    switch self {
+    case .unspecified: return 0
+    case .low: return 1
+    case .high: return 2
+    case .critical: return 3
+    case .UNRECOGNIZED(let i): return i
+    }
+  }
+
+}
+
+#if swift(>=4.2)
+
+extension Sinch_Push_Dispatch_V1beta1_Importance: CaseIterable {
+  // The compiler won't synthesize support with the UNRECOGNIZED case.
+  static let allCases: [Sinch_Push_Dispatch_V1beta1_Importance] = [
+    .unspecified,
+    .low,
+    .high,
+    .critical,
+  ]
+}
+
+#endif  // swift(>=4.2)
+
 struct Sinch_Push_Dispatch_V1beta1_DispatchRequest {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var projectID: String = String()
+  var subscription: String = String()
 
-  var clientID: String = String()
+  var excludedSubscribers: [String] = []
 
-  var userID: String = String()
-
-  var payload: Sinch_Push_Dispatch_V1beta1_Payload {
-    get {return _payload ?? Sinch_Push_Dispatch_V1beta1_Payload()}
-    set {_payload = newValue}
+  var pushNotification: Sinch_Push_Dispatch_V1beta1_PushNotification {
+    get {return _pushNotification ?? Sinch_Push_Dispatch_V1beta1_PushNotification()}
+    set {_pushNotification = newValue}
   }
-  /// Returns true if `payload` has been explicitly set.
-  var hasPayload: Bool {return self._payload != nil}
-  /// Clears the value of `payload`. Subsequent reads from it will return its default value.
-  mutating func clearPayload() {self._payload = nil}
+  /// Returns true if `pushNotification` has been explicitly set.
+  var hasPushNotification: Bool {return self._pushNotification != nil}
+  /// Clears the value of `pushNotification`. Subsequent reads from it will return its default value.
+  mutating func clearPushNotification() {self._pushNotification = nil}
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
-  fileprivate var _payload: Sinch_Push_Dispatch_V1beta1_Payload? = nil
+  fileprivate var _pushNotification: Sinch_Push_Dispatch_V1beta1_PushNotification? = nil
 }
 
 struct Sinch_Push_Dispatch_V1beta1_DispatchedEvent {
@@ -52,102 +98,124 @@ struct Sinch_Push_Dispatch_V1beta1_DispatchedEvent {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  var projectID: String = String()
+  var subscription: String = String()
 
-  var clientID: String = String()
+  var excludedSubscribers: [String] = []
 
-  var userID: String = String()
-
-  var payload: Sinch_Push_Dispatch_V1beta1_Payload {
-    get {return _payload ?? Sinch_Push_Dispatch_V1beta1_Payload()}
-    set {_payload = newValue}
+  var pushNotification: Sinch_Push_Dispatch_V1beta1_PushNotification {
+    get {return _pushNotification ?? Sinch_Push_Dispatch_V1beta1_PushNotification()}
+    set {_pushNotification = newValue}
   }
-  /// Returns true if `payload` has been explicitly set.
-  var hasPayload: Bool {return self._payload != nil}
-  /// Clears the value of `payload`. Subsequent reads from it will return its default value.
-  mutating func clearPayload() {self._payload = nil}
+  /// Returns true if `pushNotification` has been explicitly set.
+  var hasPushNotification: Bool {return self._pushNotification != nil}
+  /// Clears the value of `pushNotification`. Subsequent reads from it will return its default value.
+  mutating func clearPushNotification() {self._pushNotification = nil}
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 
-  fileprivate var _payload: Sinch_Push_Dispatch_V1beta1_Payload? = nil
+  fileprivate var _pushNotification: Sinch_Push_Dispatch_V1beta1_PushNotification? = nil
 }
 
-struct Sinch_Push_Dispatch_V1beta1_Payload {
+struct Sinch_Push_Dispatch_V1beta1_DispatchFailedEvent {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var subscription: String = String()
+
+  var excludedSubscribers: [String] = []
+
+  var pushNotification: Sinch_Push_Dispatch_V1beta1_PushNotification {
+    get {return _pushNotification ?? Sinch_Push_Dispatch_V1beta1_PushNotification()}
+    set {_pushNotification = newValue}
+  }
+  /// Returns true if `pushNotification` has been explicitly set.
+  var hasPushNotification: Bool {return self._pushNotification != nil}
+  /// Clears the value of `pushNotification`. Subsequent reads from it will return its default value.
+  mutating func clearPushNotification() {self._pushNotification = nil}
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _pushNotification: Sinch_Push_Dispatch_V1beta1_PushNotification? = nil
+}
+
+struct Sinch_Push_Dispatch_V1beta1_PushNotification {
   // SwiftProtobuf.Message conformance is added in an extension below. See the
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
   var trackingID: String = String()
 
-  var owner: String = String()
-
-  var type: Sinch_Push_Dispatch_V1beta1_Payload.OneOf_Type? = nil
-
-  var message: Sinch_Conversationapi_Type_AppMessage {
-    get {
-      if case .message(let v)? = type {return v}
-      return Sinch_Conversationapi_Type_AppMessage()
-    }
-    set {type = .message(newValue)}
+  var alert: Sinch_Push_Dispatch_V1beta1_Alert {
+    get {return _alert ?? Sinch_Push_Dispatch_V1beta1_Alert()}
+    set {_alert = newValue}
   }
+  /// Returns true if `alert` has been explicitly set.
+  var hasAlert: Bool {return self._alert != nil}
+  /// Clears the value of `alert`. Subsequent reads from it will return its default value.
+  mutating func clearAlert() {self._alert = nil}
 
-  var event: Sinch_Conversationapi_Type_AppEvent {
-    get {
-      if case .event(let v)? = type {return v}
-      return Sinch_Conversationapi_Type_AppEvent()
-    }
-    set {type = .event(newValue)}
-  }
+  var metadata: Dictionary<String,String> = [:]
+
+  var importance: Sinch_Push_Dispatch_V1beta1_Importance = .unspecified
+
+  var trigger: String = String()
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
-  enum OneOf_Type: Equatable {
-    case message(Sinch_Conversationapi_Type_AppMessage)
-    case event(Sinch_Conversationapi_Type_AppEvent)
+  init() {}
 
-  #if !swift(>=4.1)
-    static func ==(lhs: Sinch_Push_Dispatch_V1beta1_Payload.OneOf_Type, rhs: Sinch_Push_Dispatch_V1beta1_Payload.OneOf_Type) -> Bool {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch (lhs, rhs) {
-      case (.message, .message): return {
-        guard case .message(let l) = lhs, case .message(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      case (.event, .event): return {
-        guard case .event(let l) = lhs, case .event(let r) = rhs else { preconditionFailure() }
-        return l == r
-      }()
-      default: return false
-      }
-    }
-  #endif
-  }
+  fileprivate var _alert: Sinch_Push_Dispatch_V1beta1_Alert? = nil
+}
+
+struct Sinch_Push_Dispatch_V1beta1_Alert {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  var title: String = String()
+
+  var message: String = String()
+
+  var imageURL: String = String()
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
 }
 
 #if swift(>=5.5) && canImport(_Concurrency)
+extension Sinch_Push_Dispatch_V1beta1_Importance: @unchecked Sendable {}
 extension Sinch_Push_Dispatch_V1beta1_DispatchRequest: @unchecked Sendable {}
 extension Sinch_Push_Dispatch_V1beta1_DispatchedEvent: @unchecked Sendable {}
-extension Sinch_Push_Dispatch_V1beta1_Payload: @unchecked Sendable {}
-extension Sinch_Push_Dispatch_V1beta1_Payload.OneOf_Type: @unchecked Sendable {}
+extension Sinch_Push_Dispatch_V1beta1_DispatchFailedEvent: @unchecked Sendable {}
+extension Sinch_Push_Dispatch_V1beta1_PushNotification: @unchecked Sendable {}
+extension Sinch_Push_Dispatch_V1beta1_Alert: @unchecked Sendable {}
 #endif  // swift(>=5.5) && canImport(_Concurrency)
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
 
 fileprivate let _protobuf_package = "sinch.push.dispatch.v1beta1"
 
+extension Sinch_Push_Dispatch_V1beta1_Importance: SwiftProtobuf._ProtoNameProviding {
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    0: .same(proto: "IMPORTANCE_UNSPECIFIED"),
+    1: .same(proto: "IMPORTANCE_LOW"),
+    2: .same(proto: "IMPORTANCE_HIGH"),
+    3: .same(proto: "IMPORTANCE_CRITICAL"),
+  ]
+}
+
 extension Sinch_Push_Dispatch_V1beta1_DispatchRequest: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".DispatchRequest"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "project_id"),
-    2: .standard(proto: "client_id"),
-    3: .standard(proto: "user_id"),
-    4: .same(proto: "payload"),
+    1: .same(proto: "subscription"),
+    2: .standard(proto: "excluded_subscribers"),
+    3: .standard(proto: "push_notification"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -156,10 +224,9 @@ extension Sinch_Push_Dispatch_V1beta1_DispatchRequest: SwiftProtobuf.Message, Sw
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.projectID) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.clientID) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.userID) }()
-      case 4: try { try decoder.decodeSingularMessageField(value: &self._payload) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.subscription) }()
+      case 2: try { try decoder.decodeRepeatedStringField(value: &self.excludedSubscribers) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._pushNotification) }()
       default: break
       }
     }
@@ -170,26 +237,22 @@ extension Sinch_Push_Dispatch_V1beta1_DispatchRequest: SwiftProtobuf.Message, Sw
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.projectID.isEmpty {
-      try visitor.visitSingularStringField(value: self.projectID, fieldNumber: 1)
+    if !self.subscription.isEmpty {
+      try visitor.visitSingularStringField(value: self.subscription, fieldNumber: 1)
     }
-    if !self.clientID.isEmpty {
-      try visitor.visitSingularStringField(value: self.clientID, fieldNumber: 2)
+    if !self.excludedSubscribers.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.excludedSubscribers, fieldNumber: 2)
     }
-    if !self.userID.isEmpty {
-      try visitor.visitSingularStringField(value: self.userID, fieldNumber: 3)
-    }
-    try { if let v = self._payload {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    try { if let v = self._pushNotification {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
     } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Sinch_Push_Dispatch_V1beta1_DispatchRequest, rhs: Sinch_Push_Dispatch_V1beta1_DispatchRequest) -> Bool {
-    if lhs.projectID != rhs.projectID {return false}
-    if lhs.clientID != rhs.clientID {return false}
-    if lhs.userID != rhs.userID {return false}
-    if lhs._payload != rhs._payload {return false}
+    if lhs.subscription != rhs.subscription {return false}
+    if lhs.excludedSubscribers != rhs.excludedSubscribers {return false}
+    if lhs._pushNotification != rhs._pushNotification {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -198,10 +261,9 @@ extension Sinch_Push_Dispatch_V1beta1_DispatchRequest: SwiftProtobuf.Message, Sw
 extension Sinch_Push_Dispatch_V1beta1_DispatchedEvent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".DispatchedEvent"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
-    1: .standard(proto: "project_id"),
-    2: .standard(proto: "client_id"),
-    3: .standard(proto: "user_id"),
-    4: .same(proto: "payload"),
+    1: .same(proto: "subscription"),
+    2: .standard(proto: "excluded_subscribers"),
+    3: .standard(proto: "push_notification"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -210,10 +272,9 @@ extension Sinch_Push_Dispatch_V1beta1_DispatchedEvent: SwiftProtobuf.Message, Sw
       // allocates stack space for every case branch when no optimizations are
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.projectID) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.clientID) }()
-      case 3: try { try decoder.decodeSingularStringField(value: &self.userID) }()
-      case 4: try { try decoder.decodeSingularMessageField(value: &self._payload) }()
+      case 1: try { try decoder.decodeSingularStringField(value: &self.subscription) }()
+      case 2: try { try decoder.decodeRepeatedStringField(value: &self.excludedSubscribers) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._pushNotification) }()
       default: break
       }
     }
@@ -224,38 +285,83 @@ extension Sinch_Push_Dispatch_V1beta1_DispatchedEvent: SwiftProtobuf.Message, Sw
     // allocates stack space for every if/case branch local when no optimizations
     // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
     // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.projectID.isEmpty {
-      try visitor.visitSingularStringField(value: self.projectID, fieldNumber: 1)
+    if !self.subscription.isEmpty {
+      try visitor.visitSingularStringField(value: self.subscription, fieldNumber: 1)
     }
-    if !self.clientID.isEmpty {
-      try visitor.visitSingularStringField(value: self.clientID, fieldNumber: 2)
+    if !self.excludedSubscribers.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.excludedSubscribers, fieldNumber: 2)
     }
-    if !self.userID.isEmpty {
-      try visitor.visitSingularStringField(value: self.userID, fieldNumber: 3)
-    }
-    try { if let v = self._payload {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    try { if let v = self._pushNotification {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
     } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Sinch_Push_Dispatch_V1beta1_DispatchedEvent, rhs: Sinch_Push_Dispatch_V1beta1_DispatchedEvent) -> Bool {
-    if lhs.projectID != rhs.projectID {return false}
-    if lhs.clientID != rhs.clientID {return false}
-    if lhs.userID != rhs.userID {return false}
-    if lhs._payload != rhs._payload {return false}
+    if lhs.subscription != rhs.subscription {return false}
+    if lhs.excludedSubscribers != rhs.excludedSubscribers {return false}
+    if lhs._pushNotification != rhs._pushNotification {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
 }
 
-extension Sinch_Push_Dispatch_V1beta1_Payload: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
-  static let protoMessageName: String = _protobuf_package + ".Payload"
+extension Sinch_Push_Dispatch_V1beta1_DispatchFailedEvent: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".DispatchFailedEvent"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "subscription"),
+    2: .standard(proto: "excluded_subscribers"),
+    3: .standard(proto: "push_notification"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.subscription) }()
+      case 2: try { try decoder.decodeRepeatedStringField(value: &self.excludedSubscribers) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._pushNotification) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.subscription.isEmpty {
+      try visitor.visitSingularStringField(value: self.subscription, fieldNumber: 1)
+    }
+    if !self.excludedSubscribers.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.excludedSubscribers, fieldNumber: 2)
+    }
+    try { if let v = self._pushNotification {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Push_Dispatch_V1beta1_DispatchFailedEvent, rhs: Sinch_Push_Dispatch_V1beta1_DispatchFailedEvent) -> Bool {
+    if lhs.subscription != rhs.subscription {return false}
+    if lhs.excludedSubscribers != rhs.excludedSubscribers {return false}
+    if lhs._pushNotification != rhs._pushNotification {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Sinch_Push_Dispatch_V1beta1_PushNotification: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".PushNotification"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .standard(proto: "tracking_id"),
-    2: .same(proto: "owner"),
-    3: .same(proto: "message"),
-    4: .same(proto: "event"),
+    2: .same(proto: "alert"),
+    3: .same(proto: "metadata"),
+    4: .same(proto: "importance"),
+    5: .same(proto: "trigger"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -265,33 +371,10 @@ extension Sinch_Push_Dispatch_V1beta1_Payload: SwiftProtobuf.Message, SwiftProto
       // enabled. https://github.com/apple/swift-protobuf/issues/1034
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.trackingID) }()
-      case 2: try { try decoder.decodeSingularStringField(value: &self.owner) }()
-      case 3: try {
-        var v: Sinch_Conversationapi_Type_AppMessage?
-        var hadOneofValue = false
-        if let current = self.type {
-          hadOneofValue = true
-          if case .message(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.type = .message(v)
-        }
-      }()
-      case 4: try {
-        var v: Sinch_Conversationapi_Type_AppEvent?
-        var hadOneofValue = false
-        if let current = self.type {
-          hadOneofValue = true
-          if case .event(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.type = .event(v)
-        }
-      }()
+      case 2: try { try decoder.decodeSingularMessageField(value: &self._alert) }()
+      case 3: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufString,SwiftProtobuf.ProtobufString>.self, value: &self.metadata) }()
+      case 4: try { try decoder.decodeSingularEnumField(value: &self.importance) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.trigger) }()
       default: break
       }
     }
@@ -305,27 +388,71 @@ extension Sinch_Push_Dispatch_V1beta1_Payload: SwiftProtobuf.Message, SwiftProto
     if !self.trackingID.isEmpty {
       try visitor.visitSingularStringField(value: self.trackingID, fieldNumber: 1)
     }
-    if !self.owner.isEmpty {
-      try visitor.visitSingularStringField(value: self.owner, fieldNumber: 2)
+    try { if let v = self._alert {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    } }()
+    if !self.metadata.isEmpty {
+      try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufString,SwiftProtobuf.ProtobufString>.self, value: self.metadata, fieldNumber: 3)
     }
-    switch self.type {
-    case .message?: try {
-      guard case .message(let v)? = self.type else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    }()
-    case .event?: try {
-      guard case .event(let v)? = self.type else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
-    }()
-    case nil: break
+    if self.importance != .unspecified {
+      try visitor.visitSingularEnumField(value: self.importance, fieldNumber: 4)
+    }
+    if !self.trigger.isEmpty {
+      try visitor.visitSingularStringField(value: self.trigger, fieldNumber: 5)
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
-  static func ==(lhs: Sinch_Push_Dispatch_V1beta1_Payload, rhs: Sinch_Push_Dispatch_V1beta1_Payload) -> Bool {
+  static func ==(lhs: Sinch_Push_Dispatch_V1beta1_PushNotification, rhs: Sinch_Push_Dispatch_V1beta1_PushNotification) -> Bool {
     if lhs.trackingID != rhs.trackingID {return false}
-    if lhs.owner != rhs.owner {return false}
-    if lhs.type != rhs.type {return false}
+    if lhs._alert != rhs._alert {return false}
+    if lhs.metadata != rhs.metadata {return false}
+    if lhs.importance != rhs.importance {return false}
+    if lhs.trigger != rhs.trigger {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Sinch_Push_Dispatch_V1beta1_Alert: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".Alert"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "title"),
+    2: .same(proto: "message"),
+    3: .standard(proto: "image_url"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.title) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.message) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.imageURL) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.title.isEmpty {
+      try visitor.visitSingularStringField(value: self.title, fieldNumber: 1)
+    }
+    if !self.message.isEmpty {
+      try visitor.visitSingularStringField(value: self.message, fieldNumber: 2)
+    }
+    if !self.imageURL.isEmpty {
+      try visitor.visitSingularStringField(value: self.imageURL, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Push_Dispatch_V1beta1_Alert, rhs: Sinch_Push_Dispatch_V1beta1_Alert) -> Bool {
+    if lhs.title != rhs.title {return false}
+    if lhs.message != rhs.message {return false}
+    if lhs.imageURL != rhs.imageURL {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

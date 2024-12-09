@@ -48,6 +48,10 @@ struct Sinch_Conversationapi_Type_OptIn {
   /// contact_id or the channels in the channel_identities list.
   var channels: [Sinch_Conversationapi_Type_ConversationChannel] = []
 
+  /// Optional.
+  /// Provides the ability to change the default processing strategy and not create a contact during opt-in. 
+  var processingStrategy: Sinch_Conversationapi_Type_ProcessingStrategy = .default
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   init() {}
@@ -69,6 +73,7 @@ extension Sinch_Conversationapi_Type_OptIn: SwiftProtobuf.Message, SwiftProtobuf
     1: .standard(proto: "app_id"),
     2: .same(proto: "recipient"),
     3: .same(proto: "channels"),
+    4: .standard(proto: "processing_strategy"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -80,6 +85,7 @@ extension Sinch_Conversationapi_Type_OptIn: SwiftProtobuf.Message, SwiftProtobuf
       case 1: try { try decoder.decodeSingularStringField(value: &self.appID) }()
       case 2: try { try decoder.decodeSingularMessageField(value: &self._recipient) }()
       case 3: try { try decoder.decodeRepeatedEnumField(value: &self.channels) }()
+      case 4: try { try decoder.decodeSingularEnumField(value: &self.processingStrategy) }()
       default: break
       }
     }
@@ -99,6 +105,9 @@ extension Sinch_Conversationapi_Type_OptIn: SwiftProtobuf.Message, SwiftProtobuf
     if !self.channels.isEmpty {
       try visitor.visitPackedEnumField(value: self.channels, fieldNumber: 3)
     }
+    if self.processingStrategy != .default {
+      try visitor.visitSingularEnumField(value: self.processingStrategy, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -106,6 +115,7 @@ extension Sinch_Conversationapi_Type_OptIn: SwiftProtobuf.Message, SwiftProtobuf
     if lhs.appID != rhs.appID {return false}
     if lhs._recipient != rhs._recipient {return false}
     if lhs.channels != rhs.channels {return false}
+    if lhs.processingStrategy != rhs.processingStrategy {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

@@ -193,7 +193,7 @@ final class ComposeView: SinchView {
         var leftWidth = 0.0
         if !(SinchChatSDK.shared.disabledFeatures.contains(.sendLocationSharingMessage) &&
             SinchChatSDK.shared.disabledFeatures.contains(.sendDocuments)) {
-            leftWidth = 40.0
+            leftWidth = 38.0
         }
         
         leftStackViewConstraint = leftStackView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 18)

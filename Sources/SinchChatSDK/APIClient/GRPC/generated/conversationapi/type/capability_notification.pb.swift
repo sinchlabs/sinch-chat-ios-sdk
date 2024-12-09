@@ -66,7 +66,7 @@ enum Sinch_Conversationapi_Type_CapabilityStatus: SwiftProtobuf.Enum {
 
 extension Sinch_Conversationapi_Type_CapabilityStatus: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static var allCases: [Sinch_Conversationapi_Type_CapabilityStatus] = [
+  static let allCases: [Sinch_Conversationapi_Type_CapabilityStatus] = [
     .capabilityUnknown,
     .capabilityFull,
     .capabilityPartial,

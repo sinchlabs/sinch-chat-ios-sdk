@@ -59,7 +59,7 @@ enum Sinch_Conversationapi_Type_AgentType: SwiftProtobuf.Enum {
 
 extension Sinch_Conversationapi_Type_AgentType: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static var allCases: [Sinch_Conversationapi_Type_AgentType] = [
+  static let allCases: [Sinch_Conversationapi_Type_AgentType] = [
     .unknownAgentType,
     .human,
     .bot,

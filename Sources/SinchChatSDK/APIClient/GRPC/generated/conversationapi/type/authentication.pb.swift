@@ -63,7 +63,7 @@ enum Sinch_Conversationapi_Type_ChannelIntegrationStatus: SwiftProtobuf.Enum {
 
 extension Sinch_Conversationapi_Type_ChannelIntegrationStatus: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static var allCases: [Sinch_Conversationapi_Type_ChannelIntegrationStatus] = [
+  static let allCases: [Sinch_Conversationapi_Type_ChannelIntegrationStatus] = [
     .pending,
     .active,
     .failing,
@@ -165,6 +165,15 @@ struct Sinch_Conversationapi_Type_ConversationChannelCredential {
     set {credential = .lineCredentials(newValue)}
   }
 
+  /// KakaoTalkChat (2-way communication) specific channel credentials.
+  var kakaotalkchatCredentials: Sinch_Conversationapi_Type_KakaoTalkChatCredentials {
+    get {
+      if case .kakaotalkchatCredentials(let v)? = credential {return v}
+      return Sinch_Conversationapi_Type_KakaoTalkChatCredentials()
+    }
+    set {credential = .kakaotalkchatCredentials(newValue)}
+  }
+
   /// Optional. The secret used to verify the channel callbacks
   /// for channels which support callback verification.
   /// The callback verification is not needed for Sinch-managed
@@ -187,6 +196,10 @@ struct Sinch_Conversationapi_Type_ConversationChannelCredential {
   /// Clears the value of `state`. Subsequent reads from it will return its default value.
   mutating func clearState() {self._state = nil}
 
+  /// Output only. Additional identifier set by the channel that represents an specific
+  /// id used by the channel. 
+  var channelKnownID: String = String()
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   /// Required. The channel credential enabling access to the underlying messaging channel.
@@ -207,6 +220,8 @@ struct Sinch_Conversationapi_Type_ConversationChannelCredential {
     case wechatCredentials(Sinch_Conversationapi_Type_WeChatCredentials)
     /// Line specific channel credentials.
     case lineCredentials(Sinch_Conversationapi_Type_LineCredentials)
+    /// KakaoTalkChat (2-way communication) specific channel credentials.
+    case kakaotalkchatCredentials(Sinch_Conversationapi_Type_KakaoTalkChatCredentials)
 
   #if !swift(>=4.1)
     static func ==(lhs: Sinch_Conversationapi_Type_ConversationChannelCredential.OneOf_Credential, rhs: Sinch_Conversationapi_Type_ConversationChannelCredential.OneOf_Credential) -> Bool {
@@ -248,6 +263,10 @@ struct Sinch_Conversationapi_Type_ConversationChannelCredential {
       }()
       case (.lineCredentials, .lineCredentials): return {
         guard case .lineCredentials(let l) = lhs, case .lineCredentials(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.kakaotalkchatCredentials, .kakaotalkchatCredentials): return {
+        guard case .kakaotalkchatCredentials(let l) = lhs, case .kakaotalkchatCredentials(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -334,6 +353,9 @@ struct Sinch_Conversationapi_Type_MMSCredentials {
 
   /// Required. MMS API Key.
   var apiKey: String = String()
+
+  /// Optional. Used when MMS_SENDER property not set
+  var defaultSender: String = String()
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -471,6 +493,23 @@ struct Sinch_Conversationapi_Type_LineCredentials {
   init() {}
 }
 
+/// KakaoTalkChat channel credential
+struct Sinch_Conversationapi_Type_KakaoTalkChatCredentials {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Required. Kakaotalk Plus friend ID.
+  var kakaotalkPlusFriendID: String = String()
+
+  /// Optional. InfoBank API KEY.
+  var apiKey: String = String()
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
 #if swift(>=5.5) && canImport(_Concurrency)
 extension Sinch_Conversationapi_Type_ChannelIntegrationStatus: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_ConversationChannelCredential: @unchecked Sendable {}
@@ -486,6 +525,7 @@ extension Sinch_Conversationapi_Type_AppleBcCredentials: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_ChannelIntegrationState: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_WeChatCredentials: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_LineCredentials: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_KakaoTalkChatCredentials: @unchecked Sendable {}
 #endif  // swift(>=5.5) && canImport(_Concurrency)
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -513,8 +553,10 @@ extension Sinch_Conversationapi_Type_ConversationChannelCredential: SwiftProtobu
     11: .standard(proto: "applebc_credentials"),
     12: .standard(proto: "wechat_credentials"),
     13: .standard(proto: "line_credentials"),
+    15: .standard(proto: "kakaotalkchat_credentials"),
     5: .standard(proto: "callback_secret"),
     10: .same(proto: "state"),
+    14: .standard(proto: "channel_known_id"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -643,6 +685,20 @@ extension Sinch_Conversationapi_Type_ConversationChannelCredential: SwiftProtobu
           self.credential = .lineCredentials(v)
         }
       }()
+      case 14: try { try decoder.decodeSingularStringField(value: &self.channelKnownID) }()
+      case 15: try {
+        var v: Sinch_Conversationapi_Type_KakaoTalkChatCredentials?
+        var hadOneofValue = false
+        if let current = self.credential {
+          hadOneofValue = true
+          if case .kakaotalkchatCredentials(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.credential = .kakaotalkchatCredentials(v)
+        }
+      }()
       default: break
       }
     }
@@ -707,6 +763,12 @@ extension Sinch_Conversationapi_Type_ConversationChannelCredential: SwiftProtobu
     }()
     default: break
     }
+    if !self.channelKnownID.isEmpty {
+      try visitor.visitSingularStringField(value: self.channelKnownID, fieldNumber: 14)
+    }
+    try { if case .kakaotalkchatCredentials(let v)? = self.credential {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 15)
+    } }()
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -715,6 +777,7 @@ extension Sinch_Conversationapi_Type_ConversationChannelCredential: SwiftProtobu
     if lhs.credential != rhs.credential {return false}
     if lhs.callbackSecret != rhs.callbackSecret {return false}
     if lhs._state != rhs._state {return false}
+    if lhs.channelKnownID != rhs.channelKnownID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -834,6 +897,7 @@ extension Sinch_Conversationapi_Type_MMSCredentials: SwiftProtobuf.Message, Swif
     1: .standard(proto: "basic_auth"),
     2: .standard(proto: "account_id"),
     3: .standard(proto: "api_key"),
+    4: .standard(proto: "default_sender"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -845,6 +909,7 @@ extension Sinch_Conversationapi_Type_MMSCredentials: SwiftProtobuf.Message, Swif
       case 1: try { try decoder.decodeSingularMessageField(value: &self._basicAuth) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.accountID) }()
       case 3: try { try decoder.decodeSingularStringField(value: &self.apiKey) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.defaultSender) }()
       default: break
       }
     }
@@ -864,6 +929,9 @@ extension Sinch_Conversationapi_Type_MMSCredentials: SwiftProtobuf.Message, Swif
     if !self.apiKey.isEmpty {
       try visitor.visitSingularStringField(value: self.apiKey, fieldNumber: 3)
     }
+    if !self.defaultSender.isEmpty {
+      try visitor.visitSingularStringField(value: self.defaultSender, fieldNumber: 4)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
@@ -871,6 +939,7 @@ extension Sinch_Conversationapi_Type_MMSCredentials: SwiftProtobuf.Message, Swif
     if lhs._basicAuth != rhs._basicAuth {return false}
     if lhs.accountID != rhs.accountID {return false}
     if lhs.apiKey != rhs.apiKey {return false}
+    if lhs.defaultSender != rhs.defaultSender {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1155,6 +1224,44 @@ extension Sinch_Conversationapi_Type_LineCredentials: SwiftProtobuf.Message, Swi
   static func ==(lhs: Sinch_Conversationapi_Type_LineCredentials, rhs: Sinch_Conversationapi_Type_LineCredentials) -> Bool {
     if lhs.token != rhs.token {return false}
     if lhs.secret != rhs.secret {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Sinch_Conversationapi_Type_KakaoTalkChatCredentials: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".KakaoTalkChatCredentials"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "kakaotalk_plus_friend_id"),
+    2: .standard(proto: "api_key"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.kakaotalkPlusFriendID) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.apiKey) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.kakaotalkPlusFriendID.isEmpty {
+      try visitor.visitSingularStringField(value: self.kakaotalkPlusFriendID, fieldNumber: 1)
+    }
+    if !self.apiKey.isEmpty {
+      try visitor.visitSingularStringField(value: self.apiKey, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Conversationapi_Type_KakaoTalkChatCredentials, rhs: Sinch_Conversationapi_Type_KakaoTalkChatCredentials) -> Bool {
+    if lhs.kakaotalkPlusFriendID != rhs.kakaotalkPlusFriendID {return false}
+    if lhs.apiKey != rhs.apiKey {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

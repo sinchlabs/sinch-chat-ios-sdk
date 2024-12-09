@@ -7,7 +7,7 @@ class MessageSizeCalculator: ChatCellSizeCalculator {
     public var dateLabelTextInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
     public var buttonHeight = 36.0
     public var statusLabelFont = UIFont.preferredFont(forTextStyle: .caption2)
-    public var statusImageWidth = 12.0
+    public var statusImageWidth = 16.0
     public var statusSpacing = 4.0
     
     init(layout: ChatFlowLayout? = nil) {
@@ -51,7 +51,6 @@ class MessageSizeCalculator: ChatCellSizeCalculator {
         return CGSize(width: messagesLayout.itemWidth, height: itemHeight)
     }
   
-    
     func cellContentHeight(for message: Message, at indexPath: IndexPath) -> CGFloat {
         
         let messageContainerHeight = messageContainerSize(for: message).height

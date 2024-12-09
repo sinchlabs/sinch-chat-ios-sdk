@@ -6,7 +6,7 @@ protocol StartViewModel: MessageDataSourceDelegate {
     var delegate: StartViewModelDelegate? { get }
     var isStartedFromInbox: Bool { get set }
     var sendDocumentAsText: Bool { get }
-    
+
     func setInternetConnectionState(_ state: InternetConnectionState)
     func sendMedia(_ media: MediaType, completion: @escaping (Result<Message, Error>) -> Void)
     func sendMessage(_ message: MessageType, completion: @escaping (Result<Message?, Error>) -> Void)
@@ -38,7 +38,7 @@ protocol StartViewModelDelegate: AnyObject {
 
 final class DefaultStartViewModel: StartViewModel {
     
-    private var dataSource: InboxMessageDataSource
+    private var dataSource: MessageDataSource
     private let notificationPermission: PushNofiticationPermissionHandler
     
     weak var delegate: StartViewModelDelegate?
@@ -48,7 +48,7 @@ final class DefaultStartViewModel: StartViewModel {
     var isTypingIndicatorVisible = false
     var isStartedFromInbox = false
     var sendDocumentAsText = false
-    
+
     var error: Error?
     var state: InternetConnectionState = .notDetermined {
         willSet {
@@ -63,12 +63,12 @@ final class DefaultStartViewModel: StartViewModel {
     var timer: Timer?
     
     init(
-        messageDataSource: InboxMessageDataSource,
+        messageDataSource: MessageDataSource,
         notificationPermission: PushNofiticationPermissionHandler,
         sendDocumentAsText: Bool = false
     ) {
-        dataSource = messageDataSource
-        
+        self.dataSource = messageDataSource
+
         self.sendDocumentAsText = sendDocumentAsText
         self.notificationPermission = notificationPermission
     }
@@ -197,7 +197,6 @@ final class DefaultStartViewModel: StartViewModel {
             }
             callback(createArrayWithDateMessage(array))
         }
-        
     }
     
     func processNewMessages(_ message: Message) -> [Message] {
@@ -255,6 +254,7 @@ final class DefaultStartViewModel: StartViewModel {
         setRunningState()
         
     }
+
     func onInternetLost() {
         dataSource.cancelSubscription()
         error = nil
@@ -413,12 +413,12 @@ final class DefaultStartViewModel: StartViewModel {
     }
     
     private func processMessageBeforeSending(messagePayload: MessageType, callback: @escaping (MessageType?) -> Void) {
-        switch messagePayload {
-        case .choiceResponseMessage:
+
+        if case .choiceResponseMessage = messagePayload {
             callback(messagePayload)
-            return
-        default: break
         }
+
+
         guard let message = self.createMessage(entryId: UUID().uuidString, messageType: messagePayload) else {
             callback(nil)
             return

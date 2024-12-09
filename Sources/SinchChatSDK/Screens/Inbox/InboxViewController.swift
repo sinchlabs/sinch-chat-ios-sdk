@@ -1,12 +1,13 @@
 import UIKit
+import Network
 
-final class InboxViewController: SinchViewController<InboxViewModel, InboxView>, SinchChatViewController {
+final class InboxViewController: SinchViewController<InboxViewModel, InboxView>, SinchChatViewController, InboxViewModelDelegate {
     
     var customOptions: GetChatViewControllerOptions =  .init(metadata: [], shouldInitializeConversation: true)
     
-    var conversations : [InboxChat] = []
     lazy var activityIndicator = LoadMoreActivityIndicator(scrollView: mainView.tableView, spacingFromLastCell: 10, spacingFromLastCellOnActionStart: 60)
-    
+    let monitor = NWPathMonitor()
+
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -14,6 +15,9 @@ final class InboxViewController: SinchViewController<InboxViewModel, InboxView>,
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
         mainView.tableView.delegate = self
         mainView.tableView.dataSource = self
+        addNoInternetObservers()
+
+        (viewModel as? DefaultInboxViewModel)?.delegate = self
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -22,19 +26,6 @@ final class InboxViewController: SinchViewController<InboxViewModel, InboxView>,
         setNavigationBarStyle(uiConfig: mainView.uiConfig)
         addStartConversationButton()
       
-        if let data = UserDefaults.standard.data(forKey: "lastMessage") {
-            do {
-                // Create JSON Decoder
-                let decoder = JSONDecoder()
-
-                // Decode Note
-                let conversation = try decoder.decode(InboxChat.self, from: data)
-                conversations = [conversation]
-                mainView.tableView.reloadData()
-            } catch {
-                print("Unable to Decode Note (\(error))")
-            }
-        }
         if isModal {
             addCloseButton()
         } else {
@@ -42,9 +33,11 @@ final class InboxViewController: SinchViewController<InboxViewModel, InboxView>,
         }
         
     }
+    
     deinit {
-               
+        viewModel.setIdleState()
         viewModel.closeChannel()
+        monitor.cancel()
         
     }
     private func addStartConversationButton() {
@@ -60,21 +53,86 @@ final class InboxViewController: SinchViewController<InboxViewModel, InboxView>,
     @objc func startConversationAction() {
         showChat()
     }
+    
+    func addNoInternetObservers() {
+        
+        monitor.pathUpdateHandler = { [weak self] path in
+            DispatchQueue.main.async { [weak self] in
+                if path.status == .satisfied {
+                    self?.viewModel.setInternetConnectionState(.isOn)
+                } else {
+                    self?.viewModel.setInternetConnectionState(.isOff)
+                }
+            }
+        }
+        let queue = DispatchQueue(label: "internetConnectionMonitor")
+        monitor.start(queue: queue)
+    }
+    
+    func didChangeInternetState(_ state: InternetConnectionState) {
+        switch state {
+            
+        case .isOn:
+            debugPrint("ON ***********")
+                    
+            viewModel.onInternetOn()
+            
+        case .isOff:
+            debugPrint("OFF ***********")
 
+            viewModel.onInternetLost()
+            
+        case .notDetermined:
+            break
+        }
+        
+        mainView.setErrorViewState(state)
+    }
+    
+    func didUpdateChannels(_ channels: [Sinch_Chat_Sdk_V1alpha2_Channel]) {
+
+        debugPrint("didUpdateChannels")
+        mainView.tableView.reloadData()
+        self.activityIndicator.stop()
+
+    }
+    
+    func didUpdateChannelAtIndex(_ index: Int) {
+        debugPrint("didUpdateChannel")
+       // if let row = viewModel.channelsArray.firstIndex(where: { $0.channelID == channel.channelID }) {
+        mainView.tableView.reloadRows(at: [IndexPath(row: index, section: 0)], with: .none)
+        
+    }
+    func moveChannelToTopFromIndex(_ index: Int) {
+        debugPrint("moveChannelToTopFromIndex")
+
+        mainView.tableView.beginUpdates()
+        mainView.tableView.moveRow(at: IndexPath(row: index, section: 0), to: IndexPath(row: 0, section: 0))
+        mainView.tableView.endUpdates()
+
+    }
+    func handleError(_ error: Error) {
+        debugPrint("handleError")
+
+     //   DispatchQueue.main.async {
+            
+            self.activityIndicator.stop()
+     //   }
+    }
 }
 extension InboxViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return conversations.count
+        return viewModel.channelsArray.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         guard let cell = tableView.dequeueReusableCell(withIdentifier: "inboxCell", for: indexPath) as? InboxTableViewCell else {
             return UITableViewCell()
         }
-        
-        cell.updateWithData(inboxChat:conversations[indexPath.row],
-                            uiConfig: mainView.uiConfig,
-                            localizationConfig: mainView.localizationConfiguration)
+        cell.selectionStyle = .none
+        cell.updateWithChannel(viewModel.channelsArray[indexPath.row],
+                               uiConfig: mainView.uiConfig,
+                               localizationConfig: mainView.localizationConfiguration)
         
         return cell
     }
@@ -82,31 +140,33 @@ extension InboxViewController: UITableViewDataSource {
 extension InboxViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
     
-        showChatForConversation(self.conversations[indexPath.row])
+        let channel = viewModel.channelsArray[indexPath.row]
+        
+        showChatForChannel(channel)
     }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-//        activityIndicator.start {
-//            
-//            DispatchQueue.global(qos: .utility).async {
-//                sleep(1)
-//                
-//                DispatchQueue.main.async { [weak self] in
-//                    self?.numberOfConversations += 10
-//                    self?.mainView.tableView.reloadData()
-//                    self?.activityIndicator.stop()
-//                }
-//            }
-//        }
+        if self.viewModel.isLoadingMore {
+            return
+        }
+        activityIndicator.start {
+                        
+            DispatchQueue.global(qos: .utility).async {
+                sleep(1)
+                self.viewModel.fetchMoreChannels()
+
+            }
+        }
     }
-    func showChatForConversation(_ conversation: InboxChat) {
+    func showChatForChannel(_ channel: Sinch_Chat_Sdk_V1alpha2_Channel) {
         
         customOptions = .init(
-            topicID: conversation.chatOptions?.option?.topicID,
-            metadata: conversation.chatOptions?.option?.metadata ?? [],
-            shouldInitializeConversation: conversation.chatOptions?.option?.shouldInitializeConversation ?? false,
-            sendDocumentAsTextMessage: conversation.chatOptions?.option?.sendDocumentAsText ?? false
+            topicID: channel.channelID,
+            metadata: customOptions.metadata,
+            shouldInitializeConversation: customOptions.shouldInitializeConversation,
+            sendDocumentAsTextMessage: customOptions.sendDocumentAsTextMessage
         )
+
         SinchChatSDK.shared._chat.apiClient = viewModel.apiClient
         
         guard let chatViewController = (try? SinchChatSDK.shared.chat.getChatViewController(
@@ -123,6 +183,10 @@ extension InboxViewController: UITableViewDelegate {
     
     func showChat() {
         
+        if let userID = viewModel.authDataSource.currentAuthorization?.getUserID() {
+            customOptions.topicID = "\(UUID().uuidString)"
+        }
+        
         SinchChatSDK.shared._chat.apiClient = viewModel.apiClient
         guard let chatViewController = (try? SinchChatSDK.shared.chat.getChatViewController(
             uiConfig: mainView.uiConfig,
@@ -132,7 +196,9 @@ extension InboxViewController: UITableViewDelegate {
             return
         }
         chatViewController.viewModel.isStartedFromInbox = true
+        customOptions.topicID = nil
         
         self.navigationController?.pushViewController(chatViewController, animated: true)
     }
+    
 }

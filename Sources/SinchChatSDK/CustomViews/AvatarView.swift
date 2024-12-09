@@ -58,45 +58,50 @@ final class AvatarView: UIView {
 
     }
 
-    func updateWithConversation(_ conversation: InboxChat, uiConfig: SinchSDKConfig.UIConfig) {
+    func updateWithChannel(_ channel: Sinch_Chat_Sdk_V1alpha2_Channel, uiConfig: SinchSDKConfig.UIConfig) {
         var name: String?
         var pictureUrlString: String?
         
-        if let metadata = conversation.chatOptions?.option?.metadata {
+        if channel.hasLastEntry, let message = handleIncomingMessage(channel.lastEntry) {
             
-            metadata.forEach { metadata in
-                let data = metadata.getKeyValue()
-                if data.key == "senderDisplayName" {
-                    name = data.value
-                } else if data.key == "senderPictureUrl" {
-                    pictureUrlString = data.value
+            switch message.owner {
+            case .incoming(let agent):
+                if let agent = agent {
+                    name = agent.name
+                    pictureUrlString = agent.pictureUrl
                 }
-            }
-        }
-        nameLabel.text = ""
-        nameLabel.textColor = uiConfig.inboxAvatarNameTextColor
-        backgroundColor = uiConfig.inboxAvatarBackgroundColor
-
-        if let imageUrl = pictureUrlString,
-           let imageURL = URL(string: imageUrl) {
-            
-            imageView.setImage(url: imageURL) { result in
-                switch result {
-                case .success:
-                    self.nameLabel.isHidden = true
-                    self.imageView.isHidden = false
-                    
-                    self.backgroundColor = uiConfig.incomingMessageSenderBackgroundColor
-                case .failure:
-                    self.handleNonAvatarModelsWithName(name, uiConfig: uiConfig)
-                }
+                
+            case .outgoing:
+                //TODO
+                break
+            case .system:
+                break
             }
             
-        } else {
-            handleNonAvatarModelsWithName(name, uiConfig: uiConfig)
+            nameLabel.text = ""
+            nameLabel.textColor = uiConfig.inboxAvatarNameTextColor
+            backgroundColor = uiConfig.inboxAvatarBackgroundColor
+            
+            if let imageUrl = pictureUrlString,
+               let imageURL = URL(string: imageUrl) {
+                
+                imageView.setImage(url: imageURL) { result in
+                    switch result {
+                    case .success:
+                        self.nameLabel.isHidden = true
+                        self.imageView.isHidden = false
+                        
+                        self.backgroundColor = uiConfig.incomingMessageSenderBackgroundColor
+                    case .failure:
+                        self.handleNonAvatarModelsWithName(name, uiConfig: uiConfig)
+                    }
+                }
+                
+            } else {
+                handleNonAvatarModelsWithName(name, uiConfig: uiConfig)
+            }
         }
     }
-    
     func updateWithModel(_ message: Message, uiConfig: SinchSDKConfig.UIConfig) {
         nameLabel.font = uiConfig.incomingMessageSenderNameFont
         nameLabel.textColor = uiConfig.incomingMessageSenderNameTextColor

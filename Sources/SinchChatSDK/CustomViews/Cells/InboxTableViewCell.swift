@@ -115,10 +115,10 @@ class InboxTableViewCell: UITableViewCell {
         return imageView
     }()
     
-    var conversation: InboxChat?
+    var channel: Sinch_Chat_Sdk_V1alpha2_Channel?
     private var dotYCentarPosition: NSLayoutConstraint!
     private var dotYNameCenterPosition: NSLayoutConstraint!
-
+    
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         
@@ -141,7 +141,6 @@ class InboxTableViewCell: UITableViewCell {
         rightStackView.addArrangedSubview(lastMessageLabel)
         
         addSubview(mainStackView)
-        
         nameLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
         dateStackView.setContentHuggingPriority(.defaultHigh, for: .horizontal)
         
@@ -157,7 +156,7 @@ class InboxTableViewCell: UITableViewCell {
             
             emptyView.widthAnchor.constraint(equalToConstant: 12.0),
             emptyView.heightAnchor.constraint(equalTo: mainStackView.heightAnchor),
-
+            
             avatarView.widthAnchor.constraint(equalToConstant: 45.0),
             avatarView.heightAnchor.constraint(equalToConstant: 45.0),
             avatarView.centerXAnchor.constraint(equalTo: avatarEmptyView.centerXAnchor),
@@ -176,7 +175,7 @@ class InboxTableViewCell: UITableViewCell {
             nameLabel.topAnchor.constraint(equalTo: topView.topAnchor, constant: 0),
             nameLabel.bottomAnchor.constraint(equalTo: topView.bottomAnchor, constant: 0),
             nameLabel.leadingAnchor.constraint(equalTo: topView.leadingAnchor, constant: 0),
-            nameLabel.trailingAnchor.constraint(equalTo: dateStackView.leadingAnchor, constant: -8),
+            nameLabel.trailingAnchor.constraint(lessThanOrEqualTo: dateStackView.leadingAnchor, constant: -8),
             
             dateStackView.topAnchor.constraint(equalTo: topView.topAnchor, constant: 0),
             dateStackView.bottomAnchor.constraint(equalTo: topView.bottomAnchor, constant: 0),
@@ -190,43 +189,57 @@ class InboxTableViewCell: UITableViewCell {
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    func updateWithData(inboxChat:InboxChat, uiConfig: SinchSDKConfig.UIConfig,
-                        localizationConfig: SinchSDKConfig.LocalizationConfig) {
-        self.conversation = inboxChat
-       
-        dotView.backgroundColor = uiConfig.inboxUnreadDotColor
+    
+    func updateWithChannel(_ channel:Sinch_Chat_Sdk_V1alpha2_Channel, uiConfig: SinchSDKConfig.UIConfig,
+                           localizationConfig: SinchSDKConfig.LocalizationConfig) {
+        self.channel = channel
+        
         lastMessageLabel.textColor = uiConfig.inboxLastMessageTextColor
         nameLabel.textColor = uiConfig.inboxChatNameColor
         statusLabel.textColor = uiConfig.inboxStatusTextColor
-   
-        avatarView.updateWithConversation(inboxChat, uiConfig: uiConfig)
-
-        //  avatarEmptyView.isHidden = true
+        
+       //   avatarView.updateWithChannel(channel, uiConfig: uiConfig)
+        
+        avatarEmptyView.isHidden = true
+        dotYCentarPosition.isActive = false
+        dotYNameCenterPosition.isActive = true
+        
         timeLabel.textColor = uiConfig.inboxDateTextColor
         chevronImageView.image = uiConfig.inboxChevronRightImage
         dotView.backgroundColor = uiConfig.inboxNotificationDotColor
         
-        dotView.isHidden = true
-        if uiConfig.inboxAvatarPlaceholderImage != nil {
-            avatarView.imageView.image = uiConfig.inboxAvatarPlaceholderImage
-            dotYCentarPosition.isActive = true
-            dotYNameCenterPosition.isActive = false
-            avatarEmptyView.isHidden = false
-
-        } else {
-            avatarEmptyView.isHidden = true
-            dotYCentarPosition.isActive = false
-            dotYNameCenterPosition.isActive = true
-        }
-        dotView.layoutIfNeeded()
-        avatarView.backgroundColor = .clear
-
-        statusLabel.isHidden = true
-
-        nameLabel.text = "Case #1"
-     //   statusLabel.text = "Status - Open"
-        lastMessageLabel.text = inboxChat.text + String("\n")
-        timeLabel.text = inboxChat.sendDate.getInboxFormattedDate(localizationConfiguration: localizationConfig)
+        statusLabel.text = channel.status == .open ? "\(localizationConfig.inboxStatusText) \(localizationConfig.inboxStatusOpenText)" : "\(localizationConfig.inboxStatusText) \(localizationConfig.inboxStatusClosedText)"
         
+        nameLabel.text = channel.displayName.isEmpty ? channel.channelID.components(separatedBy: "/").last ?? "" : channel.displayName
+  
+       // statusLabel.text = "Status - Open"
+        
+        if channel.hasLastEntry {
+            guard let message = handleIncomingMessage(channel.lastEntry) else {
+                lastMessageLabel.text = "\n"
+                timeLabel.text = ""
+                return
+            }
+            debugPrint(channel.hasSeenAt)
+            debugPrint(channel.seenAt.seconds)
+
+            if channel.lastEntry.hasDeliveryTime && channel.hasSeenAt {
+                
+                dotView.isHidden =  channel.seenAt.seconds > channel.lastEntry.deliveryTime.seconds
+            } else {
+                dotView.isHidden = true
+            }
+
+            dotView.layoutIfNeeded()
+
+            lastMessageLabel.text = (message.convertToText ?? "") + "\n"
+            
+            if channel.hasUpdatedAt {
+                let date = Date(timeIntervalSince1970: TimeInterval(channel.updatedAt.seconds))
+                timeLabel.text = date.getInboxFormattedDate(localizationConfiguration: localizationConfig)
+            } else {
+                timeLabel.text = ""
+            }
+        }
     }
 }

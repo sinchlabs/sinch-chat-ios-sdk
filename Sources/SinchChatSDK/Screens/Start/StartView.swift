@@ -1,5 +1,6 @@
 import UIKit
 
+
 final class StartView: SinchView {
     
     var messageComposeView: ComposeView
@@ -45,14 +46,14 @@ final class StartView: SinchView {
         collectionView.register(VideoMessageCell.self, forCellWithReuseIdentifier: VideoMessageCell.cellId)
         collectionView.register(TypingIndicatorCell.self, forCellWithReuseIdentifier: TypingIndicatorCell.cellId)
 
-        collectionView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(collectionView)
         collectionView.contentInsetAdjustmentBehavior = .never
+        collectionView.translatesAutoresizingMaskIntoConstraints = false
 
-        errorView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(errorView)
         errorView.isHidden = true
-        
+        errorView.translatesAutoresizingMaskIntoConstraints = false
+
     }
     override func setupConstraints() {
         

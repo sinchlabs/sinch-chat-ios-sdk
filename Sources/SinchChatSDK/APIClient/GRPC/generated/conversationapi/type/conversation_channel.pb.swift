@@ -34,10 +34,12 @@ enum Sinch_Conversationapi_Type_ConversationChannel: SwiftProtobuf.Enum {
   case telegram // = 8
   case instagram // = 9
   case kakaotalk // = 10
-  case nativeChannel // = 11
+  case sinchChat // = 11
   case applebc // = 12
   case wechat // = 13
   case line // = 14
+  case kakaotalkchat // = 15
+  case sinchPush // = 16
   case UNRECOGNIZED(Int)
 
   init() {
@@ -57,10 +59,12 @@ enum Sinch_Conversationapi_Type_ConversationChannel: SwiftProtobuf.Enum {
     case 8: self = .telegram
     case 9: self = .instagram
     case 10: self = .kakaotalk
-    case 11: self = .nativeChannel
+    case 11: self = .sinchChat
     case 12: self = .applebc
     case 13: self = .wechat
     case 14: self = .line
+    case 15: self = .kakaotalkchat
+    case 16: self = .sinchPush
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -78,10 +82,12 @@ enum Sinch_Conversationapi_Type_ConversationChannel: SwiftProtobuf.Enum {
     case .telegram: return 8
     case .instagram: return 9
     case .kakaotalk: return 10
-    case .nativeChannel: return 11
+    case .sinchChat: return 11
     case .applebc: return 12
     case .wechat: return 13
     case .line: return 14
+    case .kakaotalkchat: return 15
+    case .sinchPush: return 16
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -92,7 +98,7 @@ enum Sinch_Conversationapi_Type_ConversationChannel: SwiftProtobuf.Enum {
 
 extension Sinch_Conversationapi_Type_ConversationChannel: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static var allCases: [Sinch_Conversationapi_Type_ConversationChannel] = [
+  static let allCases: [Sinch_Conversationapi_Type_ConversationChannel] = [
     .channelUnspecified,
     .whatsapp,
     .rcs,
@@ -104,10 +110,12 @@ extension Sinch_Conversationapi_Type_ConversationChannel: CaseIterable {
     .telegram,
     .instagram,
     .kakaotalk,
-    .nativeChannel,
+    .sinchChat,
     .applebc,
     .wechat,
     .line,
+    .kakaotalkchat,
+    .sinchPush,
   ]
 }
 
@@ -132,9 +140,11 @@ extension Sinch_Conversationapi_Type_ConversationChannel: SwiftProtobuf._ProtoNa
     8: .same(proto: "TELEGRAM"),
     9: .same(proto: "INSTAGRAM"),
     10: .same(proto: "KAKAOTALK"),
-    11: .same(proto: "NATIVE_CHANNEL"),
+    11: .same(proto: "SINCH_CHAT"),
     12: .same(proto: "APPLEBC"),
     13: .same(proto: "WECHAT"),
     14: .same(proto: "LINE"),
+    15: .same(proto: "KAKAOTALKCHAT"),
+    16: .same(proto: "SINCH_PUSH"),
   ]
 }

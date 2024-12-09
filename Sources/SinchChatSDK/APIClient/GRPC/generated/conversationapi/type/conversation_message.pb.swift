@@ -55,7 +55,7 @@ enum Sinch_Conversationapi_Type_ConversationDirection: SwiftProtobuf.Enum {
 
 extension Sinch_Conversationapi_Type_ConversationDirection: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static var allCases: [Sinch_Conversationapi_Type_ConversationDirection] = [
+  static let allCases: [Sinch_Conversationapi_Type_ConversationDirection] = [
     .undefinedDirection,
     .toApp,
     .toContact,
@@ -102,7 +102,7 @@ enum Sinch_Conversationapi_Type_CardHeight: SwiftProtobuf.Enum {
 
 extension Sinch_Conversationapi_Type_CardHeight: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static var allCases: [Sinch_Conversationapi_Type_CardHeight] = [
+  static let allCases: [Sinch_Conversationapi_Type_CardHeight] = [
     .unspecifiedHeight,
     .short,
     .medium,
@@ -121,65 +121,108 @@ struct Sinch_Conversationapi_Type_ConversationMessage {
   // methods supported on all messages.
 
   /// Required. The ID of the message.
-  var id: String = String()
+  var id: String {
+    get {return _storage._id}
+    set {_uniqueStorage()._id = newValue}
+  }
 
   /// The direction defines what is the source and
   /// what is the destination of the message. 
-  var direction: Sinch_Conversationapi_Type_ConversationDirection = .undefinedDirection
+  var direction: Sinch_Conversationapi_Type_ConversationDirection {
+    get {return _storage._direction}
+    set {_uniqueStorage()._direction = newValue}
+  }
 
   /// The content of the message.
-  var message: Sinch_Conversationapi_Type_ConversationMessage.OneOf_Message? = nil
+  var message: OneOf_Message? {
+    get {return _storage._message}
+    set {_uniqueStorage()._message = newValue}
+  }
 
   var appMessage: Sinch_Conversationapi_Type_AppMessage {
     get {
-      if case .appMessage(let v)? = message {return v}
+      if case .appMessage(let v)? = _storage._message {return v}
       return Sinch_Conversationapi_Type_AppMessage()
     }
-    set {message = .appMessage(newValue)}
+    set {_uniqueStorage()._message = .appMessage(newValue)}
   }
 
   var contactMessage: Sinch_Conversationapi_Type_ContactMessage {
     get {
-      if case .contactMessage(let v)? = message {return v}
+      if case .contactMessage(let v)? = _storage._message {return v}
       return Sinch_Conversationapi_Type_ContactMessage()
     }
-    set {message = .contactMessage(newValue)}
+    set {_uniqueStorage()._message = .contactMessage(newValue)}
   }
 
   /// Required. The channel and contact channel identity of the message.
   var channelIdentity: Sinch_Conversationapi_Type_ChannelIdentity {
-    get {return _channelIdentity ?? Sinch_Conversationapi_Type_ChannelIdentity()}
-    set {_channelIdentity = newValue}
+    get {return _storage._channelIdentity ?? Sinch_Conversationapi_Type_ChannelIdentity()}
+    set {_uniqueStorage()._channelIdentity = newValue}
   }
   /// Returns true if `channelIdentity` has been explicitly set.
-  var hasChannelIdentity: Bool {return self._channelIdentity != nil}
+  var hasChannelIdentity: Bool {return _storage._channelIdentity != nil}
   /// Clears the value of `channelIdentity`. Subsequent reads from it will return its default value.
-  mutating func clearChannelIdentity() {self._channelIdentity = nil}
+  mutating func clearChannelIdentity() {_uniqueStorage()._channelIdentity = nil}
 
-  /// Required. The ID of the conversation.
-  var conversationID: String = String()
+  /// Optional. The ID of the conversation. Will not be present for messages sent in Dispatch Mode.
+  var conversationID: String {
+    get {return _storage._conversationID}
+    set {_uniqueStorage()._conversationID = newValue}
+  }
 
-  /// Required. The ID of the contact.
-  var contactID: String = String()
+  /// Optional. The ID of the contact. Will not be present for messages sent in Dispatch Mode.
+  var contactID: String {
+    get {return _storage._contactID}
+    set {_uniqueStorage()._contactID = newValue}
+  }
 
   /// Optional. Metadata associated with the contact.
   /// Up to 1024 characters long. 
-  var metadata: String = String()
+  var metadata: String {
+    get {return _storage._metadata}
+    set {_uniqueStorage()._metadata = newValue}
+  }
 
   /// Output only.
   var acceptTime: SwiftProtobuf.Google_Protobuf_Timestamp {
-    get {return _acceptTime ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
-    set {_acceptTime = newValue}
+    get {return _storage._acceptTime ?? SwiftProtobuf.Google_Protobuf_Timestamp()}
+    set {_uniqueStorage()._acceptTime = newValue}
   }
   /// Returns true if `acceptTime` has been explicitly set.
-  var hasAcceptTime: Bool {return self._acceptTime != nil}
+  var hasAcceptTime: Bool {return _storage._acceptTime != nil}
   /// Clears the value of `acceptTime`. Subsequent reads from it will return its default value.
-  mutating func clearAcceptTime() {self._acceptTime = nil}
+  mutating func clearAcceptTime() {_uniqueStorage()._acceptTime = nil}
 
   /// Optional. For Contact Messages the sender ID that the contact
   /// sent the message to. For App Messages the sender that was
   /// used to send the message, if applicable.
-  var senderID: String = String()
+  var senderID: String {
+    get {return _storage._senderID}
+    set {_uniqueStorage()._senderID = newValue}
+  }
+
+  /// Output only. The processing mode.
+  var processingMode: Sinch_Conversationapi_Type_ProcessingMode {
+    get {return _storage._processingMode}
+    set {_uniqueStorage()._processingMode = newValue}
+  }
+
+  /// Output only. Flag if the message was injected
+  var injected: Bool {
+    get {return _storage._injected}
+    set {_uniqueStorage()._injected = newValue}
+  }
+
+  /// Required. The status of the message, eventTime of the status and reason if status is failed
+  var messageStatus: Sinch_Conversationapi_Type_MessageStatus {
+    get {return _storage._messageStatus ?? Sinch_Conversationapi_Type_MessageStatus()}
+    set {_uniqueStorage()._messageStatus = newValue}
+  }
+  /// Returns true if `messageStatus` has been explicitly set.
+  var hasMessageStatus: Bool {return _storage._messageStatus != nil}
+  /// Clears the value of `messageStatus`. Subsequent reads from it will return its default value.
+  mutating func clearMessageStatus() {_uniqueStorage()._messageStatus = nil}
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -210,8 +253,7 @@ struct Sinch_Conversationapi_Type_ConversationMessage {
 
   init() {}
 
-  fileprivate var _channelIdentity: Sinch_Conversationapi_Type_ChannelIdentity? = nil
-  fileprivate var _acceptTime: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+  fileprivate var _storage = _StorageClass.defaultInstance
 }
 
 /// Message originating from an app
@@ -232,7 +274,8 @@ struct Sinch_Conversationapi_Type_AppMessage {
   /// One of TextMessage, MediaMessage,
   /// TemplateMessage, ChoiceMessage,
   /// CardMessage, CarouselMessage, 
-  /// LocationMessage or ContactInfoMessage. 
+  /// LocationMessage, ContactInfoMessage
+  /// or ListMessage. 
   var message: OneOf_Message? {
     get {return _storage._message}
     set {_uniqueStorage()._message = newValue}
@@ -315,6 +358,16 @@ struct Sinch_Conversationapi_Type_AppMessage {
     set {_uniqueStorage()._message = .contactInfoMessage(newValue)}
   }
 
+  /// A message containing multiple sections which can have items such as choices
+  /// and products. 
+  var listMessage: Sinch_Conversationapi_Type_ListMessage {
+    get {
+      if case .listMessage(let v)? = _storage._message {return v}
+      return Sinch_Conversationapi_Type_ListMessage()
+    }
+    set {_uniqueStorage()._message = .listMessage(newValue)}
+  }
+
   /// Optional identity of an sender
   var agent: Sinch_Conversationapi_Type_Agent {
     get {return _storage._agent ?? Sinch_Conversationapi_Type_Agent()}
@@ -325,13 +378,19 @@ struct Sinch_Conversationapi_Type_AppMessage {
   /// Clears the value of `agent`. Subsequent reads from it will return its default value.
   mutating func clearAgent() {_uniqueStorage()._agent = nil}
 
+  var explicitChannelOmniMessage: Dictionary<String,Sinch_Conversationapi_Type_OmniMessageOverride> {
+    get {return _storage._explicitChannelOmniMessage}
+    set {_uniqueStorage()._explicitChannelOmniMessage = newValue}
+  }
+
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
   /// The content of the message.
   /// One of TextMessage, MediaMessage,
   /// TemplateMessage, ChoiceMessage,
   /// CardMessage, CarouselMessage, 
-  /// LocationMessage or ContactInfoMessage. 
+  /// LocationMessage, ContactInfoMessage
+  /// or ListMessage. 
   enum OneOf_Message: Equatable {
     /// A message containing only text.
     case textMessage(Sinch_Conversationapi_Type_TextMessage)
@@ -354,6 +413,9 @@ struct Sinch_Conversationapi_Type_AppMessage {
     case locationMessage(Sinch_Conversationapi_Type_LocationMessage)
     /// A message containing contact information. 
     case contactInfoMessage(Sinch_Conversationapi_Type_ContactInfoMessage)
+    /// A message containing multiple sections which can have items such as choices
+    /// and products. 
+    case listMessage(Sinch_Conversationapi_Type_ListMessage)
 
   #if !swift(>=4.1)
     static func ==(lhs: Sinch_Conversationapi_Type_AppMessage.OneOf_Message, rhs: Sinch_Conversationapi_Type_AppMessage.OneOf_Message) -> Bool {
@@ -393,6 +455,10 @@ struct Sinch_Conversationapi_Type_AppMessage {
         guard case .contactInfoMessage(let l) = lhs, case .contactInfoMessage(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
+      case (.listMessage, .listMessage): return {
+        guard case .listMessage(let l) = lhs, case .listMessage(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
       default: return false
       }
     }
@@ -402,6 +468,157 @@ struct Sinch_Conversationapi_Type_AppMessage {
   init() {}
 
   fileprivate var _storage = _StorageClass.defaultInstance
+}
+
+struct Sinch_Conversationapi_Type_OmniMessageOverride {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// This is a copy of the 'oneof message' definition in AppMessage. This list
+  /// has to be duplicated as it's impossible to extract this type and replace
+  /// the former definition in AppMessage without breaking backwards
+  /// compatibility. 
+  var message: Sinch_Conversationapi_Type_OmniMessageOverride.OneOf_Message? = nil
+
+  var textMessage: Sinch_Conversationapi_Type_TextMessage {
+    get {
+      if case .textMessage(let v)? = message {return v}
+      return Sinch_Conversationapi_Type_TextMessage()
+    }
+    set {message = .textMessage(newValue)}
+  }
+
+  var mediaMessage: Sinch_Conversationapi_Type_MediaMessage {
+    get {
+      if case .mediaMessage(let v)? = message {return v}
+      return Sinch_Conversationapi_Type_MediaMessage()
+    }
+    set {message = .mediaMessage(newValue)}
+  }
+
+  var templateReference: Sinch_Conversationapi_Type_TemplateReference {
+    get {
+      if case .templateReference(let v)? = message {return v}
+      return Sinch_Conversationapi_Type_TemplateReference()
+    }
+    set {message = .templateReference(newValue)}
+  }
+
+  var choiceMessage: Sinch_Conversationapi_Type_ChoiceMessage {
+    get {
+      if case .choiceMessage(let v)? = message {return v}
+      return Sinch_Conversationapi_Type_ChoiceMessage()
+    }
+    set {message = .choiceMessage(newValue)}
+  }
+
+  var cardMessage: Sinch_Conversationapi_Type_CardMessage {
+    get {
+      if case .cardMessage(let v)? = message {return v}
+      return Sinch_Conversationapi_Type_CardMessage()
+    }
+    set {message = .cardMessage(newValue)}
+  }
+
+  var carouselMessage: Sinch_Conversationapi_Type_CarouselMessage {
+    get {
+      if case .carouselMessage(let v)? = message {return v}
+      return Sinch_Conversationapi_Type_CarouselMessage()
+    }
+    set {message = .carouselMessage(newValue)}
+  }
+
+  var locationMessage: Sinch_Conversationapi_Type_LocationMessage {
+    get {
+      if case .locationMessage(let v)? = message {return v}
+      return Sinch_Conversationapi_Type_LocationMessage()
+    }
+    set {message = .locationMessage(newValue)}
+  }
+
+  var contactInfoMessage: Sinch_Conversationapi_Type_ContactInfoMessage {
+    get {
+      if case .contactInfoMessage(let v)? = message {return v}
+      return Sinch_Conversationapi_Type_ContactInfoMessage()
+    }
+    set {message = .contactInfoMessage(newValue)}
+  }
+
+  var listMessage: Sinch_Conversationapi_Type_ListMessage {
+    get {
+      if case .listMessage(let v)? = message {return v}
+      return Sinch_Conversationapi_Type_ListMessage()
+    }
+    set {message = .listMessage(newValue)}
+  }
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  /// This is a copy of the 'oneof message' definition in AppMessage. This list
+  /// has to be duplicated as it's impossible to extract this type and replace
+  /// the former definition in AppMessage without breaking backwards
+  /// compatibility. 
+  enum OneOf_Message: Equatable {
+    case textMessage(Sinch_Conversationapi_Type_TextMessage)
+    case mediaMessage(Sinch_Conversationapi_Type_MediaMessage)
+    case templateReference(Sinch_Conversationapi_Type_TemplateReference)
+    case choiceMessage(Sinch_Conversationapi_Type_ChoiceMessage)
+    case cardMessage(Sinch_Conversationapi_Type_CardMessage)
+    case carouselMessage(Sinch_Conversationapi_Type_CarouselMessage)
+    case locationMessage(Sinch_Conversationapi_Type_LocationMessage)
+    case contactInfoMessage(Sinch_Conversationapi_Type_ContactInfoMessage)
+    case listMessage(Sinch_Conversationapi_Type_ListMessage)
+
+  #if !swift(>=4.1)
+    static func ==(lhs: Sinch_Conversationapi_Type_OmniMessageOverride.OneOf_Message, rhs: Sinch_Conversationapi_Type_OmniMessageOverride.OneOf_Message) -> Bool {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch (lhs, rhs) {
+      case (.textMessage, .textMessage): return {
+        guard case .textMessage(let l) = lhs, case .textMessage(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.mediaMessage, .mediaMessage): return {
+        guard case .mediaMessage(let l) = lhs, case .mediaMessage(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.templateReference, .templateReference): return {
+        guard case .templateReference(let l) = lhs, case .templateReference(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.choiceMessage, .choiceMessage): return {
+        guard case .choiceMessage(let l) = lhs, case .choiceMessage(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.cardMessage, .cardMessage): return {
+        guard case .cardMessage(let l) = lhs, case .cardMessage(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.carouselMessage, .carouselMessage): return {
+        guard case .carouselMessage(let l) = lhs, case .carouselMessage(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.locationMessage, .locationMessage): return {
+        guard case .locationMessage(let l) = lhs, case .locationMessage(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.contactInfoMessage, .contactInfoMessage): return {
+        guard case .contactInfoMessage(let l) = lhs, case .contactInfoMessage(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.listMessage, .listMessage): return {
+        guard case .listMessage(let l) = lhs, case .listMessage(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      default: return false
+      }
+    }
+  #endif
+  }
+
+  init() {}
 }
 
 /// Message originating from a contact
@@ -460,6 +677,22 @@ struct Sinch_Conversationapi_Type_ContactMessage {
     set {message = .fallbackMessage(newValue)}
   }
 
+  var multipleChoiceResponseMessage: Sinch_Conversationapi_Type_MultipleChoiceResponseMessage {
+    get {
+      if case .multipleChoiceResponseMessage(let v)? = message {return v}
+      return Sinch_Conversationapi_Type_MultipleChoiceResponseMessage()
+    }
+    set {message = .multipleChoiceResponseMessage(newValue)}
+  }
+
+  var productResponseMessage: Sinch_Conversationapi_Type_ProductResponseMessage {
+    get {
+      if case .productResponseMessage(let v)? = message {return v}
+      return Sinch_Conversationapi_Type_ProductResponseMessage()
+    }
+    set {message = .productResponseMessage(newValue)}
+  }
+
   ///Optional. Included if the contact message is a response to a previous App message.
   var replyTo: Sinch_Conversationapi_Type_ReplyTo {
     get {return _replyTo ?? Sinch_Conversationapi_Type_ReplyTo()}
@@ -479,6 +712,8 @@ struct Sinch_Conversationapi_Type_ContactMessage {
     case choiceResponseMessage(Sinch_Conversationapi_Type_ChoiceResponseMessage)
     case mediaCardMessage(Sinch_Conversationapi_Type_MediaCardMessage)
     case fallbackMessage(Sinch_Conversationapi_Type_FallbackMessage)
+    case multipleChoiceResponseMessage(Sinch_Conversationapi_Type_MultipleChoiceResponseMessage)
+    case productResponseMessage(Sinch_Conversationapi_Type_ProductResponseMessage)
 
   #if !swift(>=4.1)
     static func ==(lhs: Sinch_Conversationapi_Type_ContactMessage.OneOf_Message, rhs: Sinch_Conversationapi_Type_ContactMessage.OneOf_Message) -> Bool {
@@ -508,6 +743,14 @@ struct Sinch_Conversationapi_Type_ContactMessage {
       }()
       case (.fallbackMessage, .fallbackMessage): return {
         guard case .fallbackMessage(let l) = lhs, case .fallbackMessage(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.multipleChoiceResponseMessage, .multipleChoiceResponseMessage): return {
+        guard case .multipleChoiceResponseMessage(let l) = lhs, case .multipleChoiceResponseMessage(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.productResponseMessage, .productResponseMessage): return {
+        guard case .productResponseMessage(let l) = lhs, case .productResponseMessage(let r) = rhs else { preconditionFailure() }
         return l == r
       }()
       default: return false
@@ -546,6 +789,9 @@ struct Sinch_Conversationapi_Type_MediaMessage {
 
   ///Optional. Will be used where it is natively supported
   var thumbnailURL: String = String()
+
+  ///Optional. Overrides the media file name.
+  var filenameOverride: String = String()
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -819,7 +1065,7 @@ struct Sinch_Conversationapi_Type_ChoiceMessage {
   /// Clears the value of `textMessage`. Subsequent reads from it will return its default value.
   mutating func clearTextMessage() {self._textMessage = nil}
 
-  /// Required. The number of choices is limited to 3.
+  /// Required. The number of choices is limited to 10.
   var choices: [Sinch_Conversationapi_Type_Choice] = []
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -837,7 +1083,7 @@ struct Sinch_Conversationapi_Type_CardMessage {
   // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
   // methods supported on all messages.
 
-  /// Required.
+  /// Optional.
   var title: String = String()
 
   /// Optional.
@@ -853,7 +1099,7 @@ struct Sinch_Conversationapi_Type_CardMessage {
   /// Clears the value of `mediaMessage`. Subsequent reads from it will return its default value.
   mutating func clearMediaMessage() {self._mediaMessage = nil}
 
-  /// Optional. The number of choices is limited to 3. 
+  /// Optional. The number of choices is limited to 10. 
   var choices: [Sinch_Conversationapi_Type_Choice] = []
 
   /// Optional. Will be used where it is natively supported
@@ -881,7 +1127,7 @@ struct Sinch_Conversationapi_Type_CarouselMessage {
   var cards: [Sinch_Conversationapi_Type_CardMessage] = []
 
   /// Optional. Outer choices on the carousel level.
-  /// The number of outer choices is limited to 3. 
+  /// The number of outer choices is limited to 10. 
   var choices: [Sinch_Conversationapi_Type_Choice] = []
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
@@ -902,6 +1148,25 @@ struct Sinch_Conversationapi_Type_ChoiceResponseMessage {
 
   /// Required. The postback_data defined in the selected choice.
   var postbackData: String = String()
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+/// Multiple Choice Response Message
+///
+/// Represents a response with multiple choices. 
+struct Sinch_Conversationapi_Type_MultipleChoiceResponseMessage {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Required. The message id containing the choice.
+  var messageID: String = String()
+
+  /// Required. The postback payloads for the selected choices.
+  var postbackData: [String] = []
 
   var unknownFields = SwiftProtobuf.UnknownStorage()
 
@@ -1143,6 +1408,196 @@ struct Sinch_Conversationapi_Type_UrlInfo {
   init() {}
 }
 
+/// List Message
+///
+/// Message containing multiple sections which can have items such as choices and products.
+/// All items must be of the same type in a List Message. 
+struct Sinch_Conversationapi_Type_ListMessage {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Required. The title of the list message.
+  var title: String = String()
+
+  /// Optional. The description (or subtitle) of the list message.
+  var description_p: String = String()
+
+  /// Optional. The media of the list message.
+  var media: Sinch_Conversationapi_Type_MediaMessage {
+    get {return _media ?? Sinch_Conversationapi_Type_MediaMessage()}
+    set {_media = newValue}
+  }
+  /// Returns true if `media` has been explicitly set.
+  var hasMedia: Bool {return self._media != nil}
+  /// Clears the value of `media`. Subsequent reads from it will return its default value.
+  mutating func clearMedia() {self._media = nil}
+
+  /// Required. The sections of the list message.
+  var sections: [Sinch_Conversationapi_Type_ListSection] = []
+
+  /// Optional. List Message specific properties
+  var messageProperties: Dictionary<String,String> = [:]
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _media: Sinch_Conversationapi_Type_MediaMessage? = nil
+}
+
+/// List Section
+///
+/// A section from a list message. 
+struct Sinch_Conversationapi_Type_ListSection {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Optional. The title of the list section.
+  var title: String = String()
+
+  /// Required. The items on this section.
+  var items: [Sinch_Conversationapi_Type_ListItem] = []
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+/// List Section
+///
+/// An item from a list section. 
+struct Sinch_Conversationapi_Type_ListItem {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Required. The item information.
+  var item: Sinch_Conversationapi_Type_ListItem.OneOf_Item? = nil
+
+  var choice: Sinch_Conversationapi_Type_ChoiceItem {
+    get {
+      if case .choice(let v)? = item {return v}
+      return Sinch_Conversationapi_Type_ChoiceItem()
+    }
+    set {item = .choice(newValue)}
+  }
+
+  var product: Sinch_Conversationapi_Type_ProductItem {
+    get {
+      if case .product(let v)? = item {return v}
+      return Sinch_Conversationapi_Type_ProductItem()
+    }
+    set {item = .product(newValue)}
+  }
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  /// Required. The item information.
+  enum OneOf_Item: Equatable {
+    case choice(Sinch_Conversationapi_Type_ChoiceItem)
+    case product(Sinch_Conversationapi_Type_ProductItem)
+
+  #if !swift(>=4.1)
+    static func ==(lhs: Sinch_Conversationapi_Type_ListItem.OneOf_Item, rhs: Sinch_Conversationapi_Type_ListItem.OneOf_Item) -> Bool {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch (lhs, rhs) {
+      case (.choice, .choice): return {
+        guard case .choice(let l) = lhs, case .choice(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      case (.product, .product): return {
+        guard case .product(let l) = lhs, case .product(let r) = rhs else { preconditionFailure() }
+        return l == r
+      }()
+      default: return false
+      }
+    }
+  #endif
+  }
+
+  init() {}
+}
+
+struct Sinch_Conversationapi_Type_ChoiceItem {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Required. The title of this choice item.
+  var title: String = String()
+
+  /// Optional. The description (or subtitle) of this choice item.
+  var description_p: String = String()
+
+  /// Optional. The media of this choice item.
+  var media: Sinch_Conversationapi_Type_MediaMessage {
+    get {return _media ?? Sinch_Conversationapi_Type_MediaMessage()}
+    set {_media = newValue}
+  }
+  /// Returns true if `media` has been explicitly set.
+  var hasMedia: Bool {return self._media != nil}
+  /// Clears the value of `media`. Subsequent reads from it will return its default value.
+  mutating func clearMedia() {self._media = nil}
+
+  /// Optional. Postback data that will be returned in the MO if the user selects
+  /// this option.
+  var postbackData: String = String()
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+
+  fileprivate var _media: Sinch_Conversationapi_Type_MediaMessage? = nil
+}
+
+struct Sinch_Conversationapi_Type_ProductItem {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Required. The identifier of the product.
+  var id: String = String()
+
+  /// Required. Which marketplace the product belongs to. Possible values: FACEBOOK.
+  var marketplace: String = String()
+
+  /// Output only. The quantity of the chosen product.
+  var quantity: Int32 = 0
+
+  /// Output only. The price of the chosen product.
+  var itemPrice: Float = 0
+
+  /// Output only. The price currency.
+  var currency: String = String()
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
+struct Sinch_Conversationapi_Type_ProductResponseMessage {
+  // SwiftProtobuf.Message conformance is added in an extension below. See the
+  // `Message` and `Message+*Additions` files in the SwiftProtobuf library for
+  // methods supported on all messages.
+
+  /// Required. The selected products.
+  var products: [Sinch_Conversationapi_Type_ProductItem] = []
+
+  /// Optional. Some text that may be sent with the selected products.
+  var text: String = String()
+
+  /// Optional. The catalog id that the selected products belong to.
+  var catalogID: String = String()
+
+  var unknownFields = SwiftProtobuf.UnknownStorage()
+
+  init() {}
+}
+
 #if swift(>=5.5) && canImport(_Concurrency)
 extension Sinch_Conversationapi_Type_ConversationDirection: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_CardHeight: @unchecked Sendable {}
@@ -1150,6 +1605,8 @@ extension Sinch_Conversationapi_Type_ConversationMessage: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_ConversationMessage.OneOf_Message: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_AppMessage: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_AppMessage.OneOf_Message: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_OmniMessageOverride: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_OmniMessageOverride.OneOf_Message: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_ContactMessage: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_ContactMessage.OneOf_Message: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_TextMessage: @unchecked Sendable {}
@@ -1166,6 +1623,7 @@ extension Sinch_Conversationapi_Type_ChoiceMessage: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_CardMessage: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_CarouselMessage: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_ChoiceResponseMessage: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_MultipleChoiceResponseMessage: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_UrlMessage: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_ReplyTo: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_ContactInfoMessage: @unchecked Sendable {}
@@ -1175,6 +1633,13 @@ extension Sinch_Conversationapi_Type_NameInfo: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_OrganizationInfo: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_PhoneNumberInfo: @unchecked Sendable {}
 extension Sinch_Conversationapi_Type_UrlInfo: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ListMessage: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ListSection: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ListItem: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ListItem.OneOf_Item: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ChoiceItem: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ProductItem: @unchecked Sendable {}
+extension Sinch_Conversationapi_Type_ProductResponseMessage: @unchecked Sendable {}
 #endif  // swift(>=5.5) && canImport(_Concurrency)
 
 // MARK: - Code below here is support for the SwiftProtobuf runtime.
@@ -1211,106 +1676,178 @@ extension Sinch_Conversationapi_Type_ConversationMessage: SwiftProtobuf.Message,
     8: .same(proto: "metadata"),
     9: .standard(proto: "accept_time"),
     10: .standard(proto: "sender_id"),
+    11: .standard(proto: "processing_mode"),
+    12: .same(proto: "injected"),
+    13: .standard(proto: "message_status"),
   ]
 
+  fileprivate class _StorageClass {
+    var _id: String = String()
+    var _direction: Sinch_Conversationapi_Type_ConversationDirection = .undefinedDirection
+    var _message: Sinch_Conversationapi_Type_ConversationMessage.OneOf_Message?
+    var _channelIdentity: Sinch_Conversationapi_Type_ChannelIdentity? = nil
+    var _conversationID: String = String()
+    var _contactID: String = String()
+    var _metadata: String = String()
+    var _acceptTime: SwiftProtobuf.Google_Protobuf_Timestamp? = nil
+    var _senderID: String = String()
+    var _processingMode: Sinch_Conversationapi_Type_ProcessingMode = .conversation
+    var _injected: Bool = false
+    var _messageStatus: Sinch_Conversationapi_Type_MessageStatus? = nil
+
+    static let defaultInstance = _StorageClass()
+
+    private init() {}
+
+    init(copying source: _StorageClass) {
+      _id = source._id
+      _direction = source._direction
+      _message = source._message
+      _channelIdentity = source._channelIdentity
+      _conversationID = source._conversationID
+      _contactID = source._contactID
+      _metadata = source._metadata
+      _acceptTime = source._acceptTime
+      _senderID = source._senderID
+      _processingMode = source._processingMode
+      _injected = source._injected
+      _messageStatus = source._messageStatus
+    }
+  }
+
+  fileprivate mutating func _uniqueStorage() -> _StorageClass {
+    if !isKnownUniquelyReferenced(&_storage) {
+      _storage = _StorageClass(copying: _storage)
+    }
+    return _storage
+  }
+
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
-    while let fieldNumber = try decoder.nextFieldNumber() {
-      // The use of inline closures is to circumvent an issue where the compiler
-      // allocates stack space for every case branch when no optimizations are
-      // enabled. https://github.com/apple/swift-protobuf/issues/1034
-      switch fieldNumber {
-      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
-      case 2: try { try decoder.decodeSingularEnumField(value: &self.direction) }()
-      case 3: try {
-        var v: Sinch_Conversationapi_Type_AppMessage?
-        var hadOneofValue = false
-        if let current = self.message {
-          hadOneofValue = true
-          if case .appMessage(let m) = current {v = m}
+    _ = _uniqueStorage()
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      while let fieldNumber = try decoder.nextFieldNumber() {
+        // The use of inline closures is to circumvent an issue where the compiler
+        // allocates stack space for every case branch when no optimizations are
+        // enabled. https://github.com/apple/swift-protobuf/issues/1034
+        switch fieldNumber {
+        case 1: try { try decoder.decodeSingularStringField(value: &_storage._id) }()
+        case 2: try { try decoder.decodeSingularEnumField(value: &_storage._direction) }()
+        case 3: try {
+          var v: Sinch_Conversationapi_Type_AppMessage?
+          var hadOneofValue = false
+          if let current = _storage._message {
+            hadOneofValue = true
+            if case .appMessage(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._message = .appMessage(v)
+          }
+        }()
+        case 4: try {
+          var v: Sinch_Conversationapi_Type_ContactMessage?
+          var hadOneofValue = false
+          if let current = _storage._message {
+            hadOneofValue = true
+            if case .contactMessage(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._message = .contactMessage(v)
+          }
+        }()
+        case 5: try { try decoder.decodeSingularMessageField(value: &_storage._channelIdentity) }()
+        case 6: try { try decoder.decodeSingularStringField(value: &_storage._conversationID) }()
+        case 7: try { try decoder.decodeSingularStringField(value: &_storage._contactID) }()
+        case 8: try { try decoder.decodeSingularStringField(value: &_storage._metadata) }()
+        case 9: try { try decoder.decodeSingularMessageField(value: &_storage._acceptTime) }()
+        case 10: try { try decoder.decodeSingularStringField(value: &_storage._senderID) }()
+        case 11: try { try decoder.decodeSingularEnumField(value: &_storage._processingMode) }()
+        case 12: try { try decoder.decodeSingularBoolField(value: &_storage._injected) }()
+        case 13: try { try decoder.decodeSingularMessageField(value: &_storage._messageStatus) }()
+        default: break
         }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.message = .appMessage(v)
-        }
-      }()
-      case 4: try {
-        var v: Sinch_Conversationapi_Type_ContactMessage?
-        var hadOneofValue = false
-        if let current = self.message {
-          hadOneofValue = true
-          if case .contactMessage(let m) = current {v = m}
-        }
-        try decoder.decodeSingularMessageField(value: &v)
-        if let v = v {
-          if hadOneofValue {try decoder.handleConflictingOneOf()}
-          self.message = .contactMessage(v)
-        }
-      }()
-      case 5: try { try decoder.decodeSingularMessageField(value: &self._channelIdentity) }()
-      case 6: try { try decoder.decodeSingularStringField(value: &self.conversationID) }()
-      case 7: try { try decoder.decodeSingularStringField(value: &self.contactID) }()
-      case 8: try { try decoder.decodeSingularStringField(value: &self.metadata) }()
-      case 9: try { try decoder.decodeSingularMessageField(value: &self._acceptTime) }()
-      case 10: try { try decoder.decodeSingularStringField(value: &self.senderID) }()
-      default: break
       }
     }
   }
 
   func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
-    // The use of inline closures is to circumvent an issue where the compiler
-    // allocates stack space for every if/case branch local when no optimizations
-    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
-    // https://github.com/apple/swift-protobuf/issues/1182
-    if !self.id.isEmpty {
-      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
-    }
-    if self.direction != .undefinedDirection {
-      try visitor.visitSingularEnumField(value: self.direction, fieldNumber: 2)
-    }
-    switch self.message {
-    case .appMessage?: try {
-      guard case .appMessage(let v)? = self.message else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
-    }()
-    case .contactMessage?: try {
-      guard case .contactMessage(let v)? = self.message else { preconditionFailure() }
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
-    }()
-    case nil: break
-    }
-    try { if let v = self._channelIdentity {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
-    } }()
-    if !self.conversationID.isEmpty {
-      try visitor.visitSingularStringField(value: self.conversationID, fieldNumber: 6)
-    }
-    if !self.contactID.isEmpty {
-      try visitor.visitSingularStringField(value: self.contactID, fieldNumber: 7)
-    }
-    if !self.metadata.isEmpty {
-      try visitor.visitSingularStringField(value: self.metadata, fieldNumber: 8)
-    }
-    try { if let v = self._acceptTime {
-      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
-    } }()
-    if !self.senderID.isEmpty {
-      try visitor.visitSingularStringField(value: self.senderID, fieldNumber: 10)
+    try withExtendedLifetime(_storage) { (_storage: _StorageClass) in
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every if/case branch local when no optimizations
+      // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+      // https://github.com/apple/swift-protobuf/issues/1182
+      if !_storage._id.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._id, fieldNumber: 1)
+      }
+      if _storage._direction != .undefinedDirection {
+        try visitor.visitSingularEnumField(value: _storage._direction, fieldNumber: 2)
+      }
+      switch _storage._message {
+      case .appMessage?: try {
+        guard case .appMessage(let v)? = _storage._message else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+      }()
+      case .contactMessage?: try {
+        guard case .contactMessage(let v)? = _storage._message else { preconditionFailure() }
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+      }()
+      case nil: break
+      }
+      try { if let v = _storage._channelIdentity {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+      } }()
+      if !_storage._conversationID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._conversationID, fieldNumber: 6)
+      }
+      if !_storage._contactID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._contactID, fieldNumber: 7)
+      }
+      if !_storage._metadata.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._metadata, fieldNumber: 8)
+      }
+      try { if let v = _storage._acceptTime {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+      } }()
+      if !_storage._senderID.isEmpty {
+        try visitor.visitSingularStringField(value: _storage._senderID, fieldNumber: 10)
+      }
+      if _storage._processingMode != .conversation {
+        try visitor.visitSingularEnumField(value: _storage._processingMode, fieldNumber: 11)
+      }
+      if _storage._injected != false {
+        try visitor.visitSingularBoolField(value: _storage._injected, fieldNumber: 12)
+      }
+      try { if let v = _storage._messageStatus {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 13)
+      } }()
     }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Sinch_Conversationapi_Type_ConversationMessage, rhs: Sinch_Conversationapi_Type_ConversationMessage) -> Bool {
-    if lhs.id != rhs.id {return false}
-    if lhs.direction != rhs.direction {return false}
-    if lhs.message != rhs.message {return false}
-    if lhs._channelIdentity != rhs._channelIdentity {return false}
-    if lhs.conversationID != rhs.conversationID {return false}
-    if lhs.contactID != rhs.contactID {return false}
-    if lhs.metadata != rhs.metadata {return false}
-    if lhs._acceptTime != rhs._acceptTime {return false}
-    if lhs.senderID != rhs.senderID {return false}
+    if lhs._storage !== rhs._storage {
+      let storagesAreEqual: Bool = withExtendedLifetime((lhs._storage, rhs._storage)) { (_args: (_StorageClass, _StorageClass)) in
+        let _storage = _args.0
+        let rhs_storage = _args.1
+        if _storage._id != rhs_storage._id {return false}
+        if _storage._direction != rhs_storage._direction {return false}
+        if _storage._message != rhs_storage._message {return false}
+        if _storage._channelIdentity != rhs_storage._channelIdentity {return false}
+        if _storage._conversationID != rhs_storage._conversationID {return false}
+        if _storage._contactID != rhs_storage._contactID {return false}
+        if _storage._metadata != rhs_storage._metadata {return false}
+        if _storage._acceptTime != rhs_storage._acceptTime {return false}
+        if _storage._senderID != rhs_storage._senderID {return false}
+        if _storage._processingMode != rhs_storage._processingMode {return false}
+        if _storage._injected != rhs_storage._injected {return false}
+        if _storage._messageStatus != rhs_storage._messageStatus {return false}
+        return true
+      }
+      if !storagesAreEqual {return false}
+    }
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1328,13 +1865,16 @@ extension Sinch_Conversationapi_Type_AppMessage: SwiftProtobuf.Message, SwiftPro
     7: .standard(proto: "carousel_message"),
     8: .standard(proto: "location_message"),
     9: .standard(proto: "contact_info_message"),
+    11: .standard(proto: "list_message"),
     10: .same(proto: "agent"),
+    12: .standard(proto: "explicit_channel_omni_message"),
   ]
 
   fileprivate class _StorageClass {
     var _explicitChannelMessage: Dictionary<String,String> = [:]
     var _message: Sinch_Conversationapi_Type_AppMessage.OneOf_Message?
     var _agent: Sinch_Conversationapi_Type_Agent? = nil
+    var _explicitChannelOmniMessage: Dictionary<String,Sinch_Conversationapi_Type_OmniMessageOverride> = [:]
 
     static let defaultInstance = _StorageClass()
 
@@ -1344,6 +1884,7 @@ extension Sinch_Conversationapi_Type_AppMessage: SwiftProtobuf.Message, SwiftPro
       _explicitChannelMessage = source._explicitChannelMessage
       _message = source._message
       _agent = source._agent
+      _explicitChannelOmniMessage = source._explicitChannelOmniMessage
     }
   }
 
@@ -1468,6 +2009,20 @@ extension Sinch_Conversationapi_Type_AppMessage: SwiftProtobuf.Message, SwiftPro
           }
         }()
         case 10: try { try decoder.decodeSingularMessageField(value: &_storage._agent) }()
+        case 11: try {
+          var v: Sinch_Conversationapi_Type_ListMessage?
+          var hadOneofValue = false
+          if let current = _storage._message {
+            hadOneofValue = true
+            if case .listMessage(let m) = current {v = m}
+          }
+          try decoder.decodeSingularMessageField(value: &v)
+          if let v = v {
+            if hadOneofValue {try decoder.handleConflictingOneOf()}
+            _storage._message = .listMessage(v)
+          }
+        }()
+        case 12: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufString,Sinch_Conversationapi_Type_OmniMessageOverride>.self, value: &_storage._explicitChannelOmniMessage) }()
         default: break
         }
       }
@@ -1516,11 +2071,17 @@ extension Sinch_Conversationapi_Type_AppMessage: SwiftProtobuf.Message, SwiftPro
         guard case .contactInfoMessage(let v)? = _storage._message else { preconditionFailure() }
         try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
       }()
-      case nil: break
+      default: break
       }
       try { if let v = _storage._agent {
         try visitor.visitSingularMessageField(value: v, fieldNumber: 10)
       } }()
+      try { if case .listMessage(let v)? = _storage._message {
+        try visitor.visitSingularMessageField(value: v, fieldNumber: 11)
+      } }()
+      if !_storage._explicitChannelOmniMessage.isEmpty {
+        try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMessageMap<SwiftProtobuf.ProtobufString,Sinch_Conversationapi_Type_OmniMessageOverride>.self, value: _storage._explicitChannelOmniMessage, fieldNumber: 12)
+      }
     }
     try unknownFields.traverse(visitor: &visitor)
   }
@@ -1533,10 +2094,207 @@ extension Sinch_Conversationapi_Type_AppMessage: SwiftProtobuf.Message, SwiftPro
         if _storage._explicitChannelMessage != rhs_storage._explicitChannelMessage {return false}
         if _storage._message != rhs_storage._message {return false}
         if _storage._agent != rhs_storage._agent {return false}
+        if _storage._explicitChannelOmniMessage != rhs_storage._explicitChannelOmniMessage {return false}
         return true
       }
       if !storagesAreEqual {return false}
     }
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Sinch_Conversationapi_Type_OmniMessageOverride: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".OmniMessageOverride"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "text_message"),
+    2: .standard(proto: "media_message"),
+    3: .standard(proto: "template_reference"),
+    4: .standard(proto: "choice_message"),
+    5: .standard(proto: "card_message"),
+    6: .standard(proto: "carousel_message"),
+    7: .standard(proto: "location_message"),
+    8: .standard(proto: "contact_info_message"),
+    9: .standard(proto: "list_message"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try {
+        var v: Sinch_Conversationapi_Type_TextMessage?
+        var hadOneofValue = false
+        if let current = self.message {
+          hadOneofValue = true
+          if case .textMessage(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.message = .textMessage(v)
+        }
+      }()
+      case 2: try {
+        var v: Sinch_Conversationapi_Type_MediaMessage?
+        var hadOneofValue = false
+        if let current = self.message {
+          hadOneofValue = true
+          if case .mediaMessage(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.message = .mediaMessage(v)
+        }
+      }()
+      case 3: try {
+        var v: Sinch_Conversationapi_Type_TemplateReference?
+        var hadOneofValue = false
+        if let current = self.message {
+          hadOneofValue = true
+          if case .templateReference(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.message = .templateReference(v)
+        }
+      }()
+      case 4: try {
+        var v: Sinch_Conversationapi_Type_ChoiceMessage?
+        var hadOneofValue = false
+        if let current = self.message {
+          hadOneofValue = true
+          if case .choiceMessage(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.message = .choiceMessage(v)
+        }
+      }()
+      case 5: try {
+        var v: Sinch_Conversationapi_Type_CardMessage?
+        var hadOneofValue = false
+        if let current = self.message {
+          hadOneofValue = true
+          if case .cardMessage(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.message = .cardMessage(v)
+        }
+      }()
+      case 6: try {
+        var v: Sinch_Conversationapi_Type_CarouselMessage?
+        var hadOneofValue = false
+        if let current = self.message {
+          hadOneofValue = true
+          if case .carouselMessage(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.message = .carouselMessage(v)
+        }
+      }()
+      case 7: try {
+        var v: Sinch_Conversationapi_Type_LocationMessage?
+        var hadOneofValue = false
+        if let current = self.message {
+          hadOneofValue = true
+          if case .locationMessage(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.message = .locationMessage(v)
+        }
+      }()
+      case 8: try {
+        var v: Sinch_Conversationapi_Type_ContactInfoMessage?
+        var hadOneofValue = false
+        if let current = self.message {
+          hadOneofValue = true
+          if case .contactInfoMessage(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.message = .contactInfoMessage(v)
+        }
+      }()
+      case 9: try {
+        var v: Sinch_Conversationapi_Type_ListMessage?
+        var hadOneofValue = false
+        if let current = self.message {
+          hadOneofValue = true
+          if case .listMessage(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.message = .listMessage(v)
+        }
+      }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    switch self.message {
+    case .textMessage?: try {
+      guard case .textMessage(let v)? = self.message else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    }()
+    case .mediaMessage?: try {
+      guard case .mediaMessage(let v)? = self.message else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    }()
+    case .templateReference?: try {
+      guard case .templateReference(let v)? = self.message else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    }()
+    case .choiceMessage?: try {
+      guard case .choiceMessage(let v)? = self.message else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 4)
+    }()
+    case .cardMessage?: try {
+      guard case .cardMessage(let v)? = self.message else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 5)
+    }()
+    case .carouselMessage?: try {
+      guard case .carouselMessage(let v)? = self.message else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 6)
+    }()
+    case .locationMessage?: try {
+      guard case .locationMessage(let v)? = self.message else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    }()
+    case .contactInfoMessage?: try {
+      guard case .contactInfoMessage(let v)? = self.message else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+    }()
+    case .listMessage?: try {
+      guard case .listMessage(let v)? = self.message else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
+    }()
+    case nil: break
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Conversationapi_Type_OmniMessageOverride, rhs: Sinch_Conversationapi_Type_OmniMessageOverride) -> Bool {
+    if lhs.message != rhs.message {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -1551,6 +2309,8 @@ extension Sinch_Conversationapi_Type_ContactMessage: SwiftProtobuf.Message, Swif
     4: .standard(proto: "choice_response_message"),
     6: .standard(proto: "media_card_message"),
     7: .standard(proto: "fallback_message"),
+    8: .standard(proto: "multiple_choice_response_message"),
+    9: .standard(proto: "product_response_message"),
     5: .standard(proto: "reply_to"),
   ]
 
@@ -1639,6 +2399,32 @@ extension Sinch_Conversationapi_Type_ContactMessage: SwiftProtobuf.Message, Swif
           self.message = .fallbackMessage(v)
         }
       }()
+      case 8: try {
+        var v: Sinch_Conversationapi_Type_MultipleChoiceResponseMessage?
+        var hadOneofValue = false
+        if let current = self.message {
+          hadOneofValue = true
+          if case .multipleChoiceResponseMessage(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.message = .multipleChoiceResponseMessage(v)
+        }
+      }()
+      case 9: try {
+        var v: Sinch_Conversationapi_Type_ProductResponseMessage?
+        var hadOneofValue = false
+        if let current = self.message {
+          hadOneofValue = true
+          if case .productResponseMessage(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.message = .productResponseMessage(v)
+        }
+      }()
       default: break
       }
     }
@@ -1679,6 +2465,14 @@ extension Sinch_Conversationapi_Type_ContactMessage: SwiftProtobuf.Message, Swif
     case .fallbackMessage?: try {
       guard case .fallbackMessage(let v)? = self.message else { preconditionFailure() }
       try visitor.visitSingularMessageField(value: v, fieldNumber: 7)
+    }()
+    case .multipleChoiceResponseMessage?: try {
+      guard case .multipleChoiceResponseMessage(let v)? = self.message else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 8)
+    }()
+    case .productResponseMessage?: try {
+      guard case .productResponseMessage(let v)? = self.message else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 9)
     }()
     default: break
     }
@@ -1730,6 +2524,7 @@ extension Sinch_Conversationapi_Type_MediaMessage: SwiftProtobuf.Message, SwiftP
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
     1: .same(proto: "url"),
     2: .standard(proto: "thumbnail_url"),
+    3: .standard(proto: "filename_override"),
   ]
 
   mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
@@ -1740,6 +2535,7 @@ extension Sinch_Conversationapi_Type_MediaMessage: SwiftProtobuf.Message, SwiftP
       switch fieldNumber {
       case 1: try { try decoder.decodeSingularStringField(value: &self.url) }()
       case 2: try { try decoder.decodeSingularStringField(value: &self.thumbnailURL) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.filenameOverride) }()
       default: break
       }
     }
@@ -1752,12 +2548,16 @@ extension Sinch_Conversationapi_Type_MediaMessage: SwiftProtobuf.Message, SwiftP
     if !self.thumbnailURL.isEmpty {
       try visitor.visitSingularStringField(value: self.thumbnailURL, fieldNumber: 2)
     }
+    if !self.filenameOverride.isEmpty {
+      try visitor.visitSingularStringField(value: self.filenameOverride, fieldNumber: 3)
+    }
     try unknownFields.traverse(visitor: &visitor)
   }
 
   static func ==(lhs: Sinch_Conversationapi_Type_MediaMessage, rhs: Sinch_Conversationapi_Type_MediaMessage) -> Bool {
     if lhs.url != rhs.url {return false}
     if lhs.thumbnailURL != rhs.thumbnailURL {return false}
+    if lhs.filenameOverride != rhs.filenameOverride {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }
@@ -2311,6 +3111,44 @@ extension Sinch_Conversationapi_Type_ChoiceResponseMessage: SwiftProtobuf.Messag
   }
 }
 
+extension Sinch_Conversationapi_Type_MultipleChoiceResponseMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".MultipleChoiceResponseMessage"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .standard(proto: "message_id"),
+    2: .standard(proto: "postback_data"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.messageID) }()
+      case 2: try { try decoder.decodeRepeatedStringField(value: &self.postbackData) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.messageID.isEmpty {
+      try visitor.visitSingularStringField(value: self.messageID, fieldNumber: 1)
+    }
+    if !self.postbackData.isEmpty {
+      try visitor.visitRepeatedStringField(value: self.postbackData, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Conversationapi_Type_MultipleChoiceResponseMessage, rhs: Sinch_Conversationapi_Type_MultipleChoiceResponseMessage) -> Bool {
+    if lhs.messageID != rhs.messageID {return false}
+    if lhs.postbackData != rhs.postbackData {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
 extension Sinch_Conversationapi_Type_UrlMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
   static let protoMessageName: String = _protobuf_package + ".UrlMessage"
   static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
@@ -2736,6 +3574,328 @@ extension Sinch_Conversationapi_Type_UrlInfo: SwiftProtobuf.Message, SwiftProtob
   static func ==(lhs: Sinch_Conversationapi_Type_UrlInfo, rhs: Sinch_Conversationapi_Type_UrlInfo) -> Bool {
     if lhs.url != rhs.url {return false}
     if lhs.type != rhs.type {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Sinch_Conversationapi_Type_ListMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".ListMessage"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "title"),
+    2: .same(proto: "description"),
+    3: .same(proto: "media"),
+    4: .same(proto: "sections"),
+    5: .standard(proto: "message_properties"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.title) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._media) }()
+      case 4: try { try decoder.decodeRepeatedMessageField(value: &self.sections) }()
+      case 5: try { try decoder.decodeMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufString,SwiftProtobuf.ProtobufString>.self, value: &self.messageProperties) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.title.isEmpty {
+      try visitor.visitSingularStringField(value: self.title, fieldNumber: 1)
+    }
+    if !self.description_p.isEmpty {
+      try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 2)
+    }
+    try { if let v = self._media {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    if !self.sections.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.sections, fieldNumber: 4)
+    }
+    if !self.messageProperties.isEmpty {
+      try visitor.visitMapField(fieldType: SwiftProtobuf._ProtobufMap<SwiftProtobuf.ProtobufString,SwiftProtobuf.ProtobufString>.self, value: self.messageProperties, fieldNumber: 5)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Conversationapi_Type_ListMessage, rhs: Sinch_Conversationapi_Type_ListMessage) -> Bool {
+    if lhs.title != rhs.title {return false}
+    if lhs.description_p != rhs.description_p {return false}
+    if lhs._media != rhs._media {return false}
+    if lhs.sections != rhs.sections {return false}
+    if lhs.messageProperties != rhs.messageProperties {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Sinch_Conversationapi_Type_ListSection: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".ListSection"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "title"),
+    2: .same(proto: "items"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.title) }()
+      case 2: try { try decoder.decodeRepeatedMessageField(value: &self.items) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.title.isEmpty {
+      try visitor.visitSingularStringField(value: self.title, fieldNumber: 1)
+    }
+    if !self.items.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.items, fieldNumber: 2)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Conversationapi_Type_ListSection, rhs: Sinch_Conversationapi_Type_ListSection) -> Bool {
+    if lhs.title != rhs.title {return false}
+    if lhs.items != rhs.items {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Sinch_Conversationapi_Type_ListItem: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".ListItem"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "choice"),
+    2: .same(proto: "product"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try {
+        var v: Sinch_Conversationapi_Type_ChoiceItem?
+        var hadOneofValue = false
+        if let current = self.item {
+          hadOneofValue = true
+          if case .choice(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.item = .choice(v)
+        }
+      }()
+      case 2: try {
+        var v: Sinch_Conversationapi_Type_ProductItem?
+        var hadOneofValue = false
+        if let current = self.item {
+          hadOneofValue = true
+          if case .product(let m) = current {v = m}
+        }
+        try decoder.decodeSingularMessageField(value: &v)
+        if let v = v {
+          if hadOneofValue {try decoder.handleConflictingOneOf()}
+          self.item = .product(v)
+        }
+      }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    switch self.item {
+    case .choice?: try {
+      guard case .choice(let v)? = self.item else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 1)
+    }()
+    case .product?: try {
+      guard case .product(let v)? = self.item else { preconditionFailure() }
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 2)
+    }()
+    case nil: break
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Conversationapi_Type_ListItem, rhs: Sinch_Conversationapi_Type_ListItem) -> Bool {
+    if lhs.item != rhs.item {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Sinch_Conversationapi_Type_ChoiceItem: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".ChoiceItem"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "title"),
+    2: .same(proto: "description"),
+    3: .same(proto: "media"),
+    4: .standard(proto: "postback_data"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.title) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.description_p) }()
+      case 3: try { try decoder.decodeSingularMessageField(value: &self._media) }()
+      case 4: try { try decoder.decodeSingularStringField(value: &self.postbackData) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    // The use of inline closures is to circumvent an issue where the compiler
+    // allocates stack space for every if/case branch local when no optimizations
+    // are enabled. https://github.com/apple/swift-protobuf/issues/1034 and
+    // https://github.com/apple/swift-protobuf/issues/1182
+    if !self.title.isEmpty {
+      try visitor.visitSingularStringField(value: self.title, fieldNumber: 1)
+    }
+    if !self.description_p.isEmpty {
+      try visitor.visitSingularStringField(value: self.description_p, fieldNumber: 2)
+    }
+    try { if let v = self._media {
+      try visitor.visitSingularMessageField(value: v, fieldNumber: 3)
+    } }()
+    if !self.postbackData.isEmpty {
+      try visitor.visitSingularStringField(value: self.postbackData, fieldNumber: 4)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Conversationapi_Type_ChoiceItem, rhs: Sinch_Conversationapi_Type_ChoiceItem) -> Bool {
+    if lhs.title != rhs.title {return false}
+    if lhs.description_p != rhs.description_p {return false}
+    if lhs._media != rhs._media {return false}
+    if lhs.postbackData != rhs.postbackData {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Sinch_Conversationapi_Type_ProductItem: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".ProductItem"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "id"),
+    2: .same(proto: "marketplace"),
+    3: .same(proto: "quantity"),
+    4: .standard(proto: "item_price"),
+    5: .same(proto: "currency"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeSingularStringField(value: &self.id) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.marketplace) }()
+      case 3: try { try decoder.decodeSingularInt32Field(value: &self.quantity) }()
+      case 4: try { try decoder.decodeSingularFloatField(value: &self.itemPrice) }()
+      case 5: try { try decoder.decodeSingularStringField(value: &self.currency) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.id.isEmpty {
+      try visitor.visitSingularStringField(value: self.id, fieldNumber: 1)
+    }
+    if !self.marketplace.isEmpty {
+      try visitor.visitSingularStringField(value: self.marketplace, fieldNumber: 2)
+    }
+    if self.quantity != 0 {
+      try visitor.visitSingularInt32Field(value: self.quantity, fieldNumber: 3)
+    }
+    if self.itemPrice != 0 {
+      try visitor.visitSingularFloatField(value: self.itemPrice, fieldNumber: 4)
+    }
+    if !self.currency.isEmpty {
+      try visitor.visitSingularStringField(value: self.currency, fieldNumber: 5)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Conversationapi_Type_ProductItem, rhs: Sinch_Conversationapi_Type_ProductItem) -> Bool {
+    if lhs.id != rhs.id {return false}
+    if lhs.marketplace != rhs.marketplace {return false}
+    if lhs.quantity != rhs.quantity {return false}
+    if lhs.itemPrice != rhs.itemPrice {return false}
+    if lhs.currency != rhs.currency {return false}
+    if lhs.unknownFields != rhs.unknownFields {return false}
+    return true
+  }
+}
+
+extension Sinch_Conversationapi_Type_ProductResponseMessage: SwiftProtobuf.Message, SwiftProtobuf._MessageImplementationBase, SwiftProtobuf._ProtoNameProviding {
+  static let protoMessageName: String = _protobuf_package + ".ProductResponseMessage"
+  static let _protobuf_nameMap: SwiftProtobuf._NameMap = [
+    1: .same(proto: "products"),
+    2: .same(proto: "text"),
+    3: .standard(proto: "catalog_id"),
+  ]
+
+  mutating func decodeMessage<D: SwiftProtobuf.Decoder>(decoder: inout D) throws {
+    while let fieldNumber = try decoder.nextFieldNumber() {
+      // The use of inline closures is to circumvent an issue where the compiler
+      // allocates stack space for every case branch when no optimizations are
+      // enabled. https://github.com/apple/swift-protobuf/issues/1034
+      switch fieldNumber {
+      case 1: try { try decoder.decodeRepeatedMessageField(value: &self.products) }()
+      case 2: try { try decoder.decodeSingularStringField(value: &self.text) }()
+      case 3: try { try decoder.decodeSingularStringField(value: &self.catalogID) }()
+      default: break
+      }
+    }
+  }
+
+  func traverse<V: SwiftProtobuf.Visitor>(visitor: inout V) throws {
+    if !self.products.isEmpty {
+      try visitor.visitRepeatedMessageField(value: self.products, fieldNumber: 1)
+    }
+    if !self.text.isEmpty {
+      try visitor.visitSingularStringField(value: self.text, fieldNumber: 2)
+    }
+    if !self.catalogID.isEmpty {
+      try visitor.visitSingularStringField(value: self.catalogID, fieldNumber: 3)
+    }
+    try unknownFields.traverse(visitor: &visitor)
+  }
+
+  static func ==(lhs: Sinch_Conversationapi_Type_ProductResponseMessage, rhs: Sinch_Conversationapi_Type_ProductResponseMessage) -> Bool {
+    if lhs.products != rhs.products {return false}
+    if lhs.text != rhs.text {return false}
+    if lhs.catalogID != rhs.catalogID {return false}
     if lhs.unknownFields != rhs.unknownFields {return false}
     return true
   }

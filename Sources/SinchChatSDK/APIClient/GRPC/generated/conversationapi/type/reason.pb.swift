@@ -140,6 +140,12 @@ enum Sinch_Conversationapi_Type_ReasonCode: SwiftProtobuf.Enum {
 
   /// The channel configuration is in `PENDING` or `FAILING` status.
   case inactiveCredential // = 27
+
+  /// Message is expired and will not be sent 
+  case messageExpired // = 28
+
+  /// Message is long, requires split
+  case messageSplitRequired // = 29
   case UNRECOGNIZED(Int)
 
   init() {
@@ -176,6 +182,8 @@ enum Sinch_Conversationapi_Type_ReasonCode: SwiftProtobuf.Enum {
     case 25: self = .noProfileAvailable
     case 26: self = .unsupportedOperation
     case 27: self = .inactiveCredential
+    case 28: self = .messageExpired
+    case 29: self = .messageSplitRequired
     default: self = .UNRECOGNIZED(rawValue)
     }
   }
@@ -210,6 +218,8 @@ enum Sinch_Conversationapi_Type_ReasonCode: SwiftProtobuf.Enum {
     case .noProfileAvailable: return 25
     case .unsupportedOperation: return 26
     case .inactiveCredential: return 27
+    case .messageExpired: return 28
+    case .messageSplitRequired: return 29
     case .UNRECOGNIZED(let i): return i
     }
   }
@@ -220,7 +230,7 @@ enum Sinch_Conversationapi_Type_ReasonCode: SwiftProtobuf.Enum {
 
 extension Sinch_Conversationapi_Type_ReasonCode: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static var allCases: [Sinch_Conversationapi_Type_ReasonCode] = [
+  static let allCases: [Sinch_Conversationapi_Type_ReasonCode] = [
     .unknown,
     .internalError,
     .rateLimited,
@@ -249,6 +259,8 @@ extension Sinch_Conversationapi_Type_ReasonCode: CaseIterable {
     .noProfileAvailable,
     .unsupportedOperation,
     .inactiveCredential,
+    .messageExpired,
+    .messageSplitRequired,
   ]
 }
 
@@ -301,7 +313,7 @@ enum Sinch_Conversationapi_Type_ReasonSubCode: SwiftProtobuf.Enum {
 
 extension Sinch_Conversationapi_Type_ReasonSubCode: CaseIterable {
   // The compiler won't synthesize support with the UNRECOGNIZED case.
-  static var allCases: [Sinch_Conversationapi_Type_ReasonSubCode] = [
+  static let allCases: [Sinch_Conversationapi_Type_ReasonSubCode] = [
     .unspecifiedSubCode,
     .attachmentRejected,
     .mediaTypeUndetermined,
@@ -372,6 +384,8 @@ extension Sinch_Conversationapi_Type_ReasonCode: SwiftProtobuf._ProtoNameProvidi
     25: .same(proto: "NO_PROFILE_AVAILABLE"),
     26: .same(proto: "UNSUPPORTED_OPERATION"),
     27: .same(proto: "INACTIVE_CREDENTIAL"),
+    28: .same(proto: "MESSAGE_EXPIRED"),
+    29: .same(proto: "MESSAGE_SPLIT_REQUIRED"),
   ]
 }
 

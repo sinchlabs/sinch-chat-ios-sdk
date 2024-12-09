@@ -19,18 +19,18 @@ protocol RootCoordinator: AnyObject {
     func getDocumentViewerController(viewController: StartViewController, cell: UICollectionViewCell,
                                      uiConfig: SinchSDKConfig.UIConfig,
                                      localizationConfig: SinchSDKConfig.LocalizationConfig, url: URL, index: Int) -> PreviewViewController
-    
+
 }
 
 final class DefaultRootCoordinator: RootCoordinator {
-    
-    private var messageDataSource: InboxMessageDataSource
-    
+
+    private var messageDataSource: MessageDataSource
+
     private let pushPermissionHandler: PushNofiticationPermissionHandler
     private let authDataSource: AuthDataSource
     lazy var locationManager = CLLocationManager()
-    
-    init(messageDataSource: InboxMessageDataSource,
+
+    init(messageDataSource: MessageDataSource,
          authDataSource: AuthDataSource,
          pushPermissionHandler: PushNofiticationPermissionHandler) {
         
@@ -44,7 +44,7 @@ final class DefaultRootCoordinator: RootCoordinator {
         localizationConfig: SinchSDKConfig.LocalizationConfig,
         sendDocumentAsText: Bool = false
     ) -> StartViewController {
-        
+
         let startViewModel: StartViewModel = DefaultStartViewModel(
             messageDataSource: messageDataSource,
             notificationPermission: pushPermissionHandler,
@@ -85,7 +85,7 @@ final class DefaultRootCoordinator: RootCoordinator {
     }
     
     func getLocationViewController(uiConfig: SinchSDKConfig.UIConfig, localizationConfig: SinchSDKConfig.LocalizationConfig) -> LocationViewController {
-        
+
         let locationViewController = LocationViewController(
             viewModel: DefaultLocationViewModel(),
             view: .init(uiConfiguration: uiConfig, localizationConfiguration: localizationConfig))

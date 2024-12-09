@@ -10,7 +10,7 @@ final class MessageStatusView: SinchView {
     
     lazy var stackView: UIStackView = {
         let stackView = UIStackView()
-        stackView.distribution = .fill
+        stackView.distribution = .fillProportionally
         stackView.translatesAutoresizingMaskIntoConstraints = false
         stackView.alignment = .fill
         stackView.axis = .horizontal
@@ -18,11 +18,22 @@ final class MessageStatusView: SinchView {
         
         return stackView
     }()
+    var  retryStatusEmptyView: UIView = {
+        let containerView = UIView()
+        containerView.backgroundColor = .clear
+        containerView.clipsToBounds = true
+        containerView.layer.masksToBounds = true
+        containerView.translatesAutoresizingMaskIntoConstraints = false
+
+        return containerView
+    }()
     lazy var retryStatusImageView: UIImageView = {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFit
         imageView.backgroundColor = .clear
         imageView.clipsToBounds = true
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+
         return imageView
     }()
     lazy var statusImageView: UIImageView = {
@@ -30,7 +41,18 @@ final class MessageStatusView: SinchView {
         imageView.contentMode = .scaleAspectFit
         imageView.backgroundColor = .clear
         imageView.clipsToBounds = true
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+
         return imageView
+    }()
+    var statusEmptyView: UIView = {
+        let containerView = UIView()
+        containerView.backgroundColor = .clear
+        containerView.clipsToBounds = true
+        containerView.layer.masksToBounds = true
+        containerView.translatesAutoresizingMaskIntoConstraints = false
+
+        return containerView
     }()
     lazy var statusLabel: UILabel =  {
         var label = UILabel()
@@ -49,10 +71,12 @@ final class MessageStatusView: SinchView {
         let imageTap = UITapGestureRecognizer(target: self, action: #selector(self.retryAction(_:)))
         retryStatusImageView.isUserInteractionEnabled = true
         retryStatusImageView.addGestureRecognizer(imageTap)
-        
-        stackView.addArrangedSubview(retryStatusImageView)
+        statusEmptyView.addSubview(statusImageView)
+        retryStatusEmptyView.addSubview(retryStatusImageView)
+
+        stackView.addArrangedSubview(retryStatusEmptyView)
         stackView.addArrangedSubview(statusLabel)
-        stackView.addArrangedSubview(statusImageView)
+        stackView.addArrangedSubview(statusEmptyView)
         
         addSubview(stackView)
         
@@ -67,20 +91,35 @@ final class MessageStatusView: SinchView {
         let stackViewTop = stackView.topAnchor.constraint(equalTo: topAnchor)
         let stackViewBottom = stackView.bottomAnchor.constraint(equalTo: bottomAnchor)
         
+        let statusEmptyViewWidth = statusEmptyView.widthAnchor.constraint(equalToConstant: 16.0)
+        
         let statusImageHeight = statusImageView.heightAnchor.constraint(equalToConstant: 10.0)
-        let statusImageWidth = statusImageView.widthAnchor.constraint(equalToConstant: 14.0)
-        let statusButtonHeight = retryStatusImageView.heightAnchor.constraint(equalToConstant: 10.0)
-        let statusButtonWidth = retryStatusImageView.widthAnchor.constraint(equalToConstant: 10.0)
+        let statusImageWidth = statusImageView.widthAnchor.constraint(equalToConstant: 16.0)
+        let statusImageCenterX = statusImageView.centerXAnchor.constraint(equalTo: statusEmptyView.centerXAnchor)
+        let statusImageCenterY = statusImageView.centerYAnchor.constraint(equalTo: statusEmptyView.centerYAnchor)
+
+        let retryStatusEmptyViewWidth = retryStatusEmptyView.widthAnchor.constraint(equalToConstant: 10.0)
+
+        let retryStatusImageHeight = retryStatusImageView.heightAnchor.constraint(equalToConstant: 10.0)
+        let retryStatusImageWidth = retryStatusImageView.widthAnchor.constraint(equalToConstant: 10.0)
+        let retryStatusImageCenterX = retryStatusImageView.centerXAnchor.constraint(equalTo: retryStatusEmptyView.centerXAnchor)
+        let retryStatusImageCenterY = retryStatusImageView.centerYAnchor.constraint(equalTo: retryStatusEmptyView.centerYAnchor)
         
         NSLayoutConstraint.activate([
             stackViewLeft,
             stackViewRight,
+            statusEmptyViewWidth,
+            statusImageCenterX,
+            statusImageCenterY,
             stackViewTop,
             stackViewBottom,
             statusImageHeight,
             statusImageWidth,
-            statusButtonHeight,
-            statusButtonWidth
+            retryStatusEmptyViewWidth,
+            retryStatusImageHeight,
+            retryStatusImageWidth,
+            retryStatusImageCenterX,
+            retryStatusImageCenterY
         ])
     }
     
@@ -91,21 +130,16 @@ final class MessageStatusView: SinchView {
         retryStatusImageView.image = messagesCollectionView.uiConfig.refreshStatusImage
         switch status {
             
-        case .delivered:
-            statusImageView.isHidden = false
-            retryStatusImageView.isHidden = true
         case .notSent:
-            statusImageView.isHidden = true
-            retryStatusImageView.isHidden = false
+            statusEmptyView.isHidden = true
+            retryStatusEmptyView.isHidden = false
         case .sending:
-            statusImageView.isHidden = true
-            retryStatusImageView.isHidden = true
-        case .sent:
-            statusImageView.isHidden = false
-            retryStatusImageView.isHidden = true
-        case .seen:
-            statusImageView.isHidden = false
-            retryStatusImageView.isHidden = true
+            statusEmptyView.isHidden = true
+            retryStatusEmptyView.isHidden = true
+        case .delivered, .sent, .seen:
+            statusEmptyView.isHidden = false
+            retryStatusEmptyView.isHidden = true
+        
         }
     }
 }

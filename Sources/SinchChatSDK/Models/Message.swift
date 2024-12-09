@@ -44,7 +44,6 @@ public enum MessageStatus: Int, Codable {
             
         }
     }
-    
 }
 
 public struct Message: Encodable {
@@ -172,5 +171,4 @@ extension Message {
         
         return text
     }
-    
 }
