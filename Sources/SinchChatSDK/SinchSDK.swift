@@ -11,11 +11,20 @@ public final class SinchChatSDK {
     
     public static let shared = SinchChatSDK()
     
+    public var additionalMetadata: SinchMetadataArray = []
+    public lazy var eventListenerSubject = PassthroughSubject<SinchPluginEvent, Never>()
+    public lazy var customMessageTypeHandlers: [(_ model: Message) -> Message?] = []
+    public lazy var customMessageTypeHandlersAsync: [(Message, @escaping (Message?) -> Void) -> Void] = []
+    
+    /// Override Sinch media store. Use this method to retrieve the selected media file and return a URL string upon successful upload or an error message otherwise.
+    public var overrideMediaStore: ((_ media: MediaType, _ result: (Result<String, Error>) -> Void) -> Void )?
+   
+    /// Use this set to disable some of the chat features
+    public var disabledFeatures: Set<SinchEnabledFeatures> = []
+
     let pushNotificationHandler: PushNotificationHandler = DefaultPushNotificationHandler()
     lazy var _chat = DefaultSinchChat(pushPermissionHandler: pushNotificationHandler)
 
-    public var disabledFeatures: Set<SinchEnabledFeatures> = []
-    
     var options: SinchInitializeOptions?
     
     private(set) var config: SinchSDKConfig.AppConfig? {
@@ -29,12 +38,7 @@ public final class SinchChatSDK {
             _chat.authDataSource = authDataSource
         }
     }
-    
-    public var additionalMetadata: SinchMetadataArray = []
-    public lazy var eventListenerSubject = PassthroughSubject<SinchPluginEvent, Never>()
-    public lazy var customMessageTypeHandlers: [(_ model: Message) -> Message?] = []
-    public lazy var customMessageTypeHandlersAsync: [(Message, @escaping (Message?) -> Void) -> Void] = []
-    
+        
     private init() {}
     
     /// Initialization of SinchSDK
