@@ -7,9 +7,9 @@ extension SinchChatSDK: SinchPluginAvailablePluginMethods {
     }
     
     // If AuthModel is nil then we will use current AuthModel.
-    public func sendMessage(_ message: MessageType, authModel: AuthModel?, chatOptions: SinchChatOptions?, completion: @escaping (Result<String, Error>) -> Void) {
+    public func sendMessage(_ message: MessageType, authModel: AuthModel?, chatOptions: SinchChatOptions?, completion: @escaping @Sendable (Result<String, Error>) -> Void) {
                 
-        guard let client = DefaultAPIClient(region: config?.region ?? .EU1),
+        guard let client = apiClient ?? Default2APIClient(region: config?.region ?? .EU1),
               let authDataSource = authDataSource else {
             completion(.failure(SinchChatSDKError.unavailable))
             return
@@ -39,7 +39,7 @@ extension SinchChatSDK: SinchPluginAvailablePluginMethods {
         }
     }
     
-    public func presentViewController(_ viewController: UIViewController, _ animated: Bool, completion: (() -> Void)?) {
+    public func presentViewController(_ viewController: UIViewController, _ animated: Bool, completion: (@Sendable () -> Void)?) {
         getTopViewController()?.present(viewController, animated: true, completion: {
             completion?()
         })

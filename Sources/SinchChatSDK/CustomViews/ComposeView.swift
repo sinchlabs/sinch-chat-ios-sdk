@@ -1,6 +1,7 @@
 import UIKit
 // import SnapshotTesting
 
+@MainActor
 protocol ComposeViewDelegate: AnyObject {
     
     func sendMessage(_ messageType: MessageType)
@@ -654,10 +655,12 @@ extension ComposeView: UITextViewDelegate {
     func scheduleComposeMessageEnd() {
         timer?.invalidate()
         self.timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { [weak self] _ in
-            
+
             guard let self = self else { return }
-            
-            self.delegate?.composeMessageEnded()
+
+            Task { @MainActor in
+                self.delegate?.composeMessageEnded()
+            }
 
         }
     }

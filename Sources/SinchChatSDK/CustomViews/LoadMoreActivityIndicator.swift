@@ -1,5 +1,6 @@
 import UIKit
 
+@MainActor
 class LoadMoreActivityIndicator {
     
     private let spacingFromLastCell: CGFloat
@@ -63,9 +64,10 @@ class LoadMoreActivityIndicator {
             
             if scrollView.isDecelerating {
                 if activityIndicatorView.isAnimating && scrollView.contentInset.bottom == 0 {
+                    let bottomInset = spacingFromLastCellOnActionStart
                     UIView.animate(withDuration: 0.3) { [weak self] in
-                        if let bottom = self?.spacingFromLastCellOnActionStart {
-                            scrollView.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: bottom, right: 0)
+                        if self != nil {
+                            scrollView.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: bottomInset, right: 0)
                         }
                     }
                 }
@@ -78,8 +80,8 @@ class LoadMoreActivityIndicator {
         let contentDelta = scrollView.contentSize.height - scrollView.frame.size.height
         let offsetDelta = scrollView.contentOffset.y - contentDelta
         if offsetDelta >= 0 {
-            UIView.animate(withDuration: 0.3, animations: {
-                scrollView.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+            UIView.animate(withDuration: 0.3, animations: { [weak scrollView] in
+                scrollView?.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
             }) { _ in
                 completion?()
             }

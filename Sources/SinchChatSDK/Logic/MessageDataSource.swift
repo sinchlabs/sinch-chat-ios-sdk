@@ -1,14 +1,14 @@
 // swiftlint:disable file_length
 import Foundation
-import GRPC
+import Synchronization
+import GRPCCore
 
-protocol MessageDataSourceDelegate: AnyObject {
-    
+protocol MessageDataSourceDelegate: AnyObject, Sendable {
     func subscriptionError()
 }
 
-enum MessageDataSourceError: Error {
-    case unknown(Error)
+enum MessageDataSourceError: Error, Sendable {
+    case unknown(any Error)
     case notLoggedIn
     case unknownTypeOfMessage
     case unknownTypeOfEvent
@@ -17,584 +17,662 @@ enum MessageDataSourceError: Error {
     case noMoreMessages
     case unknownTypeOfMedia
     case noInternetConnection
-    
 }
-protocol MessageDataSource {
-    
+
+protocol MessageDataSource: AnyObject, Sendable {
     var delegate: MessageDataSourceDelegate? { get set }
-    
+
     var topicModel: TopicModel? { get }
     var metadata: SinchMetadataArray { get }
     var shouldInitializeConversation: Bool { get }
-    
-    func uploadMedia(_ media: MediaType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void)
-    func uploadMediaViaStream(_ media: MediaType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void)
-    func sendMessage(_ message: MessageType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void)
-    func sendEvent(_ event: EventType, completion: @escaping (Result<Void, MessageDataSourceError>) -> Void)
-    func subscribeForMessages(completion: @escaping (Result<Message, MessageDataSourceError>) -> Void)
-    func getMessageHistory(completion: @escaping (Result<[Message], MessageDataSourceError>) -> Void)
+
+    // Async API
+    func uploadMedia(_ media: MediaType) async throws -> String
+    func uploadMediaViaStream(_ media: MediaType) async throws -> String
+    func sendMessage(_ message: MessageType) async throws -> String
+    func sendEvent(_ event: EventType) async throws
+    func subscribeForMessages() -> AsyncThrowingStream<Message, Error>
+    func getMessageHistory() async throws -> [Message]
+    func sendConversationMetadata(_ metadata: SinchMetadataArray) throws
+
+    // Completion-handler compatibility layer
+    func uploadMedia(_ media: MediaType,
+                     completion: @escaping @Sendable (Result<String, MessageDataSourceError>) -> Void)
+    func uploadMediaViaStream(_ media: MediaType,
+                              completion: @escaping @Sendable (Result<String, MessageDataSourceError>) -> Void)
+    func sendMessage(_ message: MessageType,
+                     completion: @escaping @Sendable (Result<String, MessageDataSourceError>) -> Void)
+    func sendEvent(_ event: EventType,
+                   completion: @escaping @Sendable (Result<Void, MessageDataSourceError>) -> Void)
+    func subscribeForMessages(completion: @escaping @Sendable (Result<Message, MessageDataSourceError>) -> Void)
+    func getMessageHistory(completion: @escaping @Sendable (Result<[Message], MessageDataSourceError>) -> Void)
     func sendConversationMetadata(_ metadata: SinchMetadataArray) -> Result<Void, MessageDataSourceError>
+
     func cancelSubscription()
     func closeChannel()
     func startChannel()
     func cancelCalls()
     func isSubscribed() -> Bool
     func isFirstPage() -> Bool
-    
 }
 
+private struct MessageState: Sendable {
+    var firstPage: Bool = true
+    var nextPageToken: String?
+    var wasSomeMessageSent: Bool = false
+    var subscriptionTask: Task<Void, Never>?
+    var historyTask: Task<Void, Never>?
+}
 
 // swiftlint:disable:next type_body_length
-final class DefaultMessageDataSource: MessageDataSource {
+final class DefaultMessageDataSource: MessageDataSource, @unchecked Sendable {
 
     var authDataSource: AuthDataSource
     var client: APIClient
-    var historyCall: UnaryCall<Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest, Sinch_Chat_Sdk_V1alpha2_GetHistoryResponse>?
-    var sendMessageAndEventCall: UnaryCall<Sinch_Chat_Sdk_V1alpha2_SendRequest, Sinch_Chat_Sdk_V1alpha2_SendResponse>?
-    var uploadStreamMediaCall: ClientStreamingCall<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest, Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse>?
-    var uploadMediaCall: ClientStreamingCall<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest, Sinch_Chat_Sdk_V1alpha2_UploadMediaResponse>?
+
     weak var delegate: MessageDataSourceDelegate?
-    var firstPage: Bool = true
-    lazy var dispatchQueue = DispatchQueue(label: "taskQueue")
-    lazy var dispatchSemaphore = DispatchSemaphore(value: 0)
+
+    private let state = Mutex<MessageState>(MessageState())
+
+    private let pageSize: Int32 = 10
     private let sendDocumentAsText: Bool
 
-    private var nextPageToken: String?
-    private let pageSize: Int32 = 10
-    private var subscription: ServerStreamingCall<Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest, Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamResponse>?
-    
     let topicModel: TopicModel?
     var metadata: SinchMetadataArray
     let shouldInitializeConversation: Bool
-    
+
     private let jsonEncoder = JSONEncoder()
-    
-    private var wasSomeMessageSent = false
-    
-    init(apiClient: APIClient, authDataSource: AuthDataSource, topicModel: TopicModel? = nil, metadata: SinchMetadataArray = [], shouldInitializeConversation: Bool = false, sendDocumentAsText: Bool = false) {
+
+    init(apiClient: APIClient, authDataSource: AuthDataSource, topicModel: TopicModel? = nil,
+         metadata: SinchMetadataArray = [], shouldInitializeConversation: Bool = false,
+         sendDocumentAsText: Bool = false) {
         self.client = apiClient
         self.authDataSource = authDataSource
-        
-        // Optional mode
         self.topicModel = topicModel
         self.metadata = metadata
         self.shouldInitializeConversation = shouldInitializeConversation
         self.sendDocumentAsText = sendDocumentAsText
     }
-    func closeChannel() {
-        self.client.closeChannel()
-    }
-    func startChannel() {
-        self.client.startChannel()
+
+    deinit {
+        let (sub, hist) = state.withLock { ($0.subscriptionTask, $0.historyTask) }
+        sub?.cancel()
+        hist?.cancel()
     }
 
-    // swiftlint:disable:next cyclomatic_complexity
-    func getMessageHistory(completion: @escaping (Result<[Message], MessageDataSourceError>) -> Void) {
-        if let nextPageToken = nextPageToken {
-            if nextPageToken.isEmpty {
-                
-                completion(.failure(.noMoreMessages))
-                return
+    func closeChannel() {
+        client.closeChannel()
+    }
+
+    func startChannel() {
+        client.startChannel()
+    }
+
+    // MARK: - Async API
+
+    func getMessageHistory() async throws -> [Message] {
+        let shouldThrow: Bool = state.withLock { $0.nextPageToken?.isEmpty == true }
+        if shouldThrow {
+            throw MessageDataSourceError.noMoreMessages
+        }
+        let token = state.withLock { $0.nextPageToken }
+
+        var request = Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest()
+        request.pageSize = self.pageSize
+        if let token {
+            state.withLock { $0.firstPage = false }
+            request.pageToken = token
+        }
+        if let topicModel {
+            request.topicID = topicModel.topicID
+        }
+
+        let signed: ClientRequest<Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest>
+        do {
+            signed = try authDataSource.signedRequest(request)
+        } catch {
+            throw MessageDataSourceError.notLoggedIn
+        }
+
+        do {
+            let response = try await client.withClient(handle: { client in
+                try await Sinch_Chat_Sdk_V1alpha2_SdkService.Client(wrapping: client).getHistory(
+                    request: signed,
+                    options: .standardCallOptions
+                )
+            })
+
+            // On first entry if there is no history, send a conversation_start
+            // message to bootstrap the conversation.
+            let wasFirstEntry = state.withLock { state -> Bool in
+                let first = state.nextPageToken == nil
+                state.nextPageToken = response.nextPageToken
+                return first
+            }
+
+            if shouldInitializeConversation, wasFirstEntry, response.entries.isEmpty {
+                do {
+                    _ = try await sendMessage(.fallbackMessage("conversation_start"))
+                    debugPrint("*********SEND CONVERSATION START MESSAGE **********")
+                } catch {
+                    debugPrint("conversation_start failed: \(error)")
+                }
+            }
+
+            return try await processEntries(response.entries)
+        } catch let error as MessageDataSourceError {
+            throw error
+        } catch {
+            throw MessageDataSourceError.unknown(error)
+        }
+    }
+
+    private func processEntries(_ entries: [Sinch_Chat_Sdk_V1alpha2_Entry]) async throws -> [Message] {
+        var messages: [Message] = []
+        for entry in entries {
+            guard let message = handleIncomingMessage(entry) else { continue }
+            if let event = message.body as? MessageEvent {
+                if case .composeEnd = event.type { continue }
+                if case .composeStarted = event.type { continue }
+            }
+
+            if let mediaMessage = message.body as? MessageMedia {
+                if let enriched = await getMediaMessageTypeFromMessage(mediaMessage) {
+                    if enriched.type != .unsupported {
+                        messages.append(message.with(body: enriched))
+                    } else {
+                        messages.append(message.with(body: MessageUnsupported(sendDate: enriched.sendDate)))
+                    }
+                }
+            } else {
+                messages.append(message)
             }
         }
+        return messages
+    }
+
+    func sendMessage(_ message: MessageType) async throws -> String {
+        var isConversationStarted = false
+        if case let .fallbackMessage(event) = message, event == "conversation_start" {
+            isConversationStarted = true
+        }
+
+        guard var request = message.convertToSinchMessage else {
+            throw MessageDataSourceError.unknownTypeOfMessage
+        }
+        if let topicModel {
+            request.topicID = topicModel.topicID
+        }
+        if let metadataString = getMetadataFor(isConversationStarted ? .conversationStart : .message) {
+            request.metadata = metadataString
+        }
+
+        let signed: ClientRequest<Sinch_Chat_Sdk_V1alpha2_SendRequest>
         do {
-            let service = try getService()
-            
-            var request = Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest()
-            request.pageSize = self.pageSize
-            if let nextPageToken = nextPageToken {
-                firstPage = false
-                request.pageToken = nextPageToken
+            signed = try authDataSource.signedRequest(request)
+        } catch {
+            throw MessageDataSourceError.notLoggedIn
+        }
+
+        do {
+            let response = try await client.withClient { client in
+                try await Sinch_Chat_Sdk_V1alpha2_SdkService.Client(wrapping: client).send(
+                    request: signed,
+                    options: .standardCallOptions
+                )
             }
-            
-            if let topicModel = topicModel {
-                request.topicID = topicModel.topicID
+            state.withLock { $0.wasSomeMessageSent = true }
+            return response.messageID
+        } catch {
+            throw MessageDataSourceError.unknown(error)
+        }
+    }
+
+    func sendEvent(_ event: EventType) async throws {
+        guard var request = event.convertToSinchEvent else {
+            throw MessageDataSourceError.unknownTypeOfEvent
+        }
+        if let topicModel {
+            request.topicID = topicModel.topicID
+        }
+        if let metadataString = getMetadataFor(.metadataEvent) {
+            request.metadata = metadataString
+        }
+
+        let signed: ClientRequest<Sinch_Chat_Sdk_V1alpha2_SendRequest>
+        do {
+            signed = try authDataSource.signedRequest(request)
+        } catch {
+            throw MessageDataSourceError.notLoggedIn
+        }
+
+        do {
+            _ = try await client.withClient { client in
+                try await Sinch_Chat_Sdk_V1alpha2_SdkService.Client(wrapping: client).send(
+                    request: signed,
+                    options: .standardCallOptions
+                )
             }
-            
-            self.historyCall = service.getHistory(request, callOptions: nil)
-            
-            _ = self.historyCall?.response.always { [weak self] result in
-                guard let self = self else {
+        } catch {
+            throw MessageDataSourceError.unknown(error)
+        }
+    }
+
+    func uploadMediaViaStream(_ media: MediaType) async throws -> String {
+        guard let request = media.convertToSinchMedia else {
+            throw MessageDataSourceError.unknownTypeOfMedia
+        }
+        var metadata = SinchChatSDK.standardMetadata
+        if let token = try? authDataSource.currentAccessToken() {
+            metadata.addString(token, forKey: "authorization")
+        } else {
+            throw MessageDataSourceError.notLoggedIn
+        }
+
+        do {
+            let response = try await client.withClient { client in
+                try await Sinch_Chat_Sdk_V1alpha2_SdkService.Client(wrapping: client).uploadMediaStream(
+                    metadata: metadata,
+                    options: .standardCallOptions
+                ) { writer in
+                    try await writer.write(request)
+                }
+            }
+            return response.url
+        } catch {
+            throw MessageDataSourceError.unknown(error)
+        }
+    }
+
+    func uploadMedia(_ media: MediaType) async throws -> String {
+        guard let request = media.convertToSinchMedia else {
+            throw MessageDataSourceError.unknownTypeOfMedia
+        }
+        let signed: ClientRequest<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest>
+        do {
+            signed = try authDataSource.signedRequest(request)
+        } catch {
+            throw MessageDataSourceError.notLoggedIn
+        }
+
+        do {
+            let response = try await client.withClient { client in
+                try await Sinch_Chat_Sdk_V1alpha2_SdkService.Client(wrapping: client).uploadMedia(
+                    request: signed,
+                    options: .standardCallOptions
+                )
+            }
+            return response.url
+        } catch {
+            throw MessageDataSourceError.unknown(error)
+        }
+    }
+
+    func subscribeForMessages() -> AsyncThrowingStream<Message, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task { [weak self] in
+                guard let self else {
+                    continuation.finish()
                     return
                 }
-                switch result {
-                case .success(let result):
-                    // On first entry if there is no history send conversation_start message
-                    if shouldInitializeConversation {
-                        if self.nextPageToken == nil && result.entries.isEmpty {
-
-                            self.sendMessage(.fallbackMessage("conversation_start")) { _ in
-                                
-                                debugPrint("*********SEND CONVERSATION START MESSAGE **********")
-                            }
-                        }
-                    }
-                    
-                    self.nextPageToken = result.nextPageToken
-                    var messages: [Message] = []
-                    
-                    self.dispatchQueue.async {
-                        
-                        for entry in result.entries {
-                            let message = handleIncomingMessage(entry)
-                            
-                            if let body = message?.body, let event = body as? MessageEvent {
-
-                                switch event.type {
-                                case .composeEnd, .composeStarted :
-                                    continue
-                                default:
-                                    break
-                                }
-                            }
-
-                            guard var message = message else { continue }
-                            
-                            if let mediaMessage = message.body as? MessageMedia {
-                                
-                                self.getMediaMessageTypeFromMessage(mediaMessage, completion: { messageBody in
-                                    if let messageBody = messageBody {
-                                        
-                                        if messageBody.type != .unsupported {
-                                            message.body = messageBody
-                                            
-                                        } else {
-                                            message.body = MessageUnsupported(sendDate: messageBody.sendDate)
-                                        }
-                                        
-                                        messages.append(message)
-                                    }
-                                    
-                                    self.dispatchSemaphore.signal()
-                                })
-                                
-                                self.dispatchSemaphore.wait()
-                            } else {
-                                
-                                messages.append(message)
-                            }
-                        }
-                    }
-                    
-                    self.dispatchQueue.async {
-                        completion(.success(messages))
-                    }
-                    
-                case .failure(let err):
-                    completion(.failure(.unknown(err)))
-                }
+                await self.runMessagesSubscription(continuation: continuation)
             }
-        } catch {
-            completion(.failure(.notLoggedIn))
+            continuation.onTermination = { _ in
+                task.cancel()
+            }
         }
     }
-    
-    func sendMessage(_ message: MessageType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void) {
 
-        do {
-            let service = try getService()
-            
-            var isConversationStarted = false
-            switch message {
-            case .fallbackMessage(let event):
-                isConversationStarted = event == "conversation_start"
-            default: break
+    private func runMessagesSubscription(
+        continuation: AsyncThrowingStream<Message, Error>.Continuation
+    ) async {
+        let inner = state.withLock { state -> Task<Void, Never>? in
+            if state.subscriptionTask != nil {
+                return nil
             }
-
-            guard var message = message.convertToSinchMessage else {
-                completion(.failure(.unknownTypeOfMessage))
-                return
+            let task = Task { [weak self] in
+                guard let self else { return }
+                await self.executeMessagesStream(continuation: continuation)
             }
-            
-            if let topicModel = topicModel {
-                message.topicID = topicModel.topicID
-            }
-
-            if let metadata = getMetadataFor(isConversationStarted ? .conversationStart : .message) {
-                message.metadata = metadata
-            }
-            
-            sendMessageAndEventCall = service.send(message)
-
-            _ = sendMessageAndEventCall?.response.always { [weak self] result in
-
-                switch result {
-                case .success(let response):
-                    self?.wasSomeMessageSent = true
-                    completion(.success(response.messageID))
-
-                case .failure(let err):
-                    completion(.failure(.unknown(err)))
-                }
-            }
-            
-        } catch {
-            completion(.failure(.notLoggedIn))
+            state.subscriptionTask = task
+            return task
         }
-    }
-    
-    func sendEmptyMessageWithMetadata(_ completion: @escaping () -> Void) {
-        guard let metadata = getMetadataFor(.metadataEvent) else {
-            completion()
+        if inner == nil {
+            continuation.finish()
             return
         }
-        
-        do {
-            
-            let service = try getService()
-            
-            var request = Sinch_Chat_Sdk_V1alpha2_SendRequest()
-            request.metadata = metadata
-            
-            sendMessageAndEventCall = service.send(request)
-            
-            _ = sendMessageAndEventCall?.response.always({ _ in
-                completion()
-            })
-            
-        } catch {
-            completion()
-        }
-        
+        await inner?.value
+        state.withLock { $0.subscriptionTask = nil }
     }
-    
-    func sendEvent(_ event: EventType, completion: @escaping (Result<Void, MessageDataSourceError>) -> Void) {
-        do {
-            let service = try getService()
 
-            guard var request = event.convertToSinchEvent else {
-                completion(.failure(.unknownTypeOfEvent))
-                return
-            }
-            if let topicModel = topicModel {
-                request.topicID = topicModel.topicID
-            }
+    private func executeMessagesStream(
+        continuation: AsyncThrowingStream<Message, Error>.Continuation
+    ) async {
+        do {
+            // Pre-flight: send a metadata event message so the server knows we
+            // are starting to receive.
             if let metadata = getMetadataFor(.metadataEvent) {
-                request.metadata = metadata
+                _ = try? await sendMessageWithMetadata(metadata)
             }
-
-            sendMessageAndEventCall = service.send(request)
-
-            _ = sendMessageAndEventCall?.response.always { result in
-
-                switch result {
-                case .success(_):
-
-                    completion(.success(()))
-
-                case .failure(let err):
-                    completion(.failure(.unknown(err)))
-                }
-            }
-
-        } catch {
-            completion(.failure(.notLoggedIn))
         }
-    }
 
-    func uploadMediaViaStream(_ media: MediaType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void) {
+        var request = Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest.with {
+            if let topicModel {
+                $0.topicID = topicModel.topicID
+            }
+        }
+
+        let signed: ClientRequest<Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest>
         do {
-            
-            guard let request = media.convertToSinchMedia else {
-                completion(.failure(.unknownTypeOfMedia))
-                return
-            }
-            
-            let service = try getService()
-            uploadStreamMediaCall = service.uploadMediaStream()
-            
-            uploadStreamMediaCall?.response.whenComplete({ result in
-                
-                switch result {
-                case .success(let response):
-                    completion(.success(response.url))
-                    
-                case .failure(let err):
-                    completion(.failure(.unknown(err)))
-                }
-            })
-            
-            _ = uploadStreamMediaCall?.sendMessage(request)
-            _ = uploadStreamMediaCall?.sendEnd()
-            
+            signed = try authDataSource.signedRequest(request)
         } catch {
-            completion(.failure(.notLoggedIn))
+            continuation.finish()
+            return
         }
-    }
-    func uploadMedia(_ media: MediaType, completion: @escaping (Result<String, MessageDataSourceError>) -> Void) {
+
         do {
-            
-            guard let request = media.convertToSinchMedia else {
-                completion(.failure(.unknownTypeOfMedia))
-                return
-            }
-            
-            let service = try getService()
-            let call = service.uploadMedia(request)
-            
-            call.response.whenComplete({ result in
-                
-                switch result {
-                case .success(let response):
-                    completion(.success(response.url))
-                    
-                case .failure(let err):
-                    completion(.failure(.unknown(err)))
+            try await client.withClient { client in
+                try await Sinch_Chat_Sdk_V1alpha2_SdkService.Client(wrapping: client).subscribeToStream(request: signed, options: .standardCallOptions) { [weak self] stream in
+                    guard let self else { return }
+                    for try await response in stream.messages {
+                        if Task.isCancelled { return }
+                        if let message = self.handleIncomingMessageEntry(response.entry) {
+                            if let mediaMessage = message.body as? MessageMedia {
+                                if let enriched = await self.getMediaMessageTypeFromMessage(mediaMessage) {
+                                    if enriched.type != .unsupported {
+                                        continuation.yield(message.with(body: enriched))
+                                    } else {
+                                        continuation.yield(message.with(body: MessageUnsupported(sendDate: enriched.sendDate)))
+                                    }
+                                    continue
+                                }
+                            }
+                            continuation.yield(message)
+                        }
+                    }
                 }
-            })
-            
+            }
+            continuation.finish()
+        } catch let status as RPCError where status.code == .unavailable {
+            let delegate = self.delegate
+            DispatchQueue.main.async {
+                delegate?.subscriptionError()
+            }
+            continuation.finish()
         } catch {
-            completion(.failure(.notLoggedIn))
+            continuation.finish()
         }
     }
 
-    func subscribeForMessages(completion: @escaping (Result<Message, MessageDataSourceError>) -> Void) {
-        guard subscription == nil else {
+    private func sendMessageWithMetadata(_ metadata: String) async throws {
+        var request = Sinch_Chat_Sdk_V1alpha2_SendRequest()
+        request.metadata = metadata
+        let signed: ClientRequest<Sinch_Chat_Sdk_V1alpha2_SendRequest>
+        do {
+            signed = try authDataSource.signedRequest(request)
+        } catch {
+            throw MessageDataSourceError.notLoggedIn
+        }
+        _ = try await client.withClient { client in
+            try await Sinch_Chat_Sdk_V1alpha2_SdkService.Client(wrapping: client).send(
+                request: signed,
+                options: .standardCallOptions
+            )
+        }
+    }
+
+    func sendConversationMetadata(_ metadata: SinchMetadataArray) throws {
+        try _sendConversationMetadataSync(metadata)
+    }
+
+    // MARK: - Completion-handler compatibility layer
+
+    func uploadMedia(_ media: MediaType,
+                     completion: @escaping @Sendable (Result<String, MessageDataSourceError>) -> Void) {
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let url = try await self.uploadMedia(media)
+                completion(.success(url))
+            } catch let error as MessageDataSourceError {
+                completion(.failure(error))
+            } catch {
+                completion(.failure(.unknown(error)))
+            }
+        }
+    }
+
+    func uploadMediaViaStream(_ media: MediaType,
+                              completion: @escaping @Sendable (Result<String, MessageDataSourceError>) -> Void) {
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let url = try await self.uploadMediaViaStream(media)
+                completion(.success(url))
+            } catch let error as MessageDataSourceError {
+                completion(.failure(error))
+            } catch {
+                completion(.failure(.unknown(error)))
+            }
+        }
+    }
+
+    func sendMessage(_ message: MessageType,
+                     completion: @escaping @Sendable (Result<String, MessageDataSourceError>) -> Void) {
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let id = try await self.sendMessage(message)
+                completion(.success(id))
+            } catch let error as MessageDataSourceError {
+                completion(.failure(error))
+            } catch {
+                completion(.failure(.unknown(error)))
+            }
+        }
+    }
+
+    func sendEvent(_ event: EventType,
+                   completion: @escaping @Sendable (Result<Void, MessageDataSourceError>) -> Void) {
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await self.sendEvent(event)
+                completion(.success(()))
+            } catch let error as MessageDataSourceError {
+                completion(.failure(error))
+            } catch {
+                completion(.failure(.unknown(error)))
+            }
+        }
+    }
+
+    func subscribeForMessages(completion: @escaping @Sendable (Result<Message, MessageDataSourceError>) -> Void) {
+        let alreadyStarted = state.withLock { $0.subscriptionTask != nil }
+        if alreadyStarted {
             completion(.failure(.subscriptionIsAlreadyStarted))
             return
         }
-        do {
-            let service = try getService()
-            var request = Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest()
-            if let topicModel = topicModel {
-                request.topicID = topicModel.topicID
-            }
-            
-            sendEmptyMessageWithMetadata {
 
-                let subscription = service.subscribeToStream(request, callOptions: nil) { [weak self] response in
-                    guard let self = self else {
-                        return
-                    }
-
-                    let message = handleIncomingMessage(response.entry)
-
-                    guard var message = message else { return }
-
-                    self.dispatchQueue.async {
-
-                        if let mediaMessage = message.body as? MessageMedia {
-
-                            self.getMediaMessageTypeFromMessage(mediaMessage, completion: { messageBody in
-
-                                if let messageBody = messageBody {
-
-                                    if messageBody.type != .unsupported {
-
-                                        message.body = messageBody
-
-                                    } else {
-                                        message.body = MessageUnsupported(sendDate: messageBody.sendDate)
-                                    }
-                                    self.dispatchSemaphore.signal()
-
-                                }
-                            })
-                            self.dispatchSemaphore.wait()
-
-                        }
-                    }
-
-                    self.dispatchQueue.async {
-
-                        completion(.success(message))
-
-                    }
+        let stream = subscribeForMessages()
+        Task {
+            do {
+                for try await message in stream {
+                    await MainActor.run { completion(.success(message)) }
                 }
-
-                self.subscription = subscription
-
-                self.subscription?.status.whenComplete({ [weak self] response in
-
-                    guard let self = self else {
-                        return
-                    }
-                    debugPrint(response)
-                    switch response {
-
-                    case .success(let status):
-                        debugPrint(status)
-                        if status.code == GRPCStatus.Code(rawValue: 14) {
-                            self.subscription = nil
-                            self.delegate?.subscriptionError()
-                        }
-
-                    case .failure(_):
-                        break
-                    }
-                })
+            } catch {
+                await MainActor.run {
+                    completion(.failure(.unknown(error)))
+                }
             }
-        } catch {
-            completion(.failure(.notLoggedIn))
         }
     }
-    
-    func sendConversationMetadata(_ metadata: SinchMetadataArray) -> Result<Void, MessageDataSourceError> {
-        
-        var keyValueDictionary: [String: String] = [:]
-        metadata.forEach { metadata in
-            let data = metadata.getKeyValue()
-            keyValueDictionary[data.key] = data.value
-        }
-        do {
-            let encodedData = try jsonEncoder.encode(keyValueDictionary)
-            
-            var request = Sinch_Chat_Sdk_V1alpha2_SendRequest()
-            request.metadata = String(bytes: encodedData, encoding: .utf8) ?? "{}"
-            
-            try getService().send(request).status.whenComplete { result in
-                switch result {
-                case .failure(let err):
-                    Logger.warning("cannot set conversation metadata", err.localizedDescription)
-                case .success:
-                    break
-                }
+
+    func getMessageHistory(completion: @escaping @Sendable (Result<[Message], MessageDataSourceError>) -> Void) {
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let messages = try await self.getMessageHistory()
+                completion(.success(messages))
+            } catch let error as MessageDataSourceError {
+                completion(.failure(error))
+            } catch {
+                completion(.failure(.unknown(error)))
             }
-            
+        }
+    }
+
+    func sendConversationMetadata(_ metadata: SinchMetadataArray) -> Result<Void, MessageDataSourceError> {
+        do {
+            try self._sendConversationMetadataSync(metadata)
             return .success(())
-            
-        } catch let error {
+        } catch let error as MessageDataSourceError {
+            return .failure(error)
+        } catch {
             return .failure(.unknown(error))
         }
     }
-    
+
+    private func _sendConversationMetadataSync(_ metadata: SinchMetadataArray) throws {
+        var keyValueDictionary: [String: String] = [:]
+        metadata.forEach { entry in
+            let data = entry.getKeyValue()
+            keyValueDictionary[data.key] = data.value
+        }
+
+        let encodedData = try jsonEncoder.encode(keyValueDictionary)
+        var request = Sinch_Chat_Sdk_V1alpha2_SendRequest()
+        request.metadata = String(bytes: encodedData, encoding: .utf8) ?? "{}"
+
+        let signed: ClientRequest<Sinch_Chat_Sdk_V1alpha2_SendRequest>
+        do {
+            signed = try authDataSource.signedRequest(request)
+        } catch {
+            throw MessageDataSourceError.notLoggedIn
+        }
+
+        // Fire-and-forget RPC.
+        Task {
+            do {
+                _ = try await client.withClient { client in
+                    try await Sinch_Chat_Sdk_V1alpha2_SdkService.Client(wrapping: client).send(
+                        request: signed,
+                        options: .standardCallOptions
+                    )
+                }
+            } catch {
+                Logger.warning("cannot set conversation metadata: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // MARK: - State / lifecycle
+
     func cancelCalls() {
-        historyCall?.cancel(promise: nil)
-        sendMessageAndEventCall?.cancel(promise: nil)
-        uploadStreamMediaCall?.cancel(promise: nil)
+        let task = state.withLock { state -> Task<Void, Never>? in
+            let t = state.historyTask
+            state.historyTask = nil
+            return t
+        }
+        task?.cancel()
     }
-    
+
     func cancelSubscription() {
-        nextPageToken = nil
-        subscription?.cancel(promise: nil)
-        subscription = nil
-        firstPage = true
-        
+        let task = state.withLock { state -> Task<Void, Never>? in
+            let t = state.subscriptionTask
+            state.subscriptionTask = nil
+            state.nextPageToken = nil
+            state.firstPage = true
+            return t
+        }
+        task?.cancel()
     }
+
     func isSubscribed() -> Bool {
-        (subscription != nil)
+        state.withLock { $0.subscriptionTask != nil }
     }
+
     func isFirstPage() -> Bool {
-        return firstPage
+        state.withLock { $0.firstPage }
     }
-    
-    private func getService() throws -> Sinch_Chat_Sdk_V1alpha2_SdkServiceNIOClient {
-        try Sinch_Chat_Sdk_V1alpha2_SdkServiceNIOClient(channel: client.getChannel(), defaultCallOptions: authDataSource.signRequest(.standardCallOptions))
-    }
-    
+
+    // MARK: - Private helpers
+
     private func addSize(_ response: HTTPURLResponse, mediaMessage: inout MessageMedia) {
         if let size = response.allHeaderFields["Content-Length"] as? String, let sized = Double(size) {
-            
             let sizeInMb = sized / (1024.0 * 1024.0)
             if sizeInMb < 1 {
                 let sizeInKB = sized / 1024.0
                 mediaMessage.size = String(format: "%.1f KB", sizeInKB)
-
             } else {
                 mediaMessage.size = String(format: "%.1f MB", sizeInMb)
             }
         }
     }
-    
-    // swiftlint:disable:next cyclomatic_complexity
-    func getMediaMessageTypeFromMessage(_ message: MessageMedia, completion: @escaping (MessageMedia?) -> Void) {
-        
+
+    /// Async media-type lookup via URLSession.
+    func getMediaMessageTypeFromMessage(_ message: MessageMedia) async -> MessageMedia? {
         guard let url = URL(string: message.url) else {
-            completion(message)
-            return
-            
+            return message
         }
-        var mediaMessage = message
+
         var request = URLRequest(url: url)
         request.httpMethod = "HEAD"
-        
-        let task = URLSession.shared.dataTask(with: request, completionHandler: {  _, response, error in
-            
-            if error != nil {
-                completion(nil)
-            }
-            
-            //https://developer.apple.com/library/archive/documentation/2DDrawing/Conceptual/DrawingPrintingiOS/LoadingImages/LoadingImages.html
-            
-            if let response = response as? HTTPURLResponse, let type = response.allHeaderFields["Content-Type"] as? String {
-                
-                switch type {
-                case "video/mp4", "video/mov":
-                    mediaMessage.type = .video
-                    // swiftlint:disable:next comma
-                case "audio/aac", "audio/adts", "audio/ac3", "audio/aif","audio/aiff", "audio/aifc", "audio/caf",
-                    "audio/mp4", "audio/mp3", "audio/m4a", "audio/snd", "audio/au", "audio/wav", "audio/sd2":
-                    mediaMessage.type = .audio
-                case "image/jpg", "image/jpeg", "image/png", "image/tif", "image/tiff", "image/gif", "image/bmp",
-                    "image/BMPf", "image/ico", "image/cur", "image/xbm":
-                    mediaMessage.type = .image
-                case "application/pdf":
-                    mediaMessage.type = .file(.pdf)
-                case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-                    mediaMessage.type = .file(.docx)
-                case "application/msword":
-                    mediaMessage.type = .file(.doc)
-                case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-                    mediaMessage.type = .file(.xlsx)
-                case  "application/vnd.ms-excel":
-                    mediaMessage.type = .file(.xls)
-                case "application/vnd.openxmlformats-officedocument.presentationml.presentation":
-                    mediaMessage.type = .file(.pptx)
-                case "application/vnd.ms-powerpoint":
-                    mediaMessage.type = .file(.ppt)
 
-                default:
-                    mediaMessage.type = .file(.unknown)
-                    
-                }
-                self.addSize(response, mediaMessage: &mediaMessage)
-
+        do {
+            let (_, response) = try await URLSession.shared.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse,
+                  let type = httpResponse.allHeaderFields["Content-Type"] as? String else {
+                return message
             }
-            completion(mediaMessage)
-        })
-        
-        task.resume()
-    }
-    
-    private func cssonvertSinchMetadataToMetadataJson(metadata: SinchMetadataArray) -> String? {
-        if metadata.isEmpty, SinchChatSDK.shared.additionalMetadata.isEmpty {
+
+            var mediaMessage = message
+            switch type {
+            case "video/mp4", "video/mov":
+                mediaMessage.type = .video
+            case "audio/aac", "audio/adts", "audio/ac3", "audio/aif", "audio/aiff", "audio/aifc", "audio/caf",
+                 "audio/mp4", "audio/mp3", "audio/m4a", "audio/snd", "audio/au", "audio/wav", "audio/sd2":
+                mediaMessage.type = .audio
+            case "image/jpg", "image/jpeg", "image/png", "image/tif", "image/tiff", "image/gif", "image/bmp",
+                 "image/BMPf", "image/ico", "image/cur", "image/xbm":
+                mediaMessage.type = .image
+            case "application/pdf":
+                mediaMessage.type = .file(.pdf)
+            case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                mediaMessage.type = .file(.docx)
+            case "application/msword":
+                mediaMessage.type = .file(.doc)
+            case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+                mediaMessage.type = .file(.xlsx)
+            case "application/vnd.ms-excel":
+                mediaMessage.type = .file(.xls)
+            case "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+                mediaMessage.type = .file(.pptx)
+            case "application/vnd.ms-powerpoint":
+                mediaMessage.type = .file(.ppt)
+            default:
+                mediaMessage.type = .file(.unknown)
+            }
+            self.addSize(httpResponse, mediaMessage: &mediaMessage)
+            return mediaMessage
+        } catch {
             return nil
         }
-        var dictMetadata: [String: String] = [:]
-        
-        SinchChatSDK.shared.additionalMetadata.forEach({
-            let tuple = $0.getKeyValue()
-            dictMetadata[tuple.key] = tuple.value
-        })
-        
-        metadata.forEach({
-            let tuple = $0.getKeyValue()
-            dictMetadata[tuple.key] = tuple.value
-        })
-        
-        guard let encodedMetadata = try? JSONEncoder().encode(dictMetadata) else {
-            return nil
-        }
-        
-        return String(data: encodedMetadata, encoding: .utf8)
     }
-    
+
     static func createChoicesArray(_ choices: [Sinch_Conversationapi_Type_Choice], entryID: String) -> [ChoiceMessageType] {
-        
         var choicesArray: [ChoiceMessageType] = []
-        
+
         for choice in choices {
-            guard let message = choice.choice else {
-                break
-            }
+            guard let message = choice.choice else { break }
             switch message {
-            case .textMessage( let textMessage):
-                choicesArray.append(.textMessage((ChoiceText(text: textMessage.text, postback: choice.postbackData, entryID: entryID))))
-            case .urlMessage(let urlMessage):
+            case let .textMessage(textMessage):
+                choicesArray.append(.textMessage(ChoiceText(text: textMessage.text, postback: choice.postbackData, entryID: entryID)))
+            case let .urlMessage(urlMessage):
                 choicesArray.append(.urlMessage(ChoiceUrl(url: urlMessage.url, text: urlMessage.title)))
-            case .callMessage(let callMessage):
+            case let .callMessage(callMessage):
                 choicesArray.append(.callMessage(ChoiceCall(text: callMessage.title, phoneNumber: callMessage.phoneNumber)))
-            case .locationMessage(let locationMessage):
+            case let .locationMessage(locationMessage):
                 choicesArray.append(.locationMessage(ChoiceLocation(text: locationMessage.title,
                                                                     label: locationMessage.label,
                                                                     latitude: Double(locationMessage.coordinates.latitude),
@@ -607,12 +685,9 @@ final class DefaultMessageDataSource: MessageDataSource {
     private func getMetadataFor(_ reason: MessageMetadataReason) -> String? {
         switch reason {
         case .message:
-            return getMetadataString(includingOnce: !wasSomeMessageSent)
-        case .conversationStart:
-            return getMetadataString(includingOnce: true)
-        case .metadataEvent:
-            return getMetadataString(includingOnce: true)
-        case .onceMessageRequest:
+            let first = !state.withLock { $0.wasSomeMessageSent }
+            return getMetadataString(includingOnce: first)
+        case .conversationStart, .metadataEvent, .onceMessageRequest:
             return getMetadataString(includingOnce: true)
         }
     }
@@ -627,9 +702,7 @@ final class DefaultMessageDataSource: MessageDataSource {
             let tuple = $0.getKeyValue()
             switch tuple.mode {
             case .once:
-                if includingOnce {
-                    dictMetadata[tuple.key] = tuple.value
-                }
+                if includingOnce { dictMetadata[tuple.key] = tuple.value }
             case .withEachMessage:
                 dictMetadata[tuple.key] = tuple.value
             }
@@ -639,9 +712,7 @@ final class DefaultMessageDataSource: MessageDataSource {
             let tuple = $0.getKeyValue()
             switch tuple.mode {
             case .once:
-                if includingOnce {
-                    dictMetadata[tuple.key] = tuple.value
-                }
+                if includingOnce { dictMetadata[tuple.key] = tuple.value }
             case .withEachMessage:
                 dictMetadata[tuple.key] = tuple.value
             }
@@ -653,246 +724,139 @@ final class DefaultMessageDataSource: MessageDataSource {
 
         return String(data: encodedMetadata, encoding: .utf8)
     }
+
+    fileprivate func handleIncomingMessageEntry(_ entry: Sinch_Chat_Sdk_V1alpha2_Entry) -> Message? {
+        handleIncomingMessage(entry)
+    }
 }
 
-
-struct TopicModel {
+struct TopicModel: Sendable {
     let topicID: String
-    
-}
-
-// swiftlint:disable function_body_length cyclomatic_complexity
-func handleIncomingMessage(_ entry: Sinch_Chat_Sdk_V1alpha2_Entry) -> Message? {
-   // TODO: - Handle incoming messages
-  //  if entry.hasDeliveryTime {
-        
-        // MARK: - Outgoing messages
-        
-        let outgoingText = entry.contactMessage.textMessage.text
-        if !outgoingText.isEmpty {
-            return Message(entryId: entry.entryID, owner: .outgoing, body: MessageText(text: outgoingText, sendDate: entry.deliveryTime.seconds))
-        }
-        
-        let outgoingUrl = entry.contactMessage.mediaMessage.url
-        if !outgoingUrl.isEmpty {
-            
-            return Message(entryId: entry.entryID, owner: .outgoing, body: MessageMedia(url: outgoingUrl, sendDate: entry.deliveryTime.seconds))
-        }
-        // MARK: - Incoming messages
-        
-        let incomingText = entry.appMessage.textMessage.text
-        if !incomingText.isEmpty {
-            if entry.appMessage.hasAgent {
-                let agent = entry.appMessage.agent
-                
-                return Message(entryId: entry.entryID,
-                               owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue, pictureUrl: agent.pictureURL)),
-                               body: MessageText(text: incomingText, sendDate: entry.deliveryTime.seconds, isExpanded: false))
-            } else {
-                
-                return Message(entryId: entry.entryID, owner: .incoming(nil),
-                               body: MessageText(text: incomingText,
-                                                 sendDate: entry.deliveryTime.seconds))
-            }
-        }
-        let outgoingLocationMessage = entry.contactMessage.locationMessage
-        if outgoingLocationMessage.hasCoordinates {
-            let messageBody = MessageLocation(label: outgoingLocationMessage.label,
-                                              title: outgoingLocationMessage.title,
-                                              latitude: Double(outgoingLocationMessage.coordinates.latitude),
-                                              longitude: Double(outgoingLocationMessage.coordinates.longitude),
-                                              sendDate: entry.deliveryTime.seconds)
-            
-            return Message(entryId: entry.entryID, owner: .outgoing, body: messageBody)
-        }
-        
-        if !entry.contactMessage.fallbackMessage.rawMessage.isEmpty {
-            return Message(entryId: entry.entryID, owner: .system, body: MessageEvent(type: .fallbackMessage(
-                payload: entry.contactMessage.fallbackMessage.rawMessage
-            )))
-        }
-        
-        let incomingLocationMessage = entry.appMessage.locationMessage
-        if incomingLocationMessage.hasCoordinates {
-            let messageBody = MessageLocation(label: incomingLocationMessage.label,
-                                              title: incomingLocationMessage.title,
-                                              latitude: Double(incomingLocationMessage.coordinates.latitude),
-                                              longitude: Double(incomingLocationMessage.coordinates.longitude),
-                                              sendDate: entry.deliveryTime.seconds)
-            
-            if entry.appMessage.hasAgent {
-                let agent = entry.appMessage.agent
-                
-                return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName,
-                                                                              type: agent.type.rawValue, pictureUrl: agent.pictureURL)),
-                               body:  messageBody)
-            } else {
-                
-                return Message(entryId: entry.entryID, owner: .incoming(nil), body: messageBody)
-            }
-        }
-        
-        let incomingChoiceMessage = entry.appMessage.choiceMessage
-        if incomingChoiceMessage.hasTextMessage {
-            
-            // EntryID is messageID in case od message types.
-            let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingChoiceMessage.choices, entryID: entry.entryID)
-            
-            let messageBody = MessageChoices(text: incomingChoiceMessage.textMessage.text,
-                                             choices: choicesArray,
-                                             sendDate: entry.deliveryTime.seconds)
-            
-            if entry.appMessage.hasAgent {
-                let agent = entry.appMessage.agent
-                
-                return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue, pictureUrl: agent.pictureURL)),
-                               body:  messageBody)
-            } else {
-                
-                return Message(entryId: entry.entryID, owner: .incoming(nil), body: messageBody)
-            }
-        }
-        let incomingCardMessage = entry.appMessage.cardMessage
-        
-        if incomingCardMessage.hasMediaMessage {
-            
-            // EntryID is messageID in case od message types.
-            let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingCardMessage.choices, entryID: entry.entryID)
-            
-            let messageBody = MessageCard(title: incomingCardMessage.title,
-                                          description: incomingCardMessage.description_p,
-                                          choices: choicesArray,
-                                          url: incomingCardMessage.mediaMessage.url,
-                                          sendDate: entry.deliveryTime.seconds)
-            
-            if entry.appMessage.hasAgent {
-                let agent = entry.appMessage.agent
-                
-                return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue, pictureUrl: agent.pictureURL)),
-                               body:  messageBody)
-            } else {
-                
-                return Message(entryId: entry.entryID, owner: .incoming(nil), body: messageBody)
-            }
-        }
-        
-        let incomingCarouselMessage = entry.appMessage.carouselMessage
-        
-        if !incomingCarouselMessage.cards.isEmpty {
-            
-            let carouselChoicesArray = DefaultMessageDataSource.createChoicesArray(incomingCarouselMessage.choices, entryID: entry.entryID)
-            var cardsArray: [MessageCard] = []
-            
-            for incomingCardMessage in incomingCarouselMessage.cards {
-                
-                let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingCardMessage.choices, entryID: entry.entryID)
-                let messageBody = MessageCard(title: incomingCardMessage.title,
-                                              description: incomingCardMessage.description_p ,
-                                              choices: choicesArray,
-                                              url: incomingCardMessage.mediaMessage.url,
-                                              sendDate: entry.deliveryTime.seconds)
-                
-                cardsArray.append(messageBody)
-                
-            }
-            
-            let messageBody = MessageCarousel(cards: cardsArray, choices: carouselChoicesArray, sendDate: entry.deliveryTime.seconds)
-            
-            if entry.appMessage.hasAgent {
-                let agent = entry.appMessage.agent
-                
-                return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue, pictureUrl: agent.pictureURL)),
-                               body:  messageBody)
-            } else {
-                
-                return Message(entryId: entry.entryID, owner: .incoming(nil), body: messageBody)
-            }
-        }
-        
-        let incomingUrl = entry.appMessage.mediaMessage.url
-        
-        if !incomingUrl.isEmpty {
-            if entry.appMessage.hasAgent {
-                let agent = entry.appMessage.agent
-                
-                return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue, pictureUrl: agent.pictureURL)),
-                               body: MessageMedia(url: incomingUrl,
-                                                  sendDate: entry.deliveryTime.seconds, placeholderImage: nil))
-            } else {
-                return Message(entryId: entry.entryID, owner: .incoming(nil),
-                               body: MessageMedia(url: incomingUrl,
-                                                  sendDate: entry.deliveryTime.seconds, placeholderImage: nil))
-            }
-        }
-        
-        // MARK: - Events
-        
-        if entry.appEvent.agentLeftEvent.hasAgent {
-            
-            let agentThatLeft = entry.appEvent.agentLeftEvent.agent
-            
-            return Message(entryId: entry.entryID, owner: .system,
-                           body: MessageEvent(type: .left(Agent(name: agentThatLeft.displayName,
-                                                                type: agentThatLeft.type.rawValue,
-                                                                pictureUrl: agentThatLeft.pictureURL)),
-                                              sendDate: entry.deliveryTime.seconds))
-            
-        }
-        
-        if entry.appEvent.agentJoinedEvent.hasAgent {
-            
-            let agentThatJoined = entry.appEvent.agentJoinedEvent.agent
-            
-            return Message(entryId: entry.entryID, owner: .system,
-                           body: MessageEvent(type: .joined(Agent(name: agentThatJoined.displayName,
-                                                                  type: agentThatJoined.type.rawValue,
-                                                                  pictureUrl: agentThatJoined.pictureURL)),
-                                              sendDate: entry.deliveryTime.seconds))
-            
-        }
-
-        if entry.contactMessage.choiceResponseMessage.postbackData != ""
-            || entry.contactMessage.fallbackMessage.rawMessage.isEmpty == false {
-            return nil
-        }
-
-        if case .composingEvent(_)? =  entry.appEvent.event {
-            return Message(entryId: entry.entryID, owner: .system,
-                           body: MessageEvent(type: .composeStarted,
-                                              sendDate: entry.deliveryTime.seconds))
-
-        } else if case .composingEndEvent(_)? =  entry.appEvent.event {
-            return Message(entryId: entry.entryID, owner: .system,
-                           body: MessageEvent(type: .composeEnd,
-                                              sendDate: entry.deliveryTime.seconds))
-            
-        } else if case .composingEvent(_)? =  entry.contactEvent.event {
-            return nil
-
-        } else if case .composingEndEvent(_)? =  entry.contactEvent.event {
-            return nil
-        }
-
-        if !entry.contactEvent.unknownFields.data.isEmpty {
-            return nil
-
-        }
-
-        if entry.appEvent.event != nil {
-            return nil
-        }
-
-        return Message(entryId: entry.entryID, owner: .incoming(nil), body: MessageUnsupported(sendDate: entry.deliveryTime.seconds))
-  //  }
-    
-    return nil
 }
 
 enum MessageMetadataReason {
     case message
-    case  onceMessageRequest
-    case  conversationStart
-    case  metadataEvent
+    case onceMessageRequest
+    case conversationStart
+    case metadataEvent
 }
 
-// swiftlint:enable file_length
+// swiftlint:disable function_body_length cyclomatic_complexity
+func handleIncomingMessage(_ entry: Sinch_Chat_Sdk_V1alpha2_Entry) -> Message? {
+    // TODO: - Handle incoming messages
+    //  if entry.hasDeliveryTime {
+
+    // MARK: - Outgoing messages
+
+    let outgoingText = entry.contactMessage.textMessage.text
+    if !outgoingText.isEmpty {
+        return Message(entryId: entry.entryID, owner: .outgoing, body: MessageText(text: outgoingText, sendDate: entry.deliveryTime.seconds))
+    }
+
+    let outgoingUrl = entry.contactMessage.mediaMessage.url
+    if !outgoingUrl.isEmpty {
+
+        return Message(entryId: entry.entryID, owner: .outgoing, body: MessageMedia(url: outgoingUrl, sendDate: entry.deliveryTime.seconds))
+    }
+    // MARK: - Incoming messages
+
+    let incomingText = entry.appMessage.textMessage.text
+    if !incomingText.isEmpty {
+        if entry.appMessage.hasAgent {
+            let agent = entry.appMessage.agent
+
+            return Message(entryId: entry.entryID,
+                           owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue, pictureUrl: agent.pictureURL)),
+                           body: MessageText(text: incomingText, sendDate: entry.deliveryTime.seconds, isExpanded: false))
+        } else {
+
+            return Message(entryId: entry.entryID, owner: .incoming(nil),
+                           body: MessageText(text: incomingText,
+                                             sendDate: entry.deliveryTime.seconds))
+        }
+    }
+    let outgoingLocationMessage = entry.contactMessage.locationMessage
+    if outgoingLocationMessage.hasCoordinates {
+        let messageBody = MessageLocation(label: outgoingLocationMessage.label,
+                                          title: outgoingLocationMessage.title,
+                                          latitude: Double(outgoingLocationMessage.coordinates.latitude),
+                                          longitude: Double(outgoingLocationMessage.coordinates.longitude),
+                                          sendDate: entry.deliveryTime.seconds)
+
+        return Message(entryId: entry.entryID, owner: .outgoing, body: messageBody)
+    }
+
+    if !entry.contactMessage.fallbackMessage.rawMessage.isEmpty {
+        return Message(entryId: entry.entryID, owner: .system, body: MessageEvent(type: .fallbackMessage(
+            payload: entry.contactMessage.fallbackMessage.rawMessage
+        )))
+    }
+
+    let incomingLocationMessage = entry.appMessage.locationMessage
+    if incomingLocationMessage.hasCoordinates {
+        let messageBody = MessageLocation(label: incomingLocationMessage.label,
+                                          title: incomingLocationMessage.title,
+                                          latitude: Double(incomingLocationMessage.coordinates.latitude),
+                                          longitude: Double(incomingLocationMessage.coordinates.longitude),
+                                          sendDate: entry.deliveryTime.seconds)
+
+        if entry.appMessage.hasAgent {
+            let agent = entry.appMessage.agent
+
+            return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName,
+                                                                          type: agent.type.rawValue, pictureUrl: agent.pictureURL)),
+                           body:  messageBody)
+        } else {
+
+            return Message(entryId: entry.entryID, owner: .incoming(nil), body: messageBody)
+        }
+    }
+
+    let incomingChoiceMessage = entry.appMessage.choiceMessage
+    if !incomingChoiceMessage.choices.isEmpty {
+        let choices = DefaultMessageDataSource.createChoicesArray(incomingChoiceMessage.choices,
+                                                                  entryID: entry.entryID)
+        let messageBody = MessageChoices(text: "", choices: choices, sendDate: entry.deliveryTime.seconds)
+
+        return Message(entryId: entry.entryID, owner: .incoming(nil), body: messageBody)
+    }
+
+    let incomingCardMessage = entry.appMessage.cardMessage
+
+    if incomingCardMessage.hasMediaMessage {
+        let choicesArray = DefaultMessageDataSource.createChoicesArray(incomingCardMessage.choices, entryID: entry.entryID)
+        let messageBody = MessageCard(title: incomingCardMessage.title,
+                                      description: incomingCardMessage.description_p,
+                                      choices: choicesArray,
+                                      url: incomingCardMessage.mediaMessage.url,
+                                      sendDate: entry.deliveryTime.seconds)
+
+        if entry.appMessage.hasAgent {
+            let agent = entry.appMessage.agent
+            return Message(entryId: entry.entryID, owner: .incoming(.init(name: agent.displayName, type: agent.type.rawValue, pictureUrl: agent.pictureURL)),
+                           body: messageBody)
+        } else {
+            return Message(entryId: entry.entryID, owner: .incoming(nil), body: messageBody)
+        }
+    }
+
+    let incomingCarousel = entry.appMessage.carouselMessage
+    if !incomingCarousel.cards.isEmpty {
+        var cards: [MessageCard] = []
+        for card in incomingCarousel.cards {
+            let choices = DefaultMessageDataSource.createChoicesArray(card.choices, entryID: entry.entryID)
+            cards.append(MessageCard(title: card.title,
+                                     description: card.description_p,
+                                     choices: choices,
+                                     url: card.mediaMessage.url,
+                                     sendDate: entry.deliveryTime.seconds))
+        }
+        return Message(entryId: entry.entryID,
+                       owner: .incoming(nil),
+                       body: MessageCarousel(cards: cards, choices: [], sendDate: entry.deliveryTime.seconds))
+    }
+
+    // MARK: - System events
+
+    return nil
+}

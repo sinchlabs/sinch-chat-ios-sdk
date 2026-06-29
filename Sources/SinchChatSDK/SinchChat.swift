@@ -61,7 +61,7 @@ public enum SinchChatState {
     case idle
 }
 
-final class DefaultSinchChat: SinchChat {
+final class DefaultSinchChat: SinchChat, @unchecked Sendable {
     
     /// Contains all methods connected with Inbox. Before using the inbox you should use method `setIdentity`.
     public var inbox: SinchInbox { _inbox }
@@ -84,7 +84,11 @@ final class DefaultSinchChat: SinchChat {
             _inbox.region = region
         }
     }
-    internal var apiClient: APIClient?
+    internal var apiClient: APIClient? {
+        didSet {
+            _inbox.apiClient = apiClient
+        }
+    }
 
     private let pushPermissionHandler: PushNofiticationPermissionHandler
     private let chatNotificationHandler = ChatNotificationHandler()
@@ -99,64 +103,60 @@ final class DefaultSinchChat: SinchChat {
         guard state != .running else {
             return SinchSDKChatAvailability.currentlyRunning
         }
-        
+
         guard let authDataSource = authDataSource, region != nil else {
             return SinchSDKChatAvailability.uninitialized
         }
-        
+
         guard authDataSource.isLoggedIn == true else {
             return SinchSDKChatAvailability.authorizationNeeded
         }
-        
+
         return SinchSDKChatAvailability.available
     }
-    
+
     public func getChatViewController(uiConfig: SinchSDKConfig.UIConfig? = nil,
                                       localizationConfig: SinchSDKConfig.LocalizationConfig? = nil,
                                       options: GetChatViewControllerOptions? = nil) throws -> SinchChatViewController {
-        
-        guard isChatAvailable() == .available, let authDataSource = authDataSource, let region = region else {
-            throw SinchChatSDKError.unavailable
-        }
-        
-        if let apiClient = self.apiClient {
-            
-            if !apiClient.isChannelStarted {
-                let client = DefaultAPIClient(region: region)
-                
+        let capturedUIConfig = uiConfig
+        let capturedLocConfig = localizationConfig
+        let capturedOptions = options
+        return try MainActor.assumeIsolated {
+            guard self.isChatAvailable() == .available, let authDataSource = self.authDataSource, let region = self.region else {
+                throw SinchChatSDKError.unavailable
+            }
+
+            if self.apiClient == nil {
+                guard let client = Default2APIClient(region: region) else {
+                    throw SinchChatSDKError.unavailable
+                }
                 self.apiClient = client
             }
-            
-        } else {
-            let client = DefaultAPIClient(region: region)
-            
-            apiClient = client
-        }
-        
-        var topicModel: TopicModel?
-        if let topicID = options?.topicID {
-            topicModel = TopicModel(topicID: topicID)
-        }
-        
-        let messageDataSource = DefaultMessageDataSource(
-            apiClient: apiClient!,
-            authDataSource: authDataSource,
-            topicModel: topicModel,
-            metadata: options?.metadata ?? [],
-            shouldInitializeConversation: options?.shouldInitializeConversation ?? false,
-            sendDocumentAsText: options?.sendDocumentAsTextMessage ?? false)
 
-        let rootCordinator = DefaultRootCoordinator(messageDataSource: messageDataSource,
-                                                    authDataSource: authDataSource,
-                                                    pushPermissionHandler: pushPermissionHandler)
-        
-        self.rootCordinator = rootCordinator
-        let uiConfig = uiConfig ?? SinchSDKConfig.UIConfig.defaultValue
-        let locConfig = localizationConfig ?? SinchSDKConfig.LocalizationConfig.defaultValue
-        
-        lastChatOptions = options
-        return rootCordinator.getRootViewController(uiConfig: uiConfig, localizationConfig: locConfig, sendDocumentAsText: options?.sendDocumentAsTextMessage ?? false)
-        
+            var topicModel: TopicModel?
+            if let topicID = capturedOptions?.topicID {
+                topicModel = TopicModel(topicID: topicID)
+            }
+
+            let messageDataSource = DefaultMessageDataSource(
+                apiClient: self.apiClient!,
+                authDataSource: authDataSource,
+                topicModel: topicModel,
+                metadata: capturedOptions?.metadata ?? [],
+                shouldInitializeConversation: capturedOptions?.shouldInitializeConversation ?? false,
+                sendDocumentAsText: capturedOptions?.sendDocumentAsTextMessage ?? false)
+
+            let rootCordinator = DefaultRootCoordinator(messageDataSource: messageDataSource,
+                                                        authDataSource: authDataSource,
+                                                        pushPermissionHandler: self.pushPermissionHandler)
+
+            self.rootCordinator = rootCordinator
+            let uiConfig = capturedUIConfig ?? SinchSDKConfig.UIConfig.defaultValue
+            let locConfig = capturedLocConfig ?? SinchSDKConfig.LocalizationConfig.defaultValue
+
+            self.lastChatOptions = capturedOptions
+            return rootCordinator.getRootViewController(uiConfig: uiConfig, localizationConfig: locConfig, sendDocumentAsText: capturedOptions?.sendDocumentAsTextMessage ?? false)
+        }
     }
 
     func initilize() {
@@ -180,12 +180,12 @@ public protocol SinchMetadata: Codable, Hashable {
 
 public typealias SinchMetadataArray = Array<SinchMetadataCustom>
 
-public enum SinchMetadataMode: Codable {
+public enum SinchMetadataMode: Codable, Sendable {
     case once
     case withEachMessage
 }
 
-public struct GetChatViewControllerOptions: Codable {
+public struct GetChatViewControllerOptions: Codable, Sendable {
     var topicID: String?
     let metadata: SinchMetadataArray
     let shouldInitializeConversation: Bool
@@ -204,7 +204,7 @@ public struct GetChatViewControllerOptions: Codable {
     }
 }
 
-public struct SinchMetadataCustom: Codable, Equatable, SinchMetadata {
+public struct SinchMetadataCustom: Codable, Equatable, SinchMetadata, Sendable {
     let key: String
     let value: String
     let mode: SinchMetadataMode

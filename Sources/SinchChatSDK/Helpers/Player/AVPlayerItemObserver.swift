@@ -8,8 +8,9 @@
 import Foundation
 import AVFoundation
 
+@MainActor
 protocol AVPlayerItemObserverDelegate: AnyObject {
-    
+
     /**
      Called when the observed item updates the duration.
      */
@@ -19,15 +20,16 @@ protocol AVPlayerItemObserverDelegate: AnyObject {
      Called when the observed item receives metadata
      */
     func item(didReceiveMetadata metadata: [AVTimedMetadataGroup])
-    
+
 }
 
 /**
  Observing an AVPlayers status changes.
  */
-class AVPlayerItemObserver: NSObject {
-    
-    private static var context = 0
+@MainActor
+final class AVPlayerItemObserver: NSObject, @unchecked Sendable {
+
+    private nonisolated(unsafe) static var context = 0
     private let main: DispatchQueue = .main
     private let metadataOutput: AVPlayerItemMetadataOutput
     
@@ -49,7 +51,13 @@ class AVPlayerItemObserver: NSObject {
     }
     
     deinit {
-        stopObservingCurrentItem()
+        let item = observingItem
+        var context = AVPlayerItemObserver.context
+        if let item = item, isObserving {
+            item.removeObserver(self, forKeyPath: AVPlayerItemKeyPath.duration, context: &context)
+            item.removeObserver(self, forKeyPath: AVPlayerItemKeyPath.loadedTimeRanges, context: &context)
+            item.remove(metadataOutput)
+        }
     }
     
     /**
@@ -86,12 +94,18 @@ class AVPlayerItemObserver: NSObject {
         switch observedKeyPath {
         case AVPlayerItemKeyPath.duration:
             if let duration = change?[.newKey] as? CMTime {
-                delegate?.item(didUpdateDuration: duration.seconds)
+                let seconds = duration.seconds
+                Task { @MainActor [weak self] in
+                    self?.delegate?.item(didUpdateDuration: seconds)
+                }
             }
-        
+
         case AVPlayerItemKeyPath.loadedTimeRanges:
             if let ranges = change?[.newKey] as? [NSValue], let duration = ranges.first?.timeRangeValue.duration {
-                delegate?.item(didUpdateDuration: duration.seconds)
+                let seconds = duration.seconds
+                Task { @MainActor [weak self] in
+                    self?.delegate?.item(didUpdateDuration: seconds)
+                }
             }
 
         default: break
@@ -101,7 +115,10 @@ class AVPlayerItemObserver: NSObject {
 }
 
 extension AVPlayerItemObserver: AVPlayerItemMetadataOutputPushDelegate {
-    func metadataOutput(_ output: AVPlayerItemMetadataOutput, didOutputTimedMetadataGroups groups: [AVTimedMetadataGroup], from track: AVPlayerItemTrack?) {
-        delegate?.item(didReceiveMetadata: groups)
+    nonisolated func metadataOutput(_ output: AVPlayerItemMetadataOutput, didOutputTimedMetadataGroups groups: [AVTimedMetadataGroup], from track: AVPlayerItemTrack?) {
+        nonisolated(unsafe) let captured = groups
+        Task { @MainActor [weak self] in
+            self?.delegate?.item(didReceiveMetadata: captured)
+        }
     }
 }

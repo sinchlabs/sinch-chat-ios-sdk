@@ -9,13 +9,14 @@
 import Foundation
 import AVFoundation
 
+@MainActor
 protocol AVPlayerObserverDelegate: AnyObject {
-    
+
     /**
      Called when the AVPlayer.status changes.
      */
     func player(statusDidChange status: AVPlayer.Status)
-    
+
     /**
      Called when the AVPlayer.timeControlStatus changes.
      */
@@ -25,9 +26,10 @@ protocol AVPlayerObserverDelegate: AnyObject {
 /**
  Observing an AVPlayers status changes.
  */
-class AVPlayerObserver: NSObject {
+@MainActor
+final class AVPlayerObserver: NSObject, @unchecked Sendable {
 
-    private static var context = 0
+    private nonisolated(unsafe) static var context = 0
     private let main: DispatchQueue = .main
 
     private struct AVPlayerKeyPath {
@@ -47,7 +49,12 @@ class AVPlayerObserver: NSObject {
     }
 
     deinit {
-        stopObserving()
+        let player = self.player
+        var context = AVPlayerObserver.context
+        if let player = player, isObserving {
+            player.removeObserver(self, forKeyPath: AVPlayerKeyPath.status, context: &context)
+            player.removeObserver(self, forKeyPath: AVPlayerKeyPath.timeControlStatus, context: &context)
+        }
     }
 
     /**
@@ -80,10 +87,24 @@ class AVPlayerObserver: NSObject {
 
         switch observedKeyPath {
         case AVPlayerKeyPath.status:
-            handleStatusChange(change)
+            if let statusNumber = change?[.newKey] as? NSNumber {
+                let status = AVPlayer.Status(rawValue: statusNumber.intValue) ?? .unknown
+                Task { @MainActor [weak self] in
+                    self?.delegate?.player(statusDidChange: status)
+                }
+            } else {
+                Task { @MainActor [weak self] in
+                    self?.delegate?.player(statusDidChange: .unknown)
+                }
+            }
 
         case AVPlayerKeyPath.timeControlStatus:
-            handleTimeControlStatusChange(change)
+            if let statusNumber = change?[.newKey] as? NSNumber {
+                let status = AVPlayer.TimeControlStatus(rawValue: statusNumber.intValue) ?? .paused
+                Task { @MainActor [weak self] in
+                    self?.delegate?.player(didChangeTimeControlStatus: status)
+                }
+            }
 
         default:
             break
@@ -91,20 +112,12 @@ class AVPlayerObserver: NSObject {
     }
 
     private func handleStatusChange(_ change: [NSKeyValueChangeKey: Any]?) {
-        let status: AVPlayer.Status
-        if let statusNumber = change?[.newKey] as? NSNumber {
-            status = AVPlayer.Status(rawValue: statusNumber.intValue)!
-        } else {
-            status = .unknown
-        }
-        delegate?.player(statusDidChange: status)
+        // Inlined above to avoid sending `change` across actor boundaries.
+        _ = change
     }
 
     private func handleTimeControlStatusChange(_ change: [NSKeyValueChangeKey: Any]?) {
-        let status: AVPlayer.TimeControlStatus
-        if let statusNumber = change?[.newKey] as? NSNumber {
-            status = AVPlayer.TimeControlStatus(rawValue: statusNumber.intValue)!
-            delegate?.player(didChangeTimeControlStatus: status)
-        }
+        // Inlined above to avoid sending `change` across actor boundaries.
+        _ = change
     }
 }

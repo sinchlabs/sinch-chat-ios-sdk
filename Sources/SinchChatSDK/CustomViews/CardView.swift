@@ -1,6 +1,7 @@
 import UIKit
 import Foundation
 
+@MainActor
 protocol CardProtocol: AnyObject {
     func didTapOnChoice(_ text: ChoiceMessageType)
     func didTapOnMedia(_ url: URL)

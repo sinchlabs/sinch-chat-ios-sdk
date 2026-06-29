@@ -1,5 +1,6 @@
 import UIKit
 
+@MainActor
 class MessageSizeCalculator: ChatCellSizeCalculator {
     
     public var dateLabelFont = UIFont.preferredFont(forTextStyle: .caption2)

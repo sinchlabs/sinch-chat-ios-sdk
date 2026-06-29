@@ -2,6 +2,7 @@ import MapKit
 import CoreLocation
 import Foundation
 
+@MainActor
 protocol LocationDelegate: AnyObject {
     func didShareLocation(latitude: Float, longitude: Float)
 }
@@ -161,6 +162,7 @@ final class LocationViewController: SinchViewController<LocationViewModel, Locat
         }
     }
 }
+@MainActor
 extension LocationViewController: CLLocationManagerDelegate, MKMapViewDelegate {
     fileprivate func handleChangeOfStatus(_ status: CLAuthorizationStatus) {
         switch status {
@@ -180,38 +182,41 @@ extension LocationViewController: CLLocationManagerDelegate, MKMapViewDelegate {
         }
     }
     
-    func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
-        
-        handleChangeOfStatus(status)
+    nonisolated func locationManager(_ manager: CLLocationManager, didChangeAuthorization status: CLAuthorizationStatus) {
+        Task { @MainActor [weak self] in
+            self?.handleChangeOfStatus(status)
+        }
     }
-    
+
     @available(iOS 14, *)
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-            
-        handleChangeOfStatus( manager.authorizationStatus)
-        
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
+        Task { @MainActor [weak self] in
+            self?.handleChangeOfStatus(status)
+        }
     }
-    
+
     private func setRegionFromLocation(_ locationValue: CLLocationCoordinate2D) {
         let span = MKCoordinateSpan(latitudeDelta: 0.03, longitudeDelta: 0.03)
         let region = MKCoordinateRegion(center: locationValue, span: span)
         mainView.mapView.setRegion(region, animated: true)
     }
-    
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        if let locationValue:CLLocationCoordinate2D = manager.location?.coordinate {
-            if currentLocation == nil {
 
-                setRegionFromLocation(locationValue)
-                currentLocation = locationValue
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        guard let locationValue: CLLocationCoordinate2D = manager.location?.coordinate else { return }
+        Task { @MainActor [weak self] in
+            guard let self = self else { return }
+            if self.currentLocation == nil {
+                self.setRegionFromLocation(locationValue)
+                self.currentLocation = locationValue
             }
         }
     }
-    
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         print("Error \(error)")
     }
-    
+
     func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
         if currentLocation != nil {
             currentLocation = mapView.centerCoordinate

@@ -4,6 +4,7 @@ import Combine
 
 public typealias IsHandled = Bool
 
+@MainActor
 public protocol SinchPush {
     
     /// Sends device token to specific identity.
@@ -45,6 +46,7 @@ public protocol SinchPush {
     
 }
 
+@MainActor
 final class DefaultSinchPush: SinchPush {
     private let pushNotificationhandler: PushNotificationHandler
     private lazy var inAppMessageController = DefaultInAppMessageController(pushNotificationHandler: pushNotificationhandler )

@@ -13,6 +13,7 @@ public enum InterruptionType: Equatable {
     case ended(shouldResume: Bool)
 }
 
+@MainActor
 public protocol AudioSessionControllerDelegate: AnyObject {
     func handleInterruption(type: InterruptionType)
 }
@@ -21,6 +22,7 @@ public protocol AudioSessionControllerDelegate: AnyObject {
  Simple controller for the `AVAudioSession`. If you need more advanced options, just use the `AVAudioSession` directly.
  - warning: Do not combine usage of this and `AVAudioSession` directly, chose one.
  */
+@MainActor
 public class AudioSessionController {
         
     private let audioSession: AudioSession
@@ -68,7 +70,8 @@ public class AudioSessionController {
         registerForInterruptionNotification()
     }
     deinit {
-        unregisterForInterruptionNotification()
+        // Notification center holds weak references; observers are cleaned up automatically
+        // when the observer deallocates. The Task-based cleanup from before races with deinit.
     }
     public func activateSession() throws {
         do {
@@ -98,31 +101,47 @@ public class AudioSessionController {
         _isObservingForInterruptions = true
     }
     
-    private func unregisterForInterruptionNotification() {
+    private nonisolated func unregisterForInterruptionNotification() {
         notificationCenter.removeObserver(self, name: AVAudioSession.interruptionNotification, object: nil)
-        _isObservingForInterruptions = false
+        Task { @MainActor in
+            self._isObservingForInterruptions = false
+        }
     }
     
-    @objc func handleInterruption(notification: Notification) {
+    @objc nonisolated func handleInterruption(notification: Notification) {
         guard let userInfo = notification.userInfo,
             let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
             let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
                 return
         }
-        
+
         switch type {
         case .began:
-            delegate?.handleInterruption(type: .began)
+            let userInfoCopy = userInfo
+            Task { @MainActor [weak self] in
+                self?.handleInterruptionSync(type: .began)
+            }
+            _ = userInfoCopy
         case .ended:
             guard let typeValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt else {
-                delegate?.handleInterruption(type: .ended(shouldResume: false))
+                Task { @MainActor [weak self] in
+                    self?.handleInterruptionSync(type: .ended(shouldResume: false))
+                }
                 return
             }
-            
+
             let options = AVAudioSession.InterruptionOptions(rawValue: typeValue)
-            delegate?.handleInterruption(type: .ended(shouldResume: options.contains(.shouldResume)))
-        @unknown default: return
+            let shouldResume = options.contains(.shouldResume)
+            Task { @MainActor [weak self] in
+                self?.handleInterruptionSync(type: .ended(shouldResume: shouldResume))
+            }
+        @unknown default:
+            return
         }
+    }
+
+    private func handleInterruptionSync(type: InterruptionType) {
+        delegate?.handleInterruption(type: type)
     }
     
 }

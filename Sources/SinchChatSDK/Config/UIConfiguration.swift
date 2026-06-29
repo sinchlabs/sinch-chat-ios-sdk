@@ -3,7 +3,7 @@ import UIKit
 
 public extension SinchSDKConfig {
     
-    struct UIConfig {
+    struct UIConfig: @unchecked Sendable {
         
         public static let defaultValue = UIConfig()
         

@@ -1,6 +1,6 @@
 import Foundation
 
-public enum MessageType {
+public enum MessageType: @unchecked Sendable {
     case text(String)
     case choiceResponseMessage(postbackData: String, entryID: String)
     case media(message: Message)

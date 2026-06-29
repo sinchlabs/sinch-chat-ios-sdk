@@ -1,5 +1,6 @@
 import UIKit
 
+@MainActor
 protocol AudioDelegate : AnyObject {
     func startPlaying(model: Message)
     func stopPlaying(model: Message)

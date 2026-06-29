@@ -1,6 +1,6 @@
 import UIKit
 
-public protocol MessageBody: Codable {
+public protocol MessageBody: Codable, Sendable {
     var sendDate: Int64? { get }
     var isExpanded: Bool { get set }
     

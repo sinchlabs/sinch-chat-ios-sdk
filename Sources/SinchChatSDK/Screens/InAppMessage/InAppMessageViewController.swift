@@ -1,12 +1,14 @@
 import UIKit
 import SafariServices
 
+@MainActor
 protocol InAppMessageViewDelegate: AnyObject {
-    
+
     func replyToMessage(_ choice: ChoiceText)
     func closeMessage(_ message: Message)
 }
 
+@MainActor
 protocol InAppMessageViewControllerDelegate: AnyObject {
     func didTapOnChoice(_ choice: ChoiceMessageType)
     func didTapOnUrl(_ url: URL)

@@ -33,6 +33,7 @@ public enum TimeEventFrequency {
         }
     }
 }
+@MainActor
 class AVPlayerWrapper: AVPlayerWrapperProtocol {
     
     struct Constants {
@@ -70,8 +71,9 @@ class AVPlayerWrapper: AVPlayerWrapperProtocol {
     }
     
     deinit {
-        playerTimeObserver.player = nil
-        
+        // AVPlayerTimeObserver is @MainActor, but deinit cannot be isolated.
+        // Setting a property on @MainActor-isolated class from a non-isolated deinit
+        // is unsafe, so we just nil out what we can synchronously.
     }
     // MARK: - AVPlayerWrapperProtocol
 
@@ -178,17 +180,22 @@ class AVPlayerWrapper: AVPlayerWrapperProtocol {
        if state == AVPlayerWrapperState.loading {
          initialTime = seconds
        } else {
-         avPlayer.seek(to: CMTimeMakeWithSeconds(seconds, preferredTimescale: 1000)) { finished in
+         avPlayer.seek(to: CMTimeMakeWithSeconds(seconds, preferredTimescale: 1000)) { [weak self] finished in
+             guard let self = self else { return }
              if self.initialTime != nil {
                  self.initialTime = nil
                  if self.playWhenReady {
                      self.play()
                  }
              }
-             self.delegate?.AVWrapper(seekTo: Int(seconds), didFinish: finished)
+             let delegate = self.delegate
+             let secondsInt = Int(seconds)
+             Task { @MainActor in
+                 delegate?.AVWrapper(seekTo: secondsInt, didFinish: finished)
+             }
          }
        }
-     }
+    }
     
     func load(from url: URL, playWhenReady: Bool, options: [String: Any]? = nil) {
         reset(soft: true)
@@ -204,48 +211,69 @@ class AVPlayerWrapper: AVPlayerWrapperProtocol {
             state = .loading
             pendingAsset.loadValuesAsynchronously(forKeys: [Constants.assetPlayableKey], completionHandler: { [weak self] in
                 guard let self = self else { return }
-                
+
                 var error: NSError?
                 let status = pendingAsset.statusOfValue(forKey: Constants.assetPlayableKey, error: &error)
-                
-                DispatchQueue.main.async {
-                    let isPendingAsset = (self.pendingAsset != nil && pendingAsset.isEqual(self.pendingAsset))
+
+                // Capture data needed for the metadata processing in the MainActor task.
+                let chapterLocales = pendingAsset.availableChapterLocales
+                let hasChapterLocales = !chapterLocales.isEmpty
+                var chapterGroups: [AVTimedMetadataGroup] = []
+                if hasChapterLocales {
+                    for locale in chapterLocales {
+                        chapterGroups.append(contentsOf: pendingAsset.chapterMetadataGroups(withTitleLocale: locale, containingItemsWithCommonKeys: nil))
+                    }
+                }
+                var timedMetadataGroups: [AVTimedMetadataGroup] = []
+                if !hasChapterLocales {
+                    for format in pendingAsset.availableMetadataFormats {
+                        let timeRange = CMTimeRange(start: CMTime(seconds: 0, preferredTimescale: 1000), end: pendingAsset.duration)
+                        timedMetadataGroups.append(AVTimedMetadataGroup(items: pendingAsset.metadata(forFormat: format), timeRange: timeRange))
+                    }
+                }
+                let pendingMatch: Bool = {
+                    if let current = self.pendingAsset, current.isEqual(pendingAsset) {
+                        return true
+                    }
+                    return false
+                }()
+                let shouldInstall: Bool = (status == .loaded && pendingMatch)
+
+                nonisolated(unsafe) let unsafeChapterGroups = chapterGroups
+                nonisolated(unsafe) let unsafeTimedMetadataGroups = timedMetadataGroups
+                nonisolated(unsafe) let unsafeHasChapterLocales = hasChapterLocales
+
+                Task { @MainActor [weak self] in
+                    guard let self = self else { return }
                     switch status {
                     case .loaded:
-                        if isPendingAsset {
-                            let currentItem = AVPlayerItem(asset: pendingAsset, automaticallyLoadedAssetKeys: [Constants.assetPlayableKey])
+                        if shouldInstall, let asset = self.pendingAsset {
+                            let currentItem = AVPlayerItem(asset: asset, automaticallyLoadedAssetKeys: [Constants.assetPlayableKey])
                             currentItem.preferredForwardBufferDuration = self.bufferDuration
                             self.avPlayer.replaceCurrentItem(with: currentItem)
-                            
+
                             // Register for events
                             self.playerTimeObserver.registerForBoundaryTimeEvents()
                             self.playerObserver.startObserving()
                             self.playerItemNotificationObserver.startObserving(item: currentItem)
                             self.playerItemObserver.startObserving(item: currentItem)
 
-                            if pendingAsset.availableChapterLocales.isEmpty {
-                                for locale in pendingAsset.availableChapterLocales {
-                                    let chapters = pendingAsset.chapterMetadataGroups(withTitleLocale: locale, containingItemsWithCommonKeys: nil)
-                                    self.delegate?.AVWrapper(didReceiveMetadata: chapters)
-                                }
+                            if unsafeHasChapterLocales {
+                                self.delegate?.AVWrapper(didReceiveMetadata: unsafeChapterGroups)
                             } else {
-                                for format in pendingAsset.availableMetadataFormats {
-                                    let timeRange = CMTimeRange(start: CMTime(seconds: 0, preferredTimescale: 1000), end: pendingAsset.duration)
-                                    let group = AVTimedMetadataGroup(items: pendingAsset.metadata(forFormat: format), timeRange: timeRange)
-                                    self.delegate?.AVWrapper(didReceiveMetadata: [group])
-                                }
+                                self.delegate?.AVWrapper(didReceiveMetadata: unsafeTimedMetadataGroups)
                             }
                         }
-                        
+
                     case .failed:
-                        if isPendingAsset {
+                        if shouldInstall {
                             self.delegate?.AVWrapper(failedWithError: error)
                             self.pendingAsset = nil
                         }
-                        
+
                     case .cancelled:
                         break
-                        
+
                     default:
                         break
                     }

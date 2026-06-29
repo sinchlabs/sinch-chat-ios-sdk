@@ -2,6 +2,7 @@ import Foundation
 
 /// A protocol used to handle tap events on detected text.
 
+@MainActor
 protocol MessageLabelDelegate: AnyObject {
 
     /// Triggered when a tap occurs on a detected address.

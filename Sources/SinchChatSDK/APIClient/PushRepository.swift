@@ -1,104 +1,133 @@
 import Foundation
+import GRPCCore
+import GRPCNIOTransportHTTP2
 
-enum PushRepositoryError: Error {
+enum PushRepositoryError: Error, Sendable {
     // Report this error to us.
     case internalError
 }
 
-protocol PushRepository {
-    func sendDeviceToken(token: String, completion: @escaping (Result<Void, Error>) -> Void)
-    func unsubscribe(_ currentDeviceToken: String, _ completion: @escaping (Result<Void, Error>) -> Void)
-    func replyToMessageWithTextChoice(choice: ChoiceText, completion: @escaping (Result<Void, Error>) -> Void) 
+protocol PushRepository: Sendable {
+    /// Async push registration. Preferred for new code paths.
+    func sendDeviceToken(token: String) async throws
+    func unsubscribe(_ currentDeviceToken: String) async throws
+    func replyToMessageWithTextChoice(choice: ChoiceText) async throws
+
+    /// Backwards-compatible completion-handler entry points.
+    func sendDeviceToken(token: String,
+                         completion: @escaping @Sendable (Result<Void, Error>) -> Void)
+    func unsubscribe(_ currentDeviceToken: String,
+                     _ completion: @escaping @Sendable (Result<Void, Error>) -> Void)
+    func replyToMessageWithTextChoice(choice: ChoiceText,
+                                      completion: @escaping @Sendable (Result<Void, Error>) -> Void)
 }
 
-final class DefaultPushRepository: PushRepository {
+final class DefaultPushRepository: PushRepository, @unchecked Sendable {
     private let authDataSource: AuthDataSource
-    private let region: Region
+    private let client: PushAPIClient?
 
-    init(region: Region, authDataSource: AuthDataSource) {
-        self.region = region
+    init(region: Region, authDataSource: AuthDataSource, client: PushAPIClient? = nil) {
         self.authDataSource = authDataSource
+        self.client = client ?? DefaultPushAPIClient(region: region)
     }
 
-    func sendDeviceToken(token: String, completion: @escaping (Result<Void, Error>) -> Void) {
-        do {
-            guard let client = DefaultPushAPIClient(region: region) else {
-                completion(.failure(PushRepositoryError.internalError))
-                return
-            }
-            let service = try getPushService(apiClient: client)
+    // MARK: - Async API
 
-            var request = Sinch_Push_Sdk_V1beta1_SubscribeRequest()
-            
-            request.token = token
-            request.config = authDataSource.currentConfigID
-            
-            _ = service.subscribe(request).response.always { result in
-                client.closeChannel()
-                
-                switch result {
-                case .success:
-                    completion(.success(()))
-                case .failure(let error):
-                    completion(.failure(error))
-                }
+    func sendDeviceToken(token: String) async throws {
+        guard let client else {
+            throw PushRepositoryError.internalError
+        }
+
+        let request = Sinch_Push_Sdk_V1beta1_SubscribeRequest.with {
+            $0.token = token
+            $0.config = authDataSource.currentConfigID
+        }
+
+        do {
+            let signed = try authDataSource.signedRequest(request)
+            _ = try await client.withClient { client in
+                try await Sinch_Push_Sdk_V1beta1_SdkService.Client(wrapping: client).subscribe(
+                    request: signed,
+                    options: .standardCallOptions
+                )
             }
+        } catch _ as AuthDataSourceError {
+            throw PushRepositoryError.internalError
         } catch {
-            completion(.failure(error))
+            throw error
         }
     }
-    
-    func unsubscribe(_ currentDeviceToken: String, _ completion: @escaping (Result<Void, Error>) -> Void) {
-        do {
-            guard let client = DefaultPushAPIClient(region: region) else {
-                completion(.failure(PushRepositoryError.internalError))
-                return
-            }
-            let service = try getPushService(apiClient: client)
 
-            var request = Sinch_Push_Sdk_V1beta1_UnsubscribeRequest()
-            
-            request.config = authDataSource.currentConfigID
-            request.token = currentDeviceToken
-            
-            _ = service.unsubscribe(request).response.always { result in
-                client.closeChannel()
-                
-                switch result {
-                case .success:
-                    completion(.success(()))
-                case .failure(let error):
-                    print("Unsubscribe error" + error.localizedDescription)
-                    completion(.success(()))
-                }
+    func unsubscribe(_ currentDeviceToken: String) async throws {
+        guard let client else {
+            throw PushRepositoryError.internalError
+        }
+
+        let request = Sinch_Push_Sdk_V1beta1_UnsubscribeRequest.with {
+            $0.config = authDataSource.currentConfigID
+            $0.token = currentDeviceToken
+        }
+
+        do {
+            let signed = try authDataSource.signedRequest(request)
+            _ = try await client.withClient { client in
+                try await Sinch_Push_Sdk_V1beta1_SdkService.Client(wrapping: client).unsubscribe(
+                    request: signed,
+                    options: .standardCallOptions
+                )
             }
+        } catch _ as AuthDataSourceError {
+            throw PushRepositoryError.internalError
         } catch {
-            completion(.failure(error))
+            // Preserve prior semantics: log the failure but treat as success.
+            Logger.verbose("Unsubscribe error: \(error.localizedDescription)")
         }
     }
-    
-    func replyToMessageWithTextChoice(choice: ChoiceText, completion: @escaping (Result<Void, Error>) -> Void) {
-        completion(.success(()))
-//        do {
-//            guard let client = DefaultPushAPIClient(region: region) else {
-//                completion(.failure(PushRepositoryError.internalError))
-//                return
-//            }
-//            let service = try getPushService(apiClient: client)
-//
-//            var request = Sinch_Push_Sdk_V1beta1_ReplyRequest()
-//            request.messageID = choice.entryID
-//
-//            service.reply(request)
-//
-//        } catch {
-//            completion(.failure(error))
-//        }
+
+    func replyToMessageWithTextChoice(choice: ChoiceText) async throws {
+        // The text-choice reply RPC is not currently active in the production
+        // path; the original implementation immediately returned success.
+        // Kept here for protocol completeness and future wiring.
     }
 
-    // MARK: Private
-        
-    private func getPushService(apiClient: PushAPIClient) throws -> Sinch_Push_Sdk_V1beta1_SdkServiceNIOClient {
-        try Sinch_Push_Sdk_V1beta1_SdkServiceNIOClient(channel: apiClient.getChannel(), defaultCallOptions: authDataSource.signRequest(.standardCallOptions))
+    // MARK: - Completion handler compatibility
+
+    func sendDeviceToken(token: String,
+                         completion: @escaping @Sendable (Result<Void, Error>) -> Void) {
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await self.sendDeviceToken(token: token)
+                completion(.success(()))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+
+    func unsubscribe(_ currentDeviceToken: String,
+                     _ completion: @escaping @Sendable (Result<Void, Error>) -> Void) {
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await self.unsubscribe(currentDeviceToken)
+                completion(.success(()))
+            } catch {
+                completion(.failure(error))
+            }
+        }
+    }
+
+    func replyToMessageWithTextChoice(choice: ChoiceText,
+                                      completion: @escaping @Sendable (Result<Void, Error>) -> Void) {
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await self.replyToMessageWithTextChoice(choice: choice)
+                completion(.success(()))
+            } catch {
+                completion(.failure(error))
+            }
+        }
     }
 }

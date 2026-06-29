@@ -8,6 +8,7 @@
 import Foundation
 import MediaPlayer
 
+@MainActor
 protocol AVPlayerWrapperDelegate: AnyObject {
     
     func AVWrapper(didChangeState state: AVPlayerWrapperState)

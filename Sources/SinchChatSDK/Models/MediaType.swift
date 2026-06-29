@@ -2,7 +2,7 @@ import UIKit
 import AVFoundation
 import MobileCoreServices
 
-enum MediaType {
+enum MediaType: @unchecked Sendable {
     case image(UIImage)
     case video(URL)
     case audio(URL)

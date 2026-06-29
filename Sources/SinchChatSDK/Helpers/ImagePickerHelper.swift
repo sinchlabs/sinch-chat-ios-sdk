@@ -3,14 +3,16 @@ import AVFoundation
 import Photos
 import MobileCoreServices
 
+@MainActor
 public protocol ImagePickerDelegate: AnyObject {
     func didSelect(image: UIImage?)
     func didSelect(video: URL?)
 
 }
 
+@MainActor
 final class ImagePickerHelper: NSObject {
-    
+
     private var pickerController: UIImagePickerController = UIImagePickerController()
     private weak var presentationController: UIViewController?
     private weak var delegate: ImagePickerDelegate?

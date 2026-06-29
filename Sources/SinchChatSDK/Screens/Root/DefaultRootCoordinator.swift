@@ -2,10 +2,11 @@
 @_exported import SwiftProtobuf
 import UIKit
 import Logging
-import GRPC
+import GRPCCore
 import CoreLocation
 import QuickLook
 
+@MainActor
 protocol RootCoordinator: AnyObject {
     
     func getRootViewController(uiConfig: SinchSDKConfig.UIConfig, localizationConfig: SinchSDKConfig.LocalizationConfig, sendDocumentAsText: Bool) -> StartViewController
@@ -22,6 +23,7 @@ protocol RootCoordinator: AnyObject {
 
 }
 
+@MainActor
 final class DefaultRootCoordinator: RootCoordinator {
 
     private var messageDataSource: MessageDataSource

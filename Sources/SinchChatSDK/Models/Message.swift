@@ -1,6 +1,6 @@
 import Foundation
 import UIKit
-import GRPC
+import GRPCCore
 import Swift
 
 public enum MessageError: Error {
@@ -46,7 +46,7 @@ public enum MessageStatus: Int, Codable {
     }
 }
 
-public struct Message: Encodable {
+public struct Message: Encodable, @unchecked Sendable {
     public var entryId : String
     public let owner: Owner
     public var body: MessageBody
@@ -78,7 +78,13 @@ public struct Message: Encodable {
         self.body = body
         self.status = status
     }
-    
+
+    /// Returns a copy of this message with the given body. Used by the
+    /// migrated streaming/subscription code paths.
+    public func with(body newBody: MessageBody) -> Message {
+        Message(entryId: entryId, owner: owner, body: newBody, status: status)
+    }
+
     func isFromCurrentUser() -> Bool {
         switch owner {
             

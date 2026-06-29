@@ -1,6 +1,7 @@
 import Foundation
 import AVFoundation
 
+@MainActor
 protocol VoiceRecordingProtocol: AnyObject {
     func updateTime(_ duration: Double)
     func recordingStarted(_ duration: Double, url: URL)
@@ -12,18 +13,19 @@ protocol VoiceRecordingProtocol: AnyObject {
     
 }
 
-var recordingSession: AVAudioSession!
+nonisolated(unsafe) var recordingSession: AVAudioSession!
 
+@MainActor
 final class VoiceRecorderController: NSObject, AVAudioRecorderDelegate, AVAudioPlayerDelegate {
     
-    var recordingSession: AVAudioSession!
+    nonisolated(unsafe) var recordingSession: AVAudioSession!
     weak var delegate: VoiceRecordingProtocol?
     var audioRecorder: AVAudioRecorder?
     var audioPlayer: AVAudioPlayer = AVAudioPlayer()
     var isRecording = false
     var isCanceled = false
     var duration = 0.0
-    var timer: Timer?
+    nonisolated(unsafe) var timer: Timer?
     var startTime: Date?
     var shouldRecord = true
     
@@ -78,13 +80,15 @@ final class VoiceRecorderController: NSObject, AVAudioRecorderDelegate, AVAudioP
         }
     }
     
-    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-                
-        if isRecording {
-            startRecording()
-            if let audioRecorder = audioRecorder {
-                
-                delegate?.recordingStarted(duration, url: audioRecorder.url)
+    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        Task { @MainActor [weak self] in
+            guard let self = self else { return }
+            if self.isRecording {
+                self.startRecording()
+                if let audioRecorder = self.audioRecorder {
+
+                    self.delegate?.recordingStarted(self.duration, url: audioRecorder.url)
+                }
             }
         }
     }
@@ -166,18 +170,21 @@ final class VoiceRecorderController: NSObject, AVAudioRecorderDelegate, AVAudioP
         startTime = nil
         
     }
-    func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
-        
-        debugPrint("end recording")
-        
-        isRecording = false
-        audioPlayer.play()
-        
-        if !flag {
-            finishRecording()
-        } else if !isCanceled {
-            delegate?.successfullySavedVoiceMessage(url: recorder.url)
-            
+    nonisolated func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
+        let url = recorder.url
+        Task { @MainActor [weak self] in
+            guard let self = self else { return }
+            debugPrint("end recording")
+
+            self.isRecording = false
+            self.audioPlayer.play()
+
+            if !flag {
+                self.finishRecording()
+            } else if !self.isCanceled {
+                self.delegate?.successfullySavedVoiceMessage(url: url)
+
+            }
         }
     }
     func continueRecording() {

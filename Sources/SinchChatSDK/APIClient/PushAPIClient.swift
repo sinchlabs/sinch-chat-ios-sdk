@@ -1,59 +1,61 @@
 import Foundation
-import GRPC
-import Logging
+import GRPCCore
+import GRPCNIOTransportHTTP2
+import GRPCNIOTransportHTTP2Posix
 
-protocol PushAPIClient {
-    func getChannel() -> GRPCChannel
+/// Abstraction over the push gRPC transport.
+protocol PushAPIClient: Sendable {
+    func withClient<Result: Sendable>(handle: (GRPCClient<HTTP2ClientTransport.Posix>) async throws -> Result) async throws -> Result
+
     func closeChannel()
 }
 
-final class DefaultPushAPIClient: PushAPIClient {
-    
-    private static var logger: Logging.Logger = {
-        var logger = Logging.Logger(label: "SINCH PUSH GRPC CLIENT", factory: StreamLogHandler.standardOutput(label:))
-        logger.logLevel = .warning
-        return logger
-    }()
-    private static let group = PlatformSupport.makeEventLoopGroup(loopCount: 1, networkPreference: .best, logger: logger)
+final class DefaultPushAPIClient: PushAPIClient, @unchecked Sendable {
 
     private let host: String
-    private let port = 443
+    private let port: Int
 
-    private var channel: GRPCChannel
-    
     init?(region: Region) {
         switch region {
         case .EU1:
-            host = "grpc.sinch-push.prod.sinch.com"
+            self.host = "grpc.sinch-push.prod.sinch.com"
+            self.port = 443
         case .US1:
-            host = "grpc.sinch-push.us1.prod.sinch.com"
-        case .custom(_, let host):
+            self.host = "grpc.sinch-push.us1.prod.sinch.com"
+            self.port = 443
+        case .custom(_, let host, _, _):
             self.host = host
+            self.port = 443
         }
-        
-        let keepalive = ClientConnectionKeepalive(
-            interval: .seconds(10),
-            timeout: .seconds(5)
-        )
-        do {
-            channel = try GRPCChannelPool
-                .with(target: .hostAndPort(host, port),
-                      transportSecurity: .tls(.makeClientConfigurationBackedByNIOSSL()),
-                      eventLoopGroup: DefaultPushAPIClient.group) {
-                    $0.keepalive = keepalive
-                }
-        } catch let error {
-            Logger.error("error during creating GRPCPushChannelPool", error.localizedDescription)
+
+        guard (try? Self.makeTransport(host: self.host, port: self.port)) != nil else {
             return nil
         }
     }
-    
-    func getChannel() -> GRPCChannel {
-        channel
+
+    deinit {
+        closeChannel()
     }
-    
+
     func closeChannel() {
-        _ = channel.close()
+        // `withGRPCClient` owns per-call client lifetimes.
     }
-    
+
+    func withClient<Result: Sendable>(handle: (GRPCClient<HTTP2ClientTransport.Posix>) async throws -> Result) async throws -> Result {
+        let transport = try Self.makeTransport(host: host, port: port)
+        return try await withGRPCClient(transport: transport, handleClient: { grpcClient in
+            try await handle(grpcClient)
+        })
+    }
+
+    // MARK: - Private
+
+    private static func makeTransport(host: String, port: Int) throws -> HTTP2ClientTransport.Posix {
+        let target: any ResolvableTarget = .dns(host: host, port: port)
+        return try HTTP2ClientTransport.Posix(
+            target: target,
+            transportSecurity: .tls,
+            config: .defaults
+        )
+    }
 }

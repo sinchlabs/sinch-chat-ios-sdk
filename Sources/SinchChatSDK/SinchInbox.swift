@@ -24,7 +24,7 @@ public protocol SinchInbox {
     ///
     /// - Returns: array of latest conversations
     ///
-    func getInboxChats(options: GetChatViewControllerOptions?, completion: @escaping ([InboxChat]) -> Void)
+    func getInboxChats(options: GetChatViewControllerOptions?, completion: @escaping @Sendable ([InboxChat]) -> Void)
 
     /// Subscribe to inbox chat updates
     /// - Parameters:
@@ -49,7 +49,7 @@ public protocol SinchInbox {
     
 }
 
-public struct InboxChat: Codable {
+public struct InboxChat: Codable, Sendable {
     
     // display model
     public var name: String
@@ -99,7 +99,7 @@ public enum SinchInboxEvent {
     case subcriptionFailed
 }
 
-final class DefaultSinchInbox: SinchInbox {
+final class DefaultSinchInbox: SinchInbox, @unchecked Sendable {
 
     var lastChatOptions: GetChatViewControllerOptions?
     public lazy var chatInboxEventListenerSubject = PassthroughSubject<SinchInboxEvent, Never>()
@@ -109,7 +109,7 @@ final class DefaultSinchInbox: SinchInbox {
 
     private let pushPermissionHandler: PushNofiticationPermissionHandler
     private let chatNotificationHandler = ChatNotificationHandler()
-    private var apiClient: APIClient?
+    var apiClient: APIClient?
     private var rootCoordinator: InboxRootCoordinator?
     private var inbox: InboxViewController?
 
@@ -120,118 +120,147 @@ final class DefaultSinchInbox: SinchInbox {
     public func getInboxViewController(uiConfig: SinchSDKConfig.UIConfig? = nil,
                                        localizationConfig: SinchSDKConfig.LocalizationConfig? = nil,
                                        options: GetChatViewControllerOptions? = nil) throws -> SinchChatViewController {
+        let capturedUIConfig = uiConfig
+        let capturedLocConfig = localizationConfig
+        let capturedOptions = options
+        return try MainActor.assumeIsolated {
+            guard let authDataSource = self.authDataSource, let region = self.region else {
+                throw SinchChatSDKError.unavailable
+            }
+            guard let client = self.getOrCreateAPIClient(region: region) else {
+                throw SinchChatSDKError.unavailable
+            }
 
-        guard let authDataSource = authDataSource, let region = region else {
-            throw SinchChatSDKError.unavailable
+            self.apiClient = client
+            self.lastChatOptions = capturedOptions
+
+            let inboxDataSource = DefaultInboxDataSource(apiClient: client, authDataSource: authDataSource, options: capturedOptions)
+
+            if let root = self.rootCoordinator {
+                root.inboxDataSource.cancelSubscription()
+            }
+
+            let rootCordinator = DefaultInboxRootCoordinator(uiConfiguration: capturedUIConfig ?? .defaultValue,
+                                                             localizationConfiguration: capturedLocConfig ?? .defaultValue,
+                                                             authDataSource: authDataSource, pushPermissionHandler: self.pushPermissionHandler, inboxDataSource: inboxDataSource)
+
+            self.rootCoordinator =  rootCordinator
+            let inboxViewController =  rootCordinator.getRootViewController(apiClient: client, options: capturedOptions)
+
+            return inboxViewController
         }
-        guard let client = DefaultAPIClient(region: region) else {
-            throw SinchChatSDKError.unavailable
-        }
-        
-        apiClient = client
-        lastChatOptions = options
-
-        let inboxDataSource = DefaultInboxDataSource(apiClient: apiClient!, authDataSource: authDataSource, options: options)
-
-        if let root = self.rootCoordinator {
-            root.inboxDataSource.cancelSubscription()
-        }
-
-        let rootCordinator = DefaultInboxRootCoordinator(uiConfiguration: uiConfig ?? .defaultValue,
-                                                         localizationConfiguration: localizationConfig ?? .defaultValue,
-                                                         authDataSource: authDataSource, pushPermissionHandler: pushPermissionHandler, inboxDataSource: inboxDataSource)
-
-        self.rootCoordinator =  rootCordinator
-        let inboxViewController =  rootCordinator.getRootViewController(apiClient: client, options: options)
-
-        return inboxViewController
-
     }
 
-    func getInboxChats(options: GetChatViewControllerOptions?, completion: @escaping ([InboxChat]) -> Void) {
-        guard let authDataSource = authDataSource,
-              let region = region,
-              let client = DefaultAPIClient(region: region) else {
-            return
-        }
-        lastChatOptions = options
-
-        let inboxDataSource = DefaultInboxDataSource(apiClient: client, authDataSource: authDataSource, options: options)
-
-        self.rootCoordinator = DefaultInboxRootCoordinator(uiConfiguration: .defaultValue,
-                                                           localizationConfiguration: .defaultValue,
-                                                           authDataSource: authDataSource,
-                                                           pushPermissionHandler: pushPermissionHandler,
-                                                           inboxDataSource: inboxDataSource)
-
-        rootCoordinator?.inboxDataSource.getChannels(completion: { result in
-
-            switch result {
-            case .success(let channels):
-
-                completion(channels.map {
-                    InboxChat(channel: $0, options: options)
-                })
-            case .failure(let error):
-                print(error)
+    func getInboxChats(options: GetChatViewControllerOptions?, completion: @escaping @Sendable ([InboxChat]) -> Void) {
+        let capturedOptions = options
+        Task { @MainActor in
+            guard let authDataSource = self.authDataSource,
+                  let region = self.region,
+                  let client = self.getOrCreateAPIClient(region: region) else {
                 completion([])
+                return
             }
-        })
+            self.lastChatOptions = capturedOptions
+
+            let inboxDataSource = DefaultInboxDataSource(apiClient: client, authDataSource: authDataSource, options: capturedOptions)
+
+            self.rootCoordinator = DefaultInboxRootCoordinator(uiConfiguration: .defaultValue,
+                                                               localizationConfiguration: .defaultValue,
+                                                               authDataSource: authDataSource,
+                                                               pushPermissionHandler: self.pushPermissionHandler,
+                                                               inboxDataSource: inboxDataSource)
+
+            self.rootCoordinator?.inboxDataSource.getChannels(completion: { [weak self] result in
+                switch result {
+                case .success(let channels):
+                    completion(channels.map {
+                        InboxChat(channel: $0, options: self?.lastChatOptions)
+                    })
+                case .failure(let error):
+                    print(error)
+                    completion([])
+                }
+            })
+        }
     }
     func subscribeToInboxChatUpdates(options: GetChatViewControllerOptions) {
 
-        guard let authDataSource = authDataSource, let region = region, let client = DefaultAPIClient(region: region) else {
-            chatInboxEventListenerSubject.send(.subcriptionFailed)
-            return
-        }
-
-        lastChatOptions = options
-
-        let inboxDataSource = DefaultInboxDataSource(apiClient: client, authDataSource: authDataSource, options: options)
-
-        self.rootCoordinator = DefaultInboxRootCoordinator(uiConfiguration: .defaultValue,
-                                                           localizationConfiguration: .defaultValue,
-                                                           authDataSource: authDataSource,
-                                                           pushPermissionHandler: pushPermissionHandler,
-                                                           inboxDataSource: inboxDataSource)
-
-        (self.rootCoordinator?.inboxDataSource as! DefaultInboxDataSource).delegate = self
-        rootCoordinator?.inboxDataSource.subscribeForChannels(completion: { result in
-
-            switch result {
-            case .success(let channel):
-
-                self.chatInboxEventListenerSubject.send(.chatUpdated( InboxChat(channel: channel, options: options)))
-
-            case .failure(let error):
-                print(error)
+        let capturedOptions = options
+        Task { @MainActor in
+            guard let authDataSource = self.authDataSource,
+                  let region = self.region,
+                  let client = self.getOrCreateAPIClient(region: region) else {
                 self.chatInboxEventListenerSubject.send(.subcriptionFailed)
+                return
             }
-        })
+
+            self.lastChatOptions = capturedOptions
+
+            let inboxDataSource = DefaultInboxDataSource(apiClient: client, authDataSource: authDataSource, options: capturedOptions)
+
+            self.rootCoordinator = DefaultInboxRootCoordinator(uiConfiguration: .defaultValue,
+                                                               localizationConfiguration: .defaultValue,
+                                                               authDataSource: authDataSource,
+                                                               pushPermissionHandler: self.pushPermissionHandler,
+                                                               inboxDataSource: inboxDataSource)
+
+            (self.rootCoordinator?.inboxDataSource as! DefaultInboxDataSource).delegate = self
+            self.rootCoordinator?.inboxDataSource.subscribeForChannels(completion: { [weak self] result in
+
+                switch result {
+                case .success(let channel):
+                    let opts = self?.lastChatOptions
+                    self?.chatInboxEventListenerSubject.send(.chatUpdated( InboxChat(channel: channel, options: opts)))
+
+                case .failure(let error):
+                    print(error)
+                    self?.chatInboxEventListenerSubject.send(.subcriptionFailed)
+                }
+            })
+        }
     }
     func getChatViewController(
         inboxChat: InboxChat,
         uiConfig: SinchSDKConfig.UIConfig? = nil,
         localizationConfig: SinchSDKConfig.LocalizationConfig? = nil) throws -> SinchChatViewController {
 
-        if let root = self.rootCoordinator {
+        return try MainActor.assumeIsolated {
+            if let root = self.rootCoordinator {
                 root.inboxDataSource.cancelSubscription()
             }
 
-            return try SinchChatSDK.shared.chat.getChatViewController(uiConfig: uiConfig ?? rootCoordinator?.uiConfiguration,
-                                                                  localizationConfig: localizationConfig ?? rootCoordinator?.localizationConfiguration,
-                                                                      options: inboxChat.chatOptions)
-
+            return try SinchChatSDK.shared.chat.getChatViewController(uiConfig: uiConfig ?? self.rootCoordinator?.uiConfiguration,
+                                                                     localizationConfig: localizationConfig ?? self.rootCoordinator?.localizationConfiguration,
+                                                                     options: inboxChat.chatOptions)
         }
-    
+    }
+
     func initilize() {
 
         //   SinchChatSDK.shared.pushNotificationHandler.registerAddressee(chatNotificationHandler)
         //    chatNotificationHandler.delegate = self
     }
+
+    private func getOrCreateAPIClient(region: Region) -> APIClient? {
+        if let apiClient {
+            return apiClient
+        }
+        if let sharedClient = SinchChatSDK.shared.apiClient {
+            apiClient = sharedClient
+            return sharedClient
+        }
+        guard let client = Default2APIClient(region: region) else {
+            return nil
+        }
+        apiClient = client
+        return client
+    }
 }
 extension DefaultSinchInbox : InboxDataSourceDelegate {
-    func subscriptionError() {
-        subscribeToInboxChatUpdates(options: lastChatOptions!)
+    nonisolated func subscriptionError() {
+        Task { @MainActor in
+            guard let options = self.lastChatOptions else { return }
+            self.subscribeToInboxChatUpdates(options: options)
+        }
     }
 }

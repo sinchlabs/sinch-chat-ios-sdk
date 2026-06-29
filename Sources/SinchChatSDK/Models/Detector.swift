@@ -10,8 +10,8 @@ public enum Detector: Hashable {
     case custom(NSRegularExpression)
 
     // swiftlint:disable force_try
-    public static var hashtag = Detector.custom(try! NSRegularExpression(pattern: "#[a-zA-Z0-9]{4,}", options: []))
-    public static var mention = Detector.custom(try! NSRegularExpression(pattern: "@[a-zA-Z0-9]{4,}", options: []))
+    public nonisolated(unsafe) static var hashtag = Detector.custom(try! NSRegularExpression(pattern: "#[a-zA-Z0-9]{4,}", options: []))
+    public nonisolated(unsafe) static var mention = Detector.custom(try! NSRegularExpression(pattern: "@[a-zA-Z0-9]{4,}", options: []))
     // swiftlint:enable force_try
 
     internal var textCheckingType: NSTextCheckingResult.CheckingType {

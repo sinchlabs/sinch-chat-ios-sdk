@@ -2,7 +2,7 @@ import Foundation
 
 public extension SinchSDKConfig {
 
-        struct LocalizationConfig {
+        struct LocalizationConfig: Sendable {
 
         public static let defaultValue = LocalizationConfig()
         

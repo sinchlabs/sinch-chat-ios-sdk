@@ -1,11 +1,11 @@
 import UIKit
 import Combine
 
-public protocol SinchPlugin {
+public protocol SinchPlugin: Sendable {
     func initialize(methods: SinchPluginAvailablePluginMethods)
 }
 
-public protocol SinchPluginAvailablePluginMethods: AnyObject {
+public protocol SinchPluginAvailablePluginMethods: AnyObject, Sendable {
     var eventListenerSubject: PassthroughSubject<SinchPluginEvent, Never> { get }
     
     var customMessageTypeHandlers: [(_ model: Message) -> Message?] { get set }
@@ -15,9 +15,9 @@ public protocol SinchPluginAvailablePluginMethods: AnyObject {
     
     func getAuthorizationToken() -> AuthModel?
     
-    func sendMessage(_ message: MessageType, authModel: AuthModel?, chatOptions: SinchChatOptions?, completion: @escaping (Result<String, Error>) -> Void)
+    func sendMessage(_ message: MessageType, authModel: AuthModel?, chatOptions: SinchChatOptions?, completion: @escaping @Sendable (Result<String, Error>) -> Void)
     
-    func presentViewController(_ viewController: UIViewController, _ animated: Bool, completion: (() -> Void)?)
+    func presentViewController(_ viewController: UIViewController, _ animated: Bool, completion: (@Sendable () -> Void)?)
     
     func startChatWithCurrentConfig()
 }

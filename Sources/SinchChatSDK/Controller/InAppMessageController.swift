@@ -1,9 +1,10 @@
 import Foundation
 import UIKit
 
+@MainActor
 protocol InAppMessageController {
     var queue: [Message] { get set }
-    
+
     func showInAppMessage(messagePayload: [AnyHashable : Any]) -> Bool
     func replyToMessage(_ choice: ChoiceText)
     func closeMessage(_ message: Message)
@@ -12,18 +13,17 @@ protocol InAppMessageController {
 class DefaultInAppMessageController: InAppMessageController, InAppMessageViewDelegate {
     
     var queue: [Message] = []
-    var timer: Timer?
+    nonisolated(unsafe) var timer: Timer?
     var pushNotificationHandler: PushNotificationHandler
     var presentNewInAppMessageAfterInSec: Double = 0.5
     var checkIfAlertIsRemovedInSec: Double = 5.0
-    
+
     init(pushNotificationHandler: PushNotificationHandler) {
         self.pushNotificationHandler = pushNotificationHandler
     }
-    
+
     deinit {
         timer?.invalidate()
-        timer = nil
     }
     
     func showInAppMessage(messagePayload: [AnyHashable : Any]) -> Bool {

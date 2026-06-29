@@ -1,5 +1,6 @@
 import UIKit
 
+@MainActor
 protocol ChatDataSource: AnyObject {
     
     /// A helper method to determine if a given message is from the current `SenderType`.

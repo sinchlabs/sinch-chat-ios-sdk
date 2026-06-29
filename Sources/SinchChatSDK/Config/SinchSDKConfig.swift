@@ -1,13 +1,13 @@
 import Foundation
 
-public struct SinchSDKConfig {
+public struct SinchSDKConfig: Sendable {
     private let appConfig: AppConfig
 
     public init(appConfig: AppConfig) {
         self.appConfig = appConfig
     }
 
-    public struct AppConfig: Codable {
+    public struct AppConfig: Codable, Sendable {
         // swiftlint:disable:next type_name nesting
         typealias ID = String
 

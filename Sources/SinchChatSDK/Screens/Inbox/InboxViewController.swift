@@ -35,10 +35,14 @@ final class InboxViewController: SinchViewController<InboxViewModel, InboxView>,
     }
     
     deinit {
-        viewModel.setIdleState()
-        viewModel.closeChannel()
+        let viewModel = self.viewModel
+        let monitor = self.monitor
+        Task { @MainActor in
+            viewModel.setIdleState()
+            viewModel.closeChannel()
+        }
         monitor.cancel()
-        
+
     }
     private func addStartConversationButton() {
         
@@ -150,11 +154,12 @@ extension InboxViewController: UITableViewDelegate {
             return
         }
         activityIndicator.start {
-                        
+
             DispatchQueue.global(qos: .utility).async {
                 sleep(1)
-                self.viewModel.fetchMoreChannels()
-
+                Task { @MainActor in
+                    self.viewModel.fetchMoreChannels()
+                }
             }
         }
     }
@@ -167,8 +172,6 @@ extension InboxViewController: UITableViewDelegate {
             sendDocumentAsTextMessage: customOptions.sendDocumentAsTextMessage
         )
 
-        SinchChatSDK.shared._chat.apiClient = viewModel.apiClient
-        
         guard let chatViewController = (try? SinchChatSDK.shared.chat.getChatViewController(
             uiConfig: mainView.uiConfig,
             localizationConfig: mainView.localizationConfiguration,
@@ -187,7 +190,6 @@ extension InboxViewController: UITableViewDelegate {
             customOptions.topicID = "\(UUID().uuidString)"
         }
         
-        SinchChatSDK.shared._chat.apiClient = viewModel.apiClient
         guard let chatViewController = (try? SinchChatSDK.shared.chat.getChatViewController(
             uiConfig: mainView.uiConfig,
             localizationConfig: mainView.localizationConfiguration,

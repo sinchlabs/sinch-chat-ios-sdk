@@ -1,4 +1,5 @@
 import UIKit
+@MainActor
 protocol AudioComposeDelegate: AnyObject {
     
     func deleteRecording(url: URL)

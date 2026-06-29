@@ -1,4 +1,5 @@
 import UIKit
+@MainActor
 protocol MessageStatusDelegate: AnyObject {
     func retryTapped()
     

@@ -8,6 +8,7 @@
 import Foundation
 import AVFoundation
 
+@MainActor
 protocol AVPlayerWrapperProtocol: AnyObject {
 
     var state: AVPlayerWrapperState { get }

@@ -1,6 +1,6 @@
 import Foundation
 
-public enum EventType: Codable {
+public enum EventType: Codable, Sendable {
     
     case joined(Agent)
     case left(Agent)
@@ -68,7 +68,7 @@ public struct MessageEvent: MessageBody {
     }
 }
 
-public struct Agent: Codable {
+public struct Agent: Codable, Sendable {
     
     public var name: String
     public var type: Int

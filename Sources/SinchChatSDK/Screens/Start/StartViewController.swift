@@ -1,10 +1,10 @@
 import UIKit
 import SafariServices
-import GRPC
+import GRPCCore
 import Network
 import AVFoundation
 import AVKit
-import QuickLook
+@preconcurrency import QuickLook
 import MobileCoreServices
 // swiftlint:disable file_length
 
@@ -176,18 +176,19 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
     }
 
     deinit {
-        
         NotificationCenter.default.removeObserver(self, name: UIApplication.willEnterForegroundNotification, object: nil)
         NotificationCenter.default.removeObserver(self, name: UIApplication.didEnterBackgroundNotification, object: nil)
-        viewModel.onDisappear()
-        player.stop()
-        if !viewModel.isStartedFromInbox {
-            viewModel.closeChannel()
+        let viewModel = self.viewModel
+        Task { @MainActor in
+            let isStartedFromInbox = viewModel.isStartedFromInbox
+            viewModel.onDisappear()
+            if !isStartedFromInbox {
+                viewModel.closeChannel()
+            }
         }
         SinchChatSDK.shared.eventListenerSubject.send(.didCloseChat)
         clearAllFiles()
         monitor.cancel()
-
     }
     
     override var canBecomeFirstResponder: Bool {
@@ -312,22 +313,31 @@ extension StartViewController: ImagePickerDelegate {
     }
     
     func sendMedia(_ media: MediaType) {
-        
+
         self.viewModel.sendMedia(media) { [weak self] result in
             guard let self = self else { return }
             switch result {
             case .success(let message):
                 if viewModel.sendDocumentAsText {
                     if let textMessage = message.body as? MessageText {
-                        self.sendMessage(.text(textMessage.text))
+                        Task { @MainActor in
+                            self.sendMessage(.text(textMessage.text))
+                        }
                     }
                 } else {
-                    self.messageSent(message)
-                    self.sendMessage(.media(message:message))
+                    Task { @MainActor in
+                        // `viewModel.sendMessage` is responsible for inserting
+                        // the optimistic outgoing message, so we only forward
+                        // the uploaded media here.
+                        self.sendMessage(.media(message: message))
+                    }
                 }
-                
+
             case .failure(let error):
-                self.errorSendingMessage(error: error as! MessageDataSourceError)
+                let error = error as! MessageDataSourceError
+                Task { @MainActor in
+                    self.errorSendingMessage(error: error)
+                }
             }
         }
     }
@@ -401,28 +411,37 @@ extension StartViewController: ComposeViewDelegate {
         
     }
     func sendMessage(_ messageType: MessageType) {
-        
+
         viewModel.sendMessage(messageType) { [weak self] result in
-            
+
             guard let self = self else { return }
-            
+
             switch result {
             case .success(let message):
                 if let message = message {
                     if let _ = message.body as? MessageMedia {
-                        self.didReceiveMessages([message])
+                        Task { @MainActor in
+                            self.didReceiveMessages([message])
+                        }
                     } else {
-                        self.messageSent(message)
+                        Task { @MainActor in
+                            self.messageSent(message)
+                        }
                     }
                 }
             case .failure(let error):
                 switch messageType {
-                    
+
                 case .media(var message):
                     message.status = .notSent
-                    self.didReceiveMessages([message])
+                    Task { @MainActor in
+                        self.didReceiveMessages([message])
+                    }
                 default:
-                    self.errorSendingMessage(error: error as! MessageDataSourceError)
+                    let error = error as! MessageDataSourceError
+                    Task { @MainActor in
+                        self.errorSendingMessage(error: error)
+                    }
                 }
             }
         }
@@ -761,20 +780,20 @@ extension StartViewController: StartViewModelDelegate {
     func didReceiveMessages(_ messages: [Message]) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            
+
             for streamMessage in messages {
                 var isFounded = false
                 for (index, message) in self.messages.reversed().enumerated() {
                     let  entryId = message.entryId
                     if streamMessage.entryId == message.entryId {
-                        
+
                         var wholeMessage = streamMessage
                         wholeMessage.body.isExpanded = message.body.isExpanded
                         self.messages[self.messages.count - 1 - index] = wholeMessage
-                        
+
                         isFounded = true
                         UIView.performWithoutAnimation {
-                            
+
                             self.mainView.collectionView.reloadSections([self.messages.count - 1 - index])
                         }
                     break
@@ -784,16 +803,46 @@ extension StartViewController: StartViewModelDelegate {
                         isFounded = true
 
                         UIView.performWithoutAnimation {
-                            
+
                             self.mainView.collectionView.reloadSections([self.messages.count - 1 - index])
                         }
                         break
                     }
                 }
-                
+
                 if !isFounded {
                     self.insertMessages([streamMessage], shouldHideTyping: true)
                 }
+            }
+        }
+    }
+
+    func didResolveOutgoingMessage(tempId: String, resolved: Message) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            for (index, message) in self.messages.reversed().enumerated() where message.entryId == tempId {
+                let resolvedIndex = self.messages.count - 1 - index
+                var whole = resolved
+                whole.body.isExpanded = message.body.isExpanded
+                self.messages[resolvedIndex] = whole
+                UIView.performWithoutAnimation {
+                    self.mainView.collectionView.reloadSections([resolvedIndex])
+                }
+                return
+            }
+        }
+    }
+
+    func didFailToSend(tempId: String, status: MessageStatus) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            for (index, message) in self.messages.reversed().enumerated() where message.entryId == tempId {
+                let targetIndex = self.messages.count - 1 - index
+                self.messages[targetIndex].status = status
+                UIView.performWithoutAnimation {
+                    self.mainView.collectionView.reloadSections([targetIndex])
+                }
+                return
             }
         }
     }
@@ -813,6 +862,33 @@ extension StartViewController: StartViewModelDelegate {
     
     func insertMessages(_ newMessages: [Message], shouldHideTyping: Bool = false) {
 
+        // #region agent log
+        let entryIds = newMessages.map { $0.entryId + ":" + String($0.status.rawValue) }
+        let data: [String: Any] = [
+            "newCount": newMessages.count,
+            "entryIds": entryIds.joined(separator: ","),
+            "existingCount": self.messages.count
+        ]
+        let payload: [String: Any] = [
+            "id": "insert_\(Int(Date().timeIntervalSince1970 * 1000))",
+            "hypothesisId": "H1",
+            "location": "StartViewController.swift:insertMessages",
+            "message": "insertMessages called",
+            "data": data
+        ]
+        if let json = try? JSONSerialization.data(withJSONObject: payload, options: []),
+           let str = String(data: json, encoding: .utf8) {
+            let url = URL(fileURLWithPath: "/Users/emems/swift/sinch/ios-test-app/.cursor/debug-3c9ae7.log")
+            if let handle = try? FileHandle(forWritingTo: url) {
+                defer { try? handle.close() }
+                try? handle.seekToEnd()
+                if let lineData = (str + "\n").data(using: .utf8) {
+                    try? handle.write(contentsOf: lineData)
+                }
+            }
+        }
+        // #endregion agent log
+
         self.mainView.collectionView.performBatchUpdates({
             if shouldHideTyping {
                 self.setTypingIndicatorViewHidden(true, animated: false)
@@ -824,11 +900,11 @@ extension StartViewController: StartViewModelDelegate {
             } else if newMessages.count == 2 {
                 self.messages.append(contentsOf: newMessages)
                 self.mainView.collectionView.insertSections([self.messages.count - 2, self.messages.count - 1])
-                
+
             }
         }, completion: { [weak self] _ in
             guard let self = self else { return }
-          
+
             if self.isScrolledToBottom && !(self.mainView.collectionView.isDragging || self.mainView.collectionView.isDecelerating) {
                    self.mainView.collectionView.scrollToLastItem(animated: true)
             } else {
@@ -1374,22 +1450,18 @@ extension StartViewController: UIDocumentPickerDelegate {
     }
 }
 extension StartViewController: QLPreviewControllerDataSource, QLPreviewControllerDelegate {
-    func numberOfPreviewItems(in controller: QLPreviewController) -> Int {
+    @preconcurrency nonisolated func numberOfPreviewItems(in controller: QLPreviewController) -> Int {
         return 1
     }
-    func previewController(_ controller: QLPreviewController, previewItemAt index: Int) -> QLPreviewItem {
-        
-        guard  let url = NSURL(string: fileURLs[index]) else {
-            fatalError("Could not load \(index).pdf")
-        }
-
+    @preconcurrency nonisolated func previewController(_ controller: QLPreviewController, previewItemAt index: Int) -> QLPreviewItem {
+        let url = NSURL(string: MainActor.assumeIsolated { self.fileURLs[index] })!
         return url as QLPreviewItem
     }
-    func previewControllerDidDismiss(_ controller: QLPreviewController) {
+    @preconcurrency nonisolated func previewControllerDidDismiss(_ controller: QLPreviewController) {
        // addKeyboardObservers()
     }
     // QLPreviewControllerDelegate
-    func previewController(_ controller: QLPreviewController, shouldOpen url: URL, for item: QLPreviewItem) -> Bool {
+    @preconcurrency nonisolated func previewController(_ controller: QLPreviewController, shouldOpen url: URL, for item: QLPreviewItem) -> Bool {
             return true
     }
 }

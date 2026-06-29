@@ -1,10 +1,16 @@
 import UIKit
 import Combine
 
-public final class SinchChatSDK {
+public final class SinchChatSDK: @unchecked Sendable {
     
     /// Contains all methods regarding push notifications. To be able to use push notifications you need to call `setIdentity` method.
-    private(set) public lazy var push: SinchPush = DefaultSinchPush(pushNotificationHandler: pushNotificationHandler)
+    private var _push: SinchPush?
+    public var push: SinchPush {
+        if let existing = _push { return existing }
+        let new = MainActor.assumeIsolated { DefaultSinchPush(pushNotificationHandler: pushNotificationHandler) }
+        _push = new
+        return new
+    }
     
     /// Contains all methods connected with Chat. Before using the chat you should use method `setIdentity`.
     public var chat: SinchChat { _chat }
@@ -27,6 +33,12 @@ public final class SinchChatSDK {
         didSet {
             pushNotificationHandler.authDataSource = authDataSource
             _chat.authDataSource = authDataSource
+        }
+    }
+    var apiClient: APIClient? {
+        didSet {
+            pushNotificationHandler.apiClient = apiClient
+            _chat.apiClient = apiClient
         }
     }
     
@@ -61,35 +73,45 @@ public final class SinchChatSDK {
     ///   - identity: The way of user authorization.
     ///   - completion: Callback with result of user authorization.
     public func setIdentity(with config: SinchSDKConfig.AppConfig, identity: SinchSDKIdentity,
-                            completion: ((Result<Void, SinchSDKIdentityError>) -> Void)? = nil) {
+                            completion: (@Sendable (Result<Void, SinchSDKIdentityError>) -> Void)? = nil) {
         self.config = config
-        authDataSource = DefaultAuthDataSource(authRepository: DefaultAuthRepository(config: config),
-                                               authStorage: DefaultAuthStorage(config: config))
-        
+        let newApiClient = Default2APIClient(region: config.region)!
+        apiClient = newApiClient
+        let keychainStorage = KeychainAuthStorage(config: config)
+        _ = AuthStorageMigrator(keychainStorage: keychainStorage)
+        authDataSource = DefaultAuthDataSource(
+            authRepository: DefaultAuthRepository(
+                config: config,
+                client: newApiClient
+            ),
+            authStorage: keychainStorage
+        )
+
+        let capturedCompletion = completion
         authDataSource?.generateToken(config: config, identity: identity, completion: { result in
             self.setPushRepositoryIfPossible()
-            
+
             switch result {
             case .failure(let error):
                 switch error {
                 case .internalError(tracingID: let tracingID):
-                    completion?(.failure(.internalError(tracingID: tracingID)))
+                    capturedCompletion?(.failure(.internalError(tracingID: tracingID)))
                 default:
-                    completion?(.failure(.internalError(tracingID: "unknown")))
+                    capturedCompletion?(.failure(.internalError(tracingID: "unknown")))
                 }
             case .success(let token):
                 SinchChatSDK.shared.eventListenerSubject.send(.didSetIdentity(token))
                 self.reinitializeChat()
 
-                completion?(.success(()))
-                
+                capturedCompletion?(.success(()))
+
             }
         })
     }
     
     /// Removes identity of the user.
     /// This method is logging out user. It removes token and other user data from the app.
-    public func removeIdentity(_ completion: ((Result<Void, Error>) -> Void)?) {
+    public func removeIdentity(_ completion: (@Sendable (Result<Void, Error>) -> Void)?) {
         
         guard let authDataSource = authDataSource else {
             completion?(.success(()))
@@ -140,11 +162,18 @@ public final class SinchChatSDK {
     }
 }
 
-public enum SinchSDKIdentity: Codable, Equatable {
+public enum SinchSDKIdentity: Codable, Equatable, Sendable {
     /// Creates anonymous session with random user identifier.
     case anonymous
-    /// Creates session with specific user identifier.
+    /// Creates session with a specific user identifier using a pre-computed
+    /// HMAC-SHA512(uuid, appSecret) digest as `secret`. Retained for
+    /// backwards compatibility with existing integrations.
     case selfSigned(userId: String, secret: String)
+    /// Creates session with a specific user identifier. The SDK computes
+    /// HMAC-SHA512(uuid, appSecret) internally so host apps never handle
+    /// the hash directly. The raw `appSecret` is held in memory only for
+    /// the duration of `setIdentity` and is not persisted.
+    case selfSignedWithAppSecret(userId: String, appSecret: String)
 }
 
 public enum SinchSDKIdentityError: Error {
@@ -154,19 +183,19 @@ public enum SinchSDKIdentityError: Error {
     case invalidSecret
 }
 
-public struct SinchInitializeOptions {
+public struct SinchInitializeOptions: Sendable {
     public var pushNotificationsMode: SinchPushNotificationsMode = .prod
     public var plugins: [SinchPlugin] = []
-    
+
     public static let standard = SinchInitializeOptions(pushNotificationMode: .prod)
-    
+
     public init(pushNotificationMode: SinchPushNotificationsMode, plugins: [SinchPlugin] = []) {
         self.pushNotificationsMode = pushNotificationMode
         self.plugins = plugins
     }
 }
 
-public enum SinchPushNotificationsMode {
+public enum SinchPushNotificationsMode: Sendable {
     case prod
     case sandbox
     case off

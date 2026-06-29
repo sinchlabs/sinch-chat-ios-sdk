@@ -1,4 +1,5 @@
 import UIKit
+@MainActor
 protocol PlayAudioDelegate: AnyObject {
     func playPauseButtonAction()
 }

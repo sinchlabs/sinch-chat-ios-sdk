@@ -1,5 +1,6 @@
 import UIKit
 
+@MainActor
 class ChatCellSizeCalculator {
 
     public weak var layout: UICollectionViewFlowLayout?

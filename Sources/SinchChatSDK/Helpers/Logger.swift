@@ -2,7 +2,7 @@ import Foundation
 
 public struct Logger {
 
-    public static var environment: Environment = .production
+    public nonisolated(unsafe) static var environment: Environment = .production
 
     static func verbose(_ items: Any, file: String = #file, _ function: String = #function, line: Int = #line) {
         custom(level: .verbose, items, file: file, function, line)

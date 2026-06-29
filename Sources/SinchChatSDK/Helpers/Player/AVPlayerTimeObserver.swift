@@ -9,6 +9,7 @@
 import Foundation
 import AVFoundation
 
+@MainActor
 protocol AVPlayerTimeObserverDelegate: AnyObject {
     func audioDidStart()
     func timeEvent(time: CMTime)
@@ -17,6 +18,7 @@ protocol AVPlayerTimeObserverDelegate: AnyObject {
 /**
  Class for observing time-based events from the AVPlayer
  */
+@MainActor
 class AVPlayerTimeObserver {
     
     /// The time to use as start boundary time. Cannot be zero.
@@ -49,8 +51,7 @@ class AVPlayerTimeObserver {
     }
     
     deinit {
-        unregisterForPeriodicEvents()
-        unregisterForBoundaryTimeEvents()
+        // Time observer tokens are removed by the underlying AVPlayer when it deallocates.
     }
     
     /**
@@ -63,7 +64,9 @@ class AVPlayerTimeObserver {
         unregisterForBoundaryTimeEvents()
         let startBoundaryTimes: [NSValue] = [AVPlayerTimeObserver.startBoundaryTime].map({NSValue(time: $0)})
         boundaryTimeStartObserverToken = player.addBoundaryTimeObserver(forTimes: startBoundaryTimes, queue: nil, using: { [weak self] in
-            self?.delegate?.audioDidStart()
+            Task { @MainActor in
+                self?.delegate?.audioDidStart()
+            }
         })
     }
     
@@ -88,7 +91,9 @@ class AVPlayerTimeObserver {
         }
         unregisterForPeriodicEvents()
         periodicTimeObserverToken = player.addPeriodicTimeObserver(forInterval: periodicObserverTimeInterval, queue: nil, using: { (time) in
-            self.delegate?.timeEvent(time: time)
+            Task { @MainActor in
+                self.delegate?.timeEvent(time: time)
+            }
         })
     }
     

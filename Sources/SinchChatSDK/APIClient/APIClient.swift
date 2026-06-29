@@ -1,106 +1,71 @@
 import Foundation
-import GRPC
-import Logging
-import NIO
-public enum Region: Codable, Equatable {
+import GRPCCore
+import GRPCNIOTransportHTTP2
+import GRPCNIOTransportHTTP2Posix
+
+public enum Region: Codable, Equatable, Sendable {
     case EU1
     case US1
-    case custom(host: String, pushAPIHost: String)
+    case custom(host: String, pushAPIHost: String, port: Int?, isSecure: Bool?)
 }
 
-internal var triggerFatalError = Swift.fatalError
+internal nonisolated(unsafe) var triggerFatalError = Swift.fatalError
 
-protocol APIClient {
+/// Abstraction over the chat gRPC transport.
+protocol APIClient: Sendable {
     var isChannelStarted: Bool { get }
+
+    func withClient<Result: Sendable>(handle: (GRPCClient<HTTP2ClientTransport.Posix>) async throws -> Result) async throws -> Result
     
-    func getChannel() -> GRPCChannel
     func closeChannel()
     func startChannel()
 }
 
-final class DefaultAPIClient: APIClient {
+final class Default2APIClient: APIClient, @unchecked Sendable {
 
-    private static var logger: Logging.Logger = {
-        var logger = Logging.Logger(label: "SINCH GRPC CLIENT", factory: StreamLogHandler.standardOutput(label:))
-        logger.logLevel = .warning
-        return logger
-    }()
-    private static let group = PlatformSupport.makeEventLoopGroup(loopCount: 1, networkPreference: .best, logger: logger)
-   // private var group: EventLoopGroup
     private let host: String
-    private let port = 443
-    private let transportSecurity: GRPCChannelPool.Configuration.TransportSecurity = .tls(.makeClientConfigurationBackedByNIOSSL())
-    var isChannelStarted = false
-    
-    private var channel: GRPCChannel
+    private let port: Int
+    private let isSecure: Bool
+
+    var isChannelStarted: Bool = true
     
     init?(region: Region) {
         switch region {
         case .EU1:
-            host = "grpc.sinch-chat.prod.sinch.com"
+            self.host = "grpc.sinch-chat.prod.sinch.com"
+            self.port = 443
+            self.isSecure = true
         case .US1:
-           
-            host = "grpc.sinch-chat.us1.prod.sinch.com"
-        case .custom(let host, _):
+            self.host = "grpc.sinch-chat.us1.prod.sinch.com"
+            self.port = 443
+            self.isSecure = true
+        case .custom(let host, _, let port, let isSecure):
             self.host = host
+            self.port = port ?? 443
+            self.isSecure = isSecure ?? true
         }
-        
-        let keepalive = ClientConnectionKeepalive(
-            interval: .seconds(10),
-            timeout: .seconds(5)
-        )
-      //  group = PlatformSupport.makeEventLoopGroup(loopCount: 1, networkPreference: .best, logger: DefaultAPIClient.logger)
-        do {
-            channel = try GRPCChannelPool
-                .with(target: .hostAndPort(host, port),
-                      transportSecurity: transportSecurity,
-                      eventLoopGroup: DefaultAPIClient.group) {
-                    $0.keepalive = keepalive
-                }
-            isChannelStarted = true
-        } catch let error {
-            Logger.error("error during creating GRPCChannelPool", error.localizedDescription)
+
+        guard (try? Self.makeTransport(host: self.host, port: self.port, isSecure: self.isSecure)) != nil else {
             return nil
         }
     }
-    deinit {
-        closeChannel()
-    }
     
-    func startChannel() {
-        let keepalive = ClientConnectionKeepalive(
-            interval: .seconds(10),
-            timeout: .seconds(5)
+    func startChannel() {}
+    func closeChannel() {}
+    
+    func withClient<Result: Sendable>(handle: (GRPCClient<HTTP2ClientTransport.Posix>) async throws -> Result) async throws -> Result {
+        let transport = try Self.makeTransport(host: host, port: port, isSecure: isSecure)
+        return try await withGRPCClient(transport: transport, handleClient: { grpcClient in
+            try await handle(grpcClient)
+        })
+    }
+
+    // MARK: - Private
+
+    private static func makeTransport(host: String, port: Int, isSecure: Bool) throws -> HTTP2ClientTransport.Posix {
+        try HTTP2ClientTransport.Posix.http2NIOPosix(
+            target: .dns(host: host, port: port),
+            transportSecurity: isSecure ? .tls : .plaintext
         )
-        //group = PlatformSupport.makeEventLoopGroup(loopCount: 1, networkPreference: .best, logger: DefaultAPIClient.logger)
-
-        do {
-            channel = try GRPCChannelPool
-                .with(target: .hostAndPort(host, port),
-                      transportSecurity: transportSecurity,
-                      eventLoopGroup: DefaultAPIClient.group) {
-                    $0.keepalive = keepalive
-                }
-            isChannelStarted = true
-
-        } catch let error {
-            Logger.error("error during creating GRPCChannelPool", error.localizedDescription)
-        }
-    }
-    
-    func getChannel() -> GRPCChannel {
-        channel
-    }
-    
-    func closeChannel() {
-//        do {
-//            try group.syncShutdownGracefully()
-//        } catch let error {
-//            Logger.error("error during closing GRPCChannelPool", error.localizedDescription)
-//        }
-        
-        _ = channel.close()
-        isChannelStarted = false
-        debugPrint("*********CLOSE CHANEL************")
     }
 }

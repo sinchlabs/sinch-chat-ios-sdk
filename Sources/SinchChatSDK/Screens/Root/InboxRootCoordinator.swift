@@ -1,12 +1,14 @@
+@MainActor
 protocol InboxRootCoordinator: AnyObject {
     var uiConfiguration: SinchSDKConfig.UIConfig { get }
     var localizationConfiguration: SinchSDKConfig.LocalizationConfig { get }
     var inboxDataSource: InboxDataSource { get }
 
     func getRootViewController(apiClient: APIClient, options: GetChatViewControllerOptions?) -> InboxViewController
-    
+
 }
 
+@MainActor
 final class DefaultInboxRootCoordinator: InboxRootCoordinator {
     
     var uiConfiguration: SinchSDKConfig.UIConfig

@@ -1,6 +1,6 @@
 import UIKit
 
-public enum TypeMessageMedia: Codable, Equatable {
+public enum TypeMessageMedia: Codable, Equatable, Sendable {
     case image
     case audio
     case video
@@ -8,7 +8,7 @@ public enum TypeMessageMedia: Codable, Equatable {
     case unsupported
     
 }
-public enum FileType: String, Codable {
+public enum FileType: String, Codable, Sendable {
     case pdf = "PDF"
     case doc = "DOC"
     case docx = "DOCX"

@@ -11,9 +11,10 @@ protocol PushNofiticationPermissionHandler: AnyObject {
 protocol PushNotificationHandler: PushNofiticationPermissionHandler {
     var pushRepository: PushRepository? { get set }
     var authDataSource: AuthDataSource? { get set }
+    var apiClient: APIClient? { get set }
 
     func sendDeviceToken(token: Data)
-    func unsubscribe(_ completion: @escaping (Result<Void, Error>) -> Void)
+    func unsubscribe(_ completion: @escaping @Sendable (Result<Void, Error>) -> Void)
 
     func handleNotification(payload: [AnyHashable: Any]) -> IsHandled
 
@@ -35,7 +36,7 @@ enum PushNotificationAddresseeName: String {
     case chat
 }
 
-final class DefaultPushNotificationHandler: PushNotificationHandler {
+final class DefaultPushNotificationHandler: PushNotificationHandler, @unchecked Sendable {
 
     private let pushDeviceTokenCoordinator: PushDeviceTokenCoordinator
 
@@ -48,6 +49,7 @@ final class DefaultPushNotificationHandler: PushNotificationHandler {
         get { pushDeviceTokenCoordinator.authDataSource }
         set { pushDeviceTokenCoordinator.authDataSource = newValue }
     }
+    var apiClient: APIClient?
 
     private var notificationCenter: UNUserNotificationCenter {
         return UNUserNotificationCenter.current()
@@ -76,7 +78,7 @@ final class DefaultPushNotificationHandler: PushNotificationHandler {
         sendTokenIfNeeded()
     }
     
-    func unsubscribe(_ completion: @escaping (Result<Void, Error>) -> Void) {
+    func unsubscribe(_ completion: @escaping @Sendable (Result<Void, Error>) -> Void) {
         guard let token = pushDeviceTokenCoordinator.getLastToken() else {
             completion(.success(()))
             return
