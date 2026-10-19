@@ -12,7 +12,7 @@ This is documentation how to easily implement our SDK for chat and for push feat
 
 - Xcode 14+
 
-- Swift package manager (********iOS 13+********)
+- Swift package manager or CocoaPods (********iOS 18+********)
 
   
 
@@ -27,6 +27,21 @@ This is documentation how to easily implement our SDK for chat and for push feat
 1. Copy link to this repository `https://github.com/sinchlabs/sinch-chat-ios-sdk`
 
 2. Paste into xCode SPM and login to your github account using login + github personal token.
+
+### CocoaPods:
+
+Add to your `Podfile`:
+
+```ruby
+platform :ios, '18.0'
+use_frameworks!
+
+target 'YourApp' do
+  pod 'SinchChatSDK', '~> 1.1'
+end
+```
+
+Then run `pod install`. The pod ships as a prebuilt xcframework (gRPC is linked statically).
 
   
 
