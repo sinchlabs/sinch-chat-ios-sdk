@@ -67,7 +67,7 @@ private struct MessageState: Sendable {
 // swiftlint:disable:next type_body_length
 final class DefaultMessageDataSource: MessageDataSource, @unchecked Sendable {
 
-    var authDataSource: AuthDataSource
+    var tokenProvider: ChatTokenProvider
     var client: APIClient
 
     weak var delegate: MessageDataSourceDelegate?
@@ -83,11 +83,11 @@ final class DefaultMessageDataSource: MessageDataSource, @unchecked Sendable {
 
     private let jsonEncoder = JSONEncoder()
 
-    init(apiClient: APIClient, authDataSource: AuthDataSource, topicModel: TopicModel? = nil,
+    init(apiClient: APIClient, tokenProvider: ChatTokenProvider, topicModel: TopicModel? = nil,
          metadata: SinchMetadataArray = [], shouldInitializeConversation: Bool = false,
          sendDocumentAsText: Bool = false) {
         self.client = apiClient
-        self.authDataSource = authDataSource
+        self.tokenProvider = tokenProvider
         self.topicModel = topicModel
         self.metadata = metadata
         self.shouldInitializeConversation = shouldInitializeConversation
@@ -129,7 +129,7 @@ final class DefaultMessageDataSource: MessageDataSource, @unchecked Sendable {
 
         let signed: ClientRequest<Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest>
         do {
-            signed = try authDataSource.signedRequest(request)
+            signed = try tokenProvider.signedRequest(request)
         } catch {
             throw MessageDataSourceError.notLoggedIn
         }
@@ -209,7 +209,7 @@ final class DefaultMessageDataSource: MessageDataSource, @unchecked Sendable {
 
         let signed: ClientRequest<Sinch_Chat_Sdk_V1alpha2_SendRequest>
         do {
-            signed = try authDataSource.signedRequest(request)
+            signed = try tokenProvider.signedRequest(request)
         } catch {
             throw MessageDataSourceError.notLoggedIn
         }
@@ -241,7 +241,7 @@ final class DefaultMessageDataSource: MessageDataSource, @unchecked Sendable {
 
         let signed: ClientRequest<Sinch_Chat_Sdk_V1alpha2_SendRequest>
         do {
-            signed = try authDataSource.signedRequest(request)
+            signed = try tokenProvider.signedRequest(request)
         } catch {
             throw MessageDataSourceError.notLoggedIn
         }
@@ -263,7 +263,7 @@ final class DefaultMessageDataSource: MessageDataSource, @unchecked Sendable {
             throw MessageDataSourceError.unknownTypeOfMedia
         }
         var metadata = SinchChatSDK.standardMetadata
-        if let token = try? authDataSource.currentAccessToken() {
+        if let token = try? tokenProvider.currentAccessToken() {
             metadata.addString(token, forKey: "authorization")
         } else {
             throw MessageDataSourceError.notLoggedIn
@@ -290,7 +290,7 @@ final class DefaultMessageDataSource: MessageDataSource, @unchecked Sendable {
         }
         let signed: ClientRequest<Sinch_Chat_Sdk_V1alpha2_UploadMediaRequest>
         do {
-            signed = try authDataSource.signedRequest(request)
+            signed = try tokenProvider.signedRequest(request)
         } catch {
             throw MessageDataSourceError.notLoggedIn
         }
@@ -364,7 +364,7 @@ final class DefaultMessageDataSource: MessageDataSource, @unchecked Sendable {
 
         let signed: ClientRequest<Sinch_Chat_Sdk_V1alpha2_SubscribeToStreamRequest>
         do {
-            signed = try authDataSource.signedRequest(request)
+            signed = try tokenProvider.signedRequest(request)
         } catch {
             continuation.finish()
             return
@@ -409,7 +409,7 @@ final class DefaultMessageDataSource: MessageDataSource, @unchecked Sendable {
         request.metadata = metadata
         let signed: ClientRequest<Sinch_Chat_Sdk_V1alpha2_SendRequest>
         do {
-            signed = try authDataSource.signedRequest(request)
+            signed = try tokenProvider.signedRequest(request)
         } catch {
             throw MessageDataSourceError.notLoggedIn
         }
@@ -546,7 +546,7 @@ final class DefaultMessageDataSource: MessageDataSource, @unchecked Sendable {
 
         let signed: ClientRequest<Sinch_Chat_Sdk_V1alpha2_SendRequest>
         do {
-            signed = try authDataSource.signedRequest(request)
+            signed = try tokenProvider.signedRequest(request)
         } catch {
             throw MessageDataSourceError.notLoggedIn
         }
@@ -561,7 +561,7 @@ final class DefaultMessageDataSource: MessageDataSource, @unchecked Sendable {
                     )
                 }
             } catch {
-                Logger.warning("cannot set conversation metadata: \(error.localizedDescription)")
+                chatLog("cannot set conversation metadata: \(error.localizedDescription)")
             }
         }
     }
@@ -570,20 +570,20 @@ final class DefaultMessageDataSource: MessageDataSource, @unchecked Sendable {
 
     func cancelCalls() {
         let task = state.withLock { state -> Task<Void, Never>? in
-            let t = state.historyTask
+            let pending = state.historyTask
             state.historyTask = nil
-            return t
+            return pending
         }
         task?.cancel()
     }
 
     func cancelSubscription() {
         let task = state.withLock { state -> Task<Void, Never>? in
-            let t = state.subscriptionTask
+            let pending = state.subscriptionTask
             state.subscriptionTask = nil
             state.nextPageToken = nil
             state.firstPage = true
-            return t
+            return pending
         }
         task?.cancel()
     }

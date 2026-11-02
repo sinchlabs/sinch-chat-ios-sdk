@@ -27,12 +27,12 @@ struct MessageCenterView: View {
 
     var body: some View {
         SinchInboxView(
-            options: GetChatViewControllerOptions(metadata: [])
+            options: GetChatViewControllerOptions(metadata: [], shouldInitializeConversation: true)
         )
         .ignoresSafeArea()
         .task {
-            await sinchState.loadInboxChats(options: GetChatViewControllerOptions(metadata: []))
-            sinchState.subscribeToInboxUpdates(options: GetChatViewControllerOptions(metadata: []))
+            await sinchState.loadInboxChats(options: GetChatViewControllerOptions(metadata: [], shouldInitializeConversation: true))
+            sinchState.subscribeToInboxUpdates(options: GetChatViewControllerOptions(metadata: [], shouldInitializeConversation: true))
         }
     }
 }

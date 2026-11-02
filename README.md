@@ -1,726 +1,338 @@
+# SinchChatSDK
 
-# iOS Sinch SDK - Getting Started
+Sinch Chat SDK for iOS. The SDK provides UIKit view controllers for chat and inbox, plus first-stage SwiftUI support through wrapper views and a state object.
 
+Push notifications come from a separate package, [SinchPushSDK](https://github.com/sinchlabs/sinch-push-ios-sdk),
+which this SDK depends on and re-exports. `SinchChatSDK.shared.push` is
+`SinchPushSDK.shared.push`: the same facade, the same persisted state.
 
-This is documentation how to easily implement our SDK for chat and for push features.
+## Requirements
 
-  
+- iOS 18+
+- Swift 6+
 
-# Requirements
+## Installation
 
-  
+### Swift Package Manager
 
-- Xcode 14+
+```
+https://github.com/sinchlabs/sinch-chat-ios-sdk.git
+```
 
-- Swift package manager or CocoaPods (********iOS 18+********)
+| Product | Target |
+| --- | --- |
+| `SinchChatSDK` | the app |
+| `SinchChatSDKNotificationExtension` | a Notification Service Extension — a compatibility re-export of `SinchPushSDKNotificationExtension` |
 
-  
+The package resolves [sinch-push-ios-sdk](https://github.com/sinchlabs/sinch-push-ios-sdk)
+itself; do not add it separately.
 
-# Installation
+### CocoaPods
 
-  
-
-### Swift Package Manager:
-
-  
-
-1. Copy link to this repository `https://github.com/sinchlabs/sinch-chat-ios-sdk`
-
-2. Paste into xCode SPM and login to your github account using login + github personal token.
-
-### CocoaPods:
-
-Add to your `Podfile`:
+SinchChatSDK 2.0.0 is a **binary** pod (`vendored_frameworks`) published in our own spec
+repo, not on trunk. Add both sources:
 
 ```ruby
+source 'https://github.com/sinchlabs/sinch-ios-specs.git'
+source 'https://cdn.cocoapods.org/'   # SwiftProtobuf, and SinchPushSDK's dependency
+
 platform :ios, '18.0'
 use_frameworks!
 
-target 'YourApp' do
-  pod 'SinchChatSDK', '~> 1.1'
+target 'App' do
+  pod 'SinchChatSDK'   # brings SinchPushSDK, the source push pod, with it
+end
+
+target 'NotificationService' do
+  # The NSE target takes the extension pod only, never SinchChatSDK or SinchPushSDK.
+  pod 'SinchPushSDKNotificationExtension'
+end
+
+# Trunk's SwiftProtobuf declares iOS 11.0 and Xcode refuses deployment targets below
+# 15.0. The prebuilt chat binary links SinchPushSDK and SwiftProtobuf dynamically, so
+# both must be built with library evolution as well.
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      deployment_target = (config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] || '0').to_f
+      if deployment_target > 0 && deployment_target < 15.0
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
+      end
+      if %w[SwiftProtobuf SinchPushSDK SinchPushSDKNotificationExtension].include?(target.name)
+        config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'YES'
+      end
+    end
+  end
 end
 ```
 
-Then run `pod install`. The pod ships as a prebuilt xcframework (gRPC is linked statically).
+The binary links gRPC Swift 2 and Kingfisher statically inside the framework. It links
+`SinchPushSDK` and `SwiftProtobuf` dynamically, so the app ships exactly one protobuf
+runtime and the chat SDK, the push pod and the app all share it.
 
-  
+## Setup
 
-# First steps
-
-  
-
-1. Initialize SDK as soon as application is starting.
-
-2. SetIdentity as soon as you can authenticate the user using your internal ********UserID******** and sign it using algorithm on ********the backend side.******** (You can sign it on mobile but it is ********NOT RECOMMENDED********) ← this method can be called multiple times.
-
-3. Setup push notifications.
-
-4. Show chat.
-
-
-
-## Initialize
-
+1. Add the `SinchChatSDK` package to your project.
+2. Initialize the SDK early in app launch (typically from `AppDelegate` or `@UIApplicationDelegateAdaptor`):
 
 ```swift
-
-SinchChatSDK.shared.initialize()
-
+SinchChatSDK.shared.initialize(.init(pushNotificationMode: .sandbox))
 ```
 
-As soon as possible it means the best place to do that is AppDelegate in:
+3. Set the user identity before opening chat or inbox UI:
 
 ```swift
-
-func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool
-
-```
-
-********Example:********
-
-```swift
-
-func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-
-SinchChatSDK.shared.initialize()
-
-return true
-
-}
-
-
-```
-
-### Config
-
-We need to have configuration for chat which we’re providing to you it means you need:
-
-- Region
-
-- Project ID  
-
-- Client ID
-
-- Config ID (leave "" if you don't have it)
-
-- _*___(Optional)__* Token secret
-
-  
-
-## Set identity
-
-The second step is that we need to authorize user so we need you to call us this method as soon as you can authorize the user. You can call this method as many times as you want:
-
-  
-
-```swift
-
-
-func setIdentity(with config: SinchSDKConfig.AppConfig, identity: SinchSDKIdentity, completion: ((Result<Void, SinchSDKIdentityError>) -> Void)? = nil)
-
-
-```
-
-  
-
-********Example:********
-
-  
-
-```swift
-let config = SinchSDKConfig.AppConfig(
-        clientID: {{ client_id }}, 
-        projectID: {{ project_id }}, 
-        configID: {{ config_id }}, // If you don't have it, leave empty string "" 
+SinchChatSDK.shared.setIdentity(
+    with: .init(
+        clientID: "your-client-id",
+        projectID: "your-project-id",
+        configID: "your-config-id",
         region: .EU1
+    ),
+    identity: .anonymous
+) { result in
+    // handle result
+}
+```
+
+## UIKit Integration
+
+Create chat UI:
+
+```swift
+let chatViewController = try SinchChatSDK.shared.chat.getChatViewController(
+    uiConfig: .defaultValue,
+    localizationConfig: .defaultValue,
+    options: GetChatViewControllerOptions(metadata: [], shouldInitializeConversation: true)
 )
-let currentIdentityType: SinchSDKIdentity = .anonymous
- 
-
-SinchChatSDK.shared.setIdentity(with: config, identity: currentIdentityType) { result in
-
-switch result {
-
-case .success:
-
-// SDK is authenticated successfully.
-
-case .failure(let error):
-
-// SDK cannot be initizalized so you can't use any functionality :/
-
-}
-}
-
+navigationController.pushViewController(chatViewController, animated: true)
 ```
 
-### Types of Sinch SDK Identity
+Create inbox UI:
 
-There are two types of identity:
-    
-```swift 
-
-public enum SinchSDKIdentity: Codable, Equatable {
-/// Creates anonymous session with random user identifier.
-case anonymous
-/// Creates session with specific user identifier.
-case selfSigned(userId: String, secret: String)
-}
-
-```
-  
-In anonymous sessions, we generate a unique User Identifier to identify the user for your projectID and clientID.    
-If you have a self-signed user id, **you** can specify it to be used in the scope of the projectID, clientID and configID.    
-This means you can send push notifications or start a live chat using the identifier assigned in your database.  
-
-
-Example:
----
-- ********Anonymous session********  
-  
-When you call setIdentity method with `.anonymous` identity we're generating random user, for example: 01GYC7B5TR5QR1NE2NRQDPGP0X. Until [removeIdentity](#remove-identity) is called, we're using this user for instantiating chat and push.  
- 
-********Example:********
- 
 ```swift
+let inboxViewController = try SinchChatSDK.shared.chat.inbox.getInboxViewController(
+    uiConfig: .defaultValue,
+    localizationConfig: .defaultValue,
+    options: GetChatViewControllerOptions(metadata: [], shouldInitializeConversation: true)
+)
+navigationController.pushViewController(inboxViewController, animated: true)
+```
 
+## SwiftUI Integration
+
+### Wrapper Views
+
+Use `SinchChatView` and `SinchInboxView` to embed SDK UI in SwiftUI:
+
+```swift
+import SwiftUI
 import SinchChatSDK
-//...
-let currentIdentityType: SinchSDKIdentity = .anonymous
 
-SinchChatSDK.shared.setIdentity(with: {{config}}, identity: .anonymous) { result in }
-
+struct ChatScreen: View {
+    var body: some View {
+        SinchChatView(
+            uiConfig: .defaultValue,
+            localizationConfig: .defaultValue,
+            options: GetChatViewControllerOptions(metadata: [], shouldInitializeConversation: true),
+            onError: { error in
+                print("Failed to open chat: \(error)")
+            }
+        )
+        .ignoresSafeArea()
+    }
+}
 ```
-         
-- ********Signed session********  
-
-In order to create a selfSign identity for user, you need to provide a unique identifier for that user. You can either use some id, phone number, email address, etc…  
-********One benefit of using a self-signed session, as opposed to anonymous, is that you can retain your chat history when you remove and then set the same identity.********  
-
-How to login using your identifier?
-
-********Example:********
 
 ```swift
+struct InboxScreen: View {
+    var body: some View {
+        SinchInboxView(
+            options: GetChatViewControllerOptions(metadata: [], shouldInitializeConversation: true)
+        )
+        .ignoresSafeArea()
+    }
+}
+```
 
+These views wrap the existing UIKit controllers in a `UINavigationController`, preserving SDK navigation behavior.
+
+### State Management
+
+Use `SinchChatSDKState` for SwiftUI-friendly identity and event handling:
+
+```swift
+import SwiftUI
 import SinchChatSDK
-//...
-let userID = "{your_unique_user_id}" // for example: "user123"
 
-let signedUserID: String = userID.hmac(algorithm: CryptoAlgorithm.SHA512, key: {your_secret})
+struct ContentView: View {
+    @StateObject private var sinchState = SinchChatSDKState()
+    @State private var showChat = false
 
-SinchChatSDK.shared.setIdentity(with: {{config}}, identity: .selfSigned(userId: userID, secret: signedUserID)) { result in }
+    var body: some View {
+        VStack {
+            Text("Chat status: \(String(describing: sinchState.chatAvailability))")
 
-```
-
-<aside>
-
-💡 ********your_secret******** is Secret Key provided by you on Sinch Dashboard when you created Sinch Live Chat app. 
-
-</aside>
-
-
-And now you can use SDK functionalities like chat or push.
-
-## Remove identity
-
-This method is logging out user. It removes token and other user data from the app. After calling this method, you need to call setIdentity again to use the chat and get push notifications. 
-
-  
-********Example:********
-  
-```swift
-
-SinchChatSDK.shared.removeIdentity { result in
-    
-switch result {
-case .success():
-debugPrint("remove identity success")
-
-case .failure(_):
-debugPrint("remove identity error")
+            Button("Sign In") {
+                Task {
+                    try await sinchState.setIdentity(
+                        with: .init(
+                            clientID: "your-client-id",
+                            projectID: "your-project-id",
+                            configID: "your-config-id",
+                            region: .EU1
+                        ),
+                        identity: .anonymous
+                    )
+                    showChat = true
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $showChat) {
+            SinchChatView(options: GetChatViewControllerOptions(metadata: [], shouldInitializeConversation: true))
+        }
+    }
 }
-}
-
 ```
 
-## Info.plist permissions
+Available state:
 
-  
+- `identityStatus` — `.notSet`, `.setting`, `.set`, `.removing`, `.failed`
+- `chatAvailability` — current chat availability from the SDK
+- `isSettingIdentity` / `isRemovingIdentity` — loading flags
+- `lastPluginEvent` — latest SDK lifecycle event
+- `inboxChats` — inbox conversations loaded via `loadInboxChats(options:)`
+- `lastInboxEvent` — latest inbox update event
+- `lastError` — most recent error
 
-### Push notifications permission 
-
-- Capability → `Push Notifications`
-
-- Capability → `background modes` → `Remote notifications` + explanation in info.plist:
-
-
-********Example:********
+Async methods:
 
 ```swift
-
-<dict>
-
-<key>UIBackgroundModes</key>
-
-<array>
-
-<string>remote-notification</string>
-
-</array>
-
-</dict>
-
-  
+try await sinchState.setIdentity(with: config, identity: .anonymous)
+try await sinchState.removeIdentity()
+sinchState.refreshChatAvailability()
+await sinchState.loadInboxChats(options: nil)
+sinchState.subscribeToSDKEvents()
+sinchState.subscribeToInboxUpdates(options: GetChatViewControllerOptions(metadata: [], shouldInitializeConversation: true))
 ```
 
-### Other permissions
+## Push Notifications
 
-If you keep [enabled](#disable-some-of-the-features) the option to send voice messages, you will need to add the `NSMicrophoneUsageDescription` permission.  
- Likewise, if you keep [enabled](#disable-some-of-the-features) the Share Location option, you may also need to add location permissions `NSLocationAlwaysAndWhenInUseUsageDescription` and `NSLocationWhenInUseUsageDescription` based on your use case.
+Push is included: `SinchChatSDK.shared.push` is the push facade of `SinchPushSDK`, and
+`import SinchChatSDK` already re-exports `SinchPushSDK` (`@_exported`). Existing code
+keeps compiling and behaving the same, including the persisted state.
 
-********Example:********
-
-```swift
-
-<dict>
-
-<key>NSMicrophoneUsageDescription</key>
-<string>Enabling microphone access lets you send voice messages in the chat.</string>
-
-<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-<string>Enabling location services will allow you to share your location with others through the chat.</string>
-
-<key>NSLocationWhenInUseUsageDescription</key>
-<string>Enabling location services will allow you to share your location with others through the chat.</string>
-
-</dict>
-
-  
-```
-
-## Privacy manifest files
-
-In SDK source code there is `PrivacyInfo.xcprivacy` that describe the data SDK collects and the reasons required APIs it uses. 
-
-See more at https://developer.apple.com/documentation/bundleresources/privacy_manifest_files
-
-### Describing data use in privacy manifests
-
-Record the categories of data that your app or third-party SDK collects about the person using the app, and the reasons it collects the data. 
-
-If you keep [enabled](#disable-some-of-the-features) the option to send voice messages, you will ********need to add******** add the `NSPrivacyCollectedDataTypeAudioData` data type to your `PrivacyInfo` file.  
-Likewise, if you keep [enabled](#disable-some-of-the-features) the Share Location option, you may also ********need to add******** `NSPrivacyCollectedDataTypePreciseLocation` data type to your `PrivacyInfo` file. 
-If you keep [enabled](#disable-some-of-the-features) the option to send photo or video messages, you will ********need to add******** the `NSPrivacyCollectedDataTypePhotosorVideos` data type to your `PrivacyInfo` file.
-
-See more at  https://developer.apple.com/documentation/bundleresources/privacy_manifest_files/describing_data_use_in_privacy_manifests
-
-********Example:********
-
+Keep push registration and notification delegate methods in `AppDelegate` or `@UIApplicationDelegateAdaptor`:
 
 ```swift
-
-    <key>NSPrivacyCollectedDataTypes</key>
-    <array>
-        <dict>
-            <key>NSPrivacyCollectedDataType</key>
-            <string>NSPrivacyCollectedDataTypeAudioData</string>
-            <key>NSPrivacyCollectedDataTypeLinked</key>
-            <false/>
-            <key>NSPrivacyCollectedDataTypeTracking</key>
-            <false/>
-            <key>NSPrivacyCollectedDataTypePurposes</key>
-            <array>
-                <string>User can send voice message to the other user using chat.</string>
-            </array>
-        </dict>
-        <dict>
-            <key>NSPrivacyCollectedDataType</key>
-            <string>NSPrivacyCollectedDataTypePhotosorVideos</string>
-            <key>NSPrivacyCollectedDataTypeLinked</key>
-            <false/>
-            <key>NSPrivacyCollectedDataTypeTracking</key>
-            <false/>
-            <key>NSPrivacyCollectedDataTypePurposes</key>
-            <array>
-                <string>User can send his photos or videos to the other user using chat.</string>
-            </array>
-        </dict>
-        <dict>
-            <key>NSPrivacyCollectedDataType</key>
-            <string>NSPrivacyCollectedDataTypePreciseLocation</string>
-            <key>NSPrivacyCollectedDataTypeLinked</key>
-            <false/>
-            <key>NSPrivacyCollectedDataTypeTracking</key>
-            <false/>
-            <key>NSPrivacyCollectedDataTypePurposes</key>
-            <array>
-                <string>User can send his location to the other using chat.</string>
-            </array>
-        </dict>
-    </array>
-
-```
-
-# Chat
-
-
-## Check chat availability
-
-  
-
-To check if the chat is available for user you should use method:
-
-```swift
-
-public enum SinchSDKChatAvailability {
-
-/// The Chat is ready to user.
-
-case available
-
-/// The Chat is not initialized
-
-/// Tip: use initialize method to initialize chat.
-
-case uninitialized
-
-  
-
-/// The chat is not authorized
-
-/// Tip: User setIdentity method to authorize the client.
-
-case authorizationNeeded
-
-  
-
-/// The chat is opened
-
-/// You cannot run two chats at once.
-
-case currentlyRunning
-
-}
-
-  
-func isChatAvailable() -> SinchSDKChatAvailability
-
-  
-```
-
-  
-
-## Show chat
-
-
-********Before showing the chat make sure you have initialised this SDK.********
-
-   
-
-### Present chat view controller modally
-  
-  
-    
-```swift
-
-do {
-     
-let options = GetChatViewControllerOptions(metadata: [], shouldInitializeConversation: true)
-let chatViewController = try SinchChatSDK.shared.chat.getChatViewController(uiConfig: .defaultValue,
-                                                                            localizationConfig: .defaultValue,
-                                                                            options: options)
-                    
-let navigationController = UINavigationController(rootViewController: chatViewController)
-navigationController.modalPresentationStyle = .fullScreen
-self?.present(navigationController, animated: true, completion: nil)
-    
-} catch {
-// all errors are related with bad configuration. You can check if chat is available using `isChatAvailable` method.
-
-
-}}
-
-```
-
-### Programmatically push chat view controller onto the current navigation stack
-  
-  
-    
-```swift
-
-do {
- 
-let options = GetChatViewControllerOptions(metadata: [], shouldInitializeConversation: true)
-let chatViewController = try SinchChatSDK.shared.chat.getChatViewController(uiConfig: .defaultValue,
-                                                                        localizationConfig: .defaultValue,
-                                                                        options: options)
-                
-self.navigationItem.backBarButtonItem = UIBarButtonItem(title: "", style: .plain, target: nil, action: nil)
-self.navigationController?.pushViewController(viewControler, animated: true)
-
-} catch {
-// all errors are related with bad configuration. You can check if chat is available using `isChatAvailable` method.
-
-}}
-
-```
-
-### Chat options
-
-If you need to create a chat that is connected to, for example, some order, you can use topicID.   
-If you need to pass metadata to chat you can use the metadata parameter.  
-If the conversation should start when the user enters the chat set shouldInitializeConversation to true.  
-If you want to send document files as text messages and not as media messages set sendDocumentAsTextMessage to true.  
-
-
-
-```swift
-
-let options = GetChatViewControllerOptions(topicID: "{topicID}",
-                                           metadata: [],
-                                           shouldInitializeConversation: true,
-                                           sendDocumentAsTextMessage: true)  
-  
-  
-
-```
-
-
-
-### Update Localization Configuration
-
-It is possible to customise the text for each UI element within the SDK. We’re currently supporting the English language only, if you want to have other languages as well then override the `localizationConfig` parameter.
-
-
-********Example:********
-
-
-```swift
-
-
-var localizationConfig = SinchSDKConfig.LocalizationConfig.defaultValue
-localizationConfig.disabledChatMessageText = NSLocalizedString("errorMessage", comment: "")
-                  
-let viewControler = try SinchChatSDK.shared.chat.getChatViewController(uiConfig: .defaultValue,
-                                                                       localizationConfig: localizationConfig)
-  
-  
-```
-
-### Update UI Configuration
-
-
-It is possible to customise the all colors and images within the SDK.
-
-
-********Example:********
-
-```swift
-
-
-var uiConfig = SinchSDKConfig.UIConfig.defaultValue
-uiConfig.navigationBarColor = .white 
-uiConfig.navigationBarTitleColor = UIColor(red: 0.0, green: 43.0/256.0, blue: 227.0/256.0, alpha: 1.0)
-uiConfig.backIcon =  UIImage(named: "backIcon")
-uiConfig.closeIcon =  UIImage(named: "closeIcon")
-
-                  
-let viewControler = try SinchChatSDK.shared.chat.getChatViewController(uiConfig: uiConfig,
-                                                                       localizationConfig: .defaultValue)
-  
-  
-```
-
-### Disable sending messages
-
-
-You can disable the sending of any type of message.  
-
-********Example:********
-
-```swift
-
-SinchChatSDK.shared.chat.advanced.disableSendingMessages()
-
-var localizationConfig = SinchSDKConfig.LocalizationConfig.defaultValue
-localizationConfig.disabledChatMessageText = "Sending messages is disabled"
-                  
-let viewControler = try SinchChatSDK.shared.chat.getChatViewController(uiConfig: .defaultValue,
-                                                                       localizationConfig: localizationConfig)
-
-```
-
-### Enable sending messages
-
-********Example:********
-
-```swift
-
-SinchChatSDK.shared.chat.advanced.enableSendingMessages()
-
-
-```
-
-### Disable some of the features
-
-It is possible to disable some of the features in the chat. A button that is in the Input view will disappear if all features connected with it are disabled. For example, if you disable sending voice messages, the button responsible for it will disappear. 
-
-********List of features that is possible to disable:********
-
-
-```swift
-
-public enum SinchEnabledFeatures {
-case sendImageMessageFromGallery
-case sendVideoMessageFromGallery
-case sendVoiceMessage
-case sendLocationSharingMessage
-case sendImageFromCamera
-case sendVideoMessageFromCamera
-case sendDocuments
-
-}
-
-```
-
-********Example:********
-
-
-```swift
-
-SinchChatSDK.shared.disabledFeatures = [.sendVoiceMessage,
-                                        .sendVideoMessageFromCamera,
-                                        .sendVideoMessageFromGallery,
-                                        ]
-
-```
-
-# Push
-
-  
-
-### APNS certificate
-
-  
-
-To use ********push notifications******** with this SDK you have to provide ********APNS Key******** and upload it to out Sinch Panel.
-
-
-### Xcode Capabilities
-
-  
-
-  
-
-Make sure you’ve checked `Remove notifications` capability in `Background Modes` in your target configuration in tab `Signing & Capabilities` and `Push Notifications` .
-
-  
-
-### Methods in AppDelegate.swift or AppDelegate.m:
-
-  
-
-```swift
-
 func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-
-SinchChatSDK.shared.push.sendDeviceToken(deviceToken)
-
+    SinchChatSDK.shared.push.sendDeviceToken(deviceToken)
 }
-
-  
-
 ```
 
-<aside>
+Delivery reports and the foreground push relay are described in [`Documentation/PushRelay.md`](Documentation/PushRelay.md).
+The push API itself (relay, in-app alerts, permissions, delivery reports) is documented in
+[the SinchPushSDK README](https://github.com/sinchlabs/sinch-push-ios-sdk).
 
-💡 Make sure you’ve added `UNUserNotificationCenterDelegate` to AppDelegate definition or to you own class.
-
-</aside>
-
-  
+In-app message alerts are rendered by the push SDK now. On the chat SDK they are the same
+alerts, configured through `SinchPushSDK.shared.inAppMessages`:
 
 ```swift
-
-func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
-
-  
-
-if SinchChatSDK.shared.push.handleNotificationResponse(response) {
-
-// this is our notification and it is handled by SinchChatSDK
-
-}
-
-  
-
-completionHandler()
-
-}
-
+SinchPushSDK.shared.inAppMessages.isEnabled = true
+SinchPushSDK.shared.inAppMessages.theme = .default
+SinchPushSDK.shared.inAppMessages.delegate = myInAppHandler   // InAppMessageDelegate
 ```
 
-  
+### Notification Service Extension (optional, recommended)
+
+Add a Notification Service Extension to report the delivery of **every** visible push to Sinch, also after the user
+force-quit the app, and set the App Group in `initialize`. The reports are uploaded with a background `URLSession`, so
+they complete even when the extension or the app is suspended or killed. Step-by-step setup, signing notes and
+troubleshooting: [`Documentation/NotificationServiceExtension.md`](Documentation/NotificationServiceExtension.md).
+
+The extension uses the **`SinchPushSDKNotificationExtension`** product of the push package
+(SPM) or pod (CocoaPods). `SinchChatSDKNotificationExtension` still exists as an SPM
+product that only re-exports it, so an existing extension target keeps building without
+changes; the pod is `SinchPushSDKNotificationExtension`.
 
 ```swift
+SinchChatSDK.shared.initialize(SinchInitializeOptions(pushNotificationMode: .prod, appGroup: "group.com.example.app"))
 
-func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-
-  
-
-if let presentationOptions = SinchChatSDK.shared.push.handleWillPresentNotification(notification) {
-
-completionHandler(presentationOptions)
-
-return
-
+func application(_ application: UIApplication,
+                 handleEventsForBackgroundURLSession identifier: String,
+                 completionHandler: @escaping () -> Void) {
+    _ = SinchChatSDK.shared.push.handleEventsForBackgroundURLSession(identifier: identifier,
+                                                                     completionHandler: completionHandler)
 }
-
-completionHandler([])
-
-}
-
-  
-
 ```
 
-  
+## Migration to 2.0.0
 
-### Additional methods
+SinchChatSDK 2.0.0 moves push into [SinchPushSDK](https://github.com/sinchlabs/sinch-push-ios-sdk)
+and re-exports it. **No source changes are required:** `SinchChatSDK.shared.push`, the
+in-app delegate path and every persisted key keep their names, so users stay signed in
+and queued reports are kept.
 
-  
+What changes is how the SDK is installed:
 
-Those methods are ********optional******** and they are only ********helpers for you******** if you want to ask for notifications in other places then after starting the chat. Please don’t ask user for notification at application start. ********It is a bad practice.******** Ask when you need it.
+- **Swift Package Manager**: only the version. The URL and both product names
+  (`SinchChatSDK`, `SinchChatSDKNotificationExtension`) are unchanged.
+- **CocoaPods**: 2.0.0 is not on trunk. Add the spec repo and the `post_install` hook,
+  then bump the version (see [Installation](#cocoapods)):
 
-  
+  ```ruby
+  source 'https://github.com/sinchlabs/sinch-ios-specs.git'
+  source 'https://cdn.cocoapods.org/'
+  ```
 
-Possibility to check push permission using our method:
+  Keep `use_frameworks!`. The app now installs three pods: `SinchChatSDK` (binary),
+  `SinchPushSDK` (source) and `SwiftProtobuf` (dynamic); `SinchChatSDK` declares them,
+  so the Podfile only needs `pod 'SinchChatSDK'`.
+- **Notification Service Extension**: move the extension target from the old
+  `SinchChatSDK` extension sub-target to the `SinchPushSDKNotificationExtension` pod
+  (CocoaPods) or product (SPM). The API (`SinchPushNotificationExtension.didReceive(_:appGroup:)`)
+  is unchanged.
 
-  
+If you only need push and no chat UI, depend on `SinchPushSDK` directly instead; see its
+README. The old `SinchChatSDK.shared.push` API keeps working in both cases.
+
+## Migration Notes
+
+- Existing UIKit integrations should continue using `getChatViewController` and `getInboxViewController`.
+- SwiftUI apps should prefer `SinchChatView`, `SinchInboxView`, and `SinchChatSDKState` for first-stage support.
+- A future SDK release may provide native SwiftUI chat/inbox views; the current SwiftUI API wraps UIKit internally.
+
+## Security
+
+### Identity signing
+
+Prefer the new `selfSignedWithAppSecret` identity so the SDK computes the
+HMAC-SHA512 digest internally — your app secret never has to leave the
+caller and is not persisted:
 
 ```swift
-
-SinchChatSDK.shared.push.checkPushPermission(completion: @escaping (SinchSDKNotificationStatus) -> Void)
-
-  
-
-// OR iOS 13+ with Combine
-
-func checkPushPermission() -> AnyPublisher<SinchSDKNotificationStatus, Never>
-
+SinchChatSDK.shared.setIdentity(
+    with: config,
+    identity: .selfSignedWithAppSecret(
+        userId: userID,
+        appSecret: appSecret
+    )
+)
 ```
 
-Possibility to ask for notifications permission:
+`selfSigned(userId:secret:)` is still supported for backwards compatibility
+but requires you to pre-compute the digest with the now-deprecated
+`String.hmac(algorithm: .SHA512, key:)` helper.
 
-```swift
+### Token storage
 
-func askNotificationPermission(completion: @escaping (SinchSDKNotificationStatus) -> Void)
+Access tokens are stored in the iOS Keychain
+(`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`), scoped per SDK
+configuration. On first contact with the SDK, any token previously stored in
+`UserDefaults` is migrated automatically and the legacy key is removed.
 
-  
+### Production note
 
-// OR iOS 13+ with Combine
-
-func askNotificationPermission() -> AnyPublisher<SinchSDKNotificationStatus, Never>
-
-```
+Do not embed your application secret in production code. The same warning
+applies to the Sinch RTC JWT helpers in `SinchVideoRTCPluginSDK` — sign JWTs
+on your backend and ship the resulting token to the client.

@@ -104,7 +104,7 @@ final class DefaultSinchInbox: SinchInbox, @unchecked Sendable {
     var lastChatOptions: GetChatViewControllerOptions?
     public lazy var chatInboxEventListenerSubject = PassthroughSubject<SinchInboxEvent, Never>()
 
-    internal var authDataSource: AuthDataSource?
+    internal var tokenProvider: ChatTokenProvider?
     internal var region: Region?
 
     private let pushPermissionHandler: PushNofiticationPermissionHandler
@@ -124,7 +124,7 @@ final class DefaultSinchInbox: SinchInbox, @unchecked Sendable {
         let capturedLocConfig = localizationConfig
         let capturedOptions = options
         return try MainActor.assumeIsolated {
-            guard let authDataSource = self.authDataSource, let region = self.region else {
+            guard let tokenProvider = self.tokenProvider, let region = self.region else {
                 throw SinchChatSDKError.unavailable
             }
             guard let client = self.getOrCreateAPIClient(region: region) else {
@@ -134,7 +134,7 @@ final class DefaultSinchInbox: SinchInbox, @unchecked Sendable {
             self.apiClient = client
             self.lastChatOptions = capturedOptions
 
-            let inboxDataSource = DefaultInboxDataSource(apiClient: client, authDataSource: authDataSource, options: capturedOptions)
+            let inboxDataSource = DefaultInboxDataSource(apiClient: client, tokenProvider: tokenProvider, options: capturedOptions)
 
             if let root = self.rootCoordinator {
                 root.inboxDataSource.cancelSubscription()
@@ -142,7 +142,7 @@ final class DefaultSinchInbox: SinchInbox, @unchecked Sendable {
 
             let rootCordinator = DefaultInboxRootCoordinator(uiConfiguration: capturedUIConfig ?? .defaultValue,
                                                              localizationConfiguration: capturedLocConfig ?? .defaultValue,
-                                                             authDataSource: authDataSource, pushPermissionHandler: self.pushPermissionHandler, inboxDataSource: inboxDataSource)
+                                                             tokenProvider: tokenProvider, pushPermissionHandler: self.pushPermissionHandler, inboxDataSource: inboxDataSource)
 
             self.rootCoordinator =  rootCordinator
             let inboxViewController =  rootCordinator.getRootViewController(apiClient: client, options: capturedOptions)
@@ -154,7 +154,7 @@ final class DefaultSinchInbox: SinchInbox, @unchecked Sendable {
     func getInboxChats(options: GetChatViewControllerOptions?, completion: @escaping @Sendable ([InboxChat]) -> Void) {
         let capturedOptions = options
         Task { @MainActor in
-            guard let authDataSource = self.authDataSource,
+            guard let tokenProvider = self.tokenProvider,
                   let region = self.region,
                   let client = self.getOrCreateAPIClient(region: region) else {
                 completion([])
@@ -162,11 +162,11 @@ final class DefaultSinchInbox: SinchInbox, @unchecked Sendable {
             }
             self.lastChatOptions = capturedOptions
 
-            let inboxDataSource = DefaultInboxDataSource(apiClient: client, authDataSource: authDataSource, options: capturedOptions)
+            let inboxDataSource = DefaultInboxDataSource(apiClient: client, tokenProvider: tokenProvider, options: capturedOptions)
 
             self.rootCoordinator = DefaultInboxRootCoordinator(uiConfiguration: .defaultValue,
                                                                localizationConfiguration: .defaultValue,
-                                                               authDataSource: authDataSource,
+                                                               tokenProvider: tokenProvider,
                                                                pushPermissionHandler: self.pushPermissionHandler,
                                                                inboxDataSource: inboxDataSource)
 
@@ -187,7 +187,7 @@ final class DefaultSinchInbox: SinchInbox, @unchecked Sendable {
 
         let capturedOptions = options
         Task { @MainActor in
-            guard let authDataSource = self.authDataSource,
+            guard let tokenProvider = self.tokenProvider,
                   let region = self.region,
                   let client = self.getOrCreateAPIClient(region: region) else {
                 self.chatInboxEventListenerSubject.send(.subcriptionFailed)
@@ -196,11 +196,11 @@ final class DefaultSinchInbox: SinchInbox, @unchecked Sendable {
 
             self.lastChatOptions = capturedOptions
 
-            let inboxDataSource = DefaultInboxDataSource(apiClient: client, authDataSource: authDataSource, options: capturedOptions)
+            let inboxDataSource = DefaultInboxDataSource(apiClient: client, tokenProvider: tokenProvider, options: capturedOptions)
 
             self.rootCoordinator = DefaultInboxRootCoordinator(uiConfiguration: .defaultValue,
                                                                localizationConfiguration: .defaultValue,
-                                                               authDataSource: authDataSource,
+                                                               tokenProvider: tokenProvider,
                                                                pushPermissionHandler: self.pushPermissionHandler,
                                                                inboxDataSource: inboxDataSource)
 

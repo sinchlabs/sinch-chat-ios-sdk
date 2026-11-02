@@ -1,0 +1,84 @@
+/*
+ * Copyright 2024, gRPC Authors All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/// Additional information about an RPC handled by a server.
+@available(gRPCSwift 2.0, *)
+public struct ServerContext: Sendable {
+
+  /// Protocol used to help identify transport-specific context fields.
+  public protocol TransportSpecific: Sendable {}
+
+  /// A description of the method being called.
+  public var descriptor: MethodDescriptor
+
+  /// A description of the remote peer.
+  ///
+  /// The format of the description should follow the pattern `<transport>:<address>` where
+  /// `<transport>` indicates the underlying network transport (such as `ipv4`, `unix`, or
+  /// `in-process`). This is a guideline for how transports should format descriptions; different
+  /// implementations may not follow this format, so don't make assumptions based on it.
+  ///
+  /// Some examples include:
+  /// - `ipv4:127.0.0.1:31415`,
+  /// - `ipv6:[::1]:443`,
+  /// - `in-process:27182`.
+  public var remotePeer: String
+
+  /// A description of the local peer.
+  ///
+  /// The format of the description should follow the pattern `<transport>:<address>` where
+  /// `<transport>` indicates the underlying network transport (such as `ipv4`, `unix`, or
+  /// `in-process`). This is a guideline for how transports should format descriptions; different
+  /// implementations may not follow this format, so don't make assumptions based on it.
+  ///
+  /// Some examples include:
+  /// - `ipv4:127.0.0.1:31415`,
+  /// - `ipv6:[::1]:443`,
+  /// - `in-process:27182`.
+  public var localPeer: String
+
+  /// An optional field for transports to store specific data.
+  ///
+  /// Refer to the transport documentation to understand what type of
+  /// value this field will contain, if any.
+  ///
+  /// For example, a transport might use this field to store something like a peer certificate
+  /// from an mTLS connection.
+  public var transportSpecific: (any TransportSpecific)?
+
+  /// A handle for checking the cancellation status of an RPC.
+  public var cancellation: RPCCancellationHandle
+
+  /// Creates a new server context.
+  ///
+  /// - Parameters:
+  ///   - descriptor: A description of the method being called.
+  ///   - remotePeer: A description of the remote peer.
+  ///   - localPeer: A description of the local peer.
+  ///   - cancellation: A cancellation handle. You can create a cancellation handle
+  ///     using ``withServerContextRPCCancellationHandle(_:)``.
+  public init(
+    descriptor: MethodDescriptor,
+    remotePeer: String,
+    localPeer: String,
+    cancellation: RPCCancellationHandle
+  ) {
+    self.descriptor = descriptor
+    self.remotePeer = remotePeer
+    self.localPeer = localPeer
+    self.cancellation = cancellation
+  }
+}

@@ -1,0 +1,124 @@
+# Code generation with the build plugin
+
+This article describes how to use `protoc` to generate stubs for gRPC Swift and
+Swift Protobuf from your Protocol Buffers `.proto` files.
+
+## Overview
+
+The build plugin (`GRPCProtobufGenerator`) generates gRPC Swift stubs as part of
+your build. It uses a vendored copy of `protoc` provided by the `swift-protobuf`
+package, so you don't need to install anything separately.
+
+To learn more about other options for code generation, see <doc:Generating-stubs>.
+
+The build plugin works by detecting `.proto` files in the source tree and
+invoking `protoc` once for each file (caching results and performing the
+generation as necessary).
+
+### Adoption
+
+You must adopt Swift Package Manager build plugins on a per-target basis by
+modifying your package manifest (`Package.swift` file). To do this, declare the
+`grpc-swift-protobuf` package as a dependency and add the plugin to your desired
+targets.
+
+For example, to use the plugin for generating gRPC Swift stubs as part
+of the `echo-server` target:
+
+```swift
+targets: [
+   .executableTarget(
+     name: "echo-server",
+     dependencies: [
+       // ...
+     ],
+     plugins: [
+       .plugin(
+         name: "GRPCProtobufGenerator",
+         package: "grpc-swift-protobuf"
+       )
+     ]
+   )
+ ]
+```
+
+Once this is done, you need to ensure that the `.proto` files used for
+generation are included in the target's source directory and that you have
+defined a configuration file.
+
+## Configuration
+
+You must provide a configuration file named
+`grpc-swift-proto-generator-config.json` in the directory that encloses all
+`.proto` files (in the same directory as the files or a parent directory). The
+configuration file tells the build plugin about the options used for `protoc`
+invocations.
+
+> Warning:
+> The name of the config file is important and must match exactly. If the
+> plugin can't find the config file, it won't run.
+
+You can use the following as a starting point for your configuration:
+
+```json
+{
+  "generate": {
+    "clients": true,
+    "servers": true,
+    "messages": true
+  }
+}
+```
+
+By default, the plugin generates clients, servers, and messages with the
+`internal` access level.
+
+The full structure of the config file looks like this:
+
+```json
+{
+  "generate": {
+    "clients": true,
+    "servers": true,
+    "messages": true
+  },
+  "generatedSource": {
+    "accessLevelOnImports": false,
+    "accessLevel": "internal"
+  },
+  "protoc": {
+    "executablePath": "/opt/homebrew/bin/protoc",
+    "importPaths": [
+      "../directory_1"
+    ]
+  }
+}
+```
+
+Each of the options is described below:
+
+| Name                                   | Possible Values                            | Default      | Description                                         |
+|----------------------------------------|--------------------------------------------|--------------|-----------------------------------------------------|
+| `generate.servers`                     | `true`, `false`                            | `true`       | Generate server stubs                               |
+| `generate.clients`                     | `true`, `false`                            | `true`       | Generate client stubs                               |
+| `generate.messages`                    | `true`, `false`                            | `true`       | Generate message stubs                              |
+| `generatedSource.accessLevelOnImports` | `true`, `false`                            | `false`      | Whether imports should have explicit access levels  |
+| `generatedSource.accessLevel`          | `"public"`, `"package"`, `"internal"`      | `"internal"` | Access level for generated stubs                    |
+| `protoc.executablePath`                | N/A                                        | `null`†      | Path to the `protoc` executable                     |
+| `protoc.importPaths`                   | N/A                                        | `null`‡      | Import paths passed to `protoc`                     |
+
+† By default, the plugin uses a vendored copy of `protoc` from `swift-protobuf`.
+To override it, set `protoc.executablePath` in the configuration file or the
+`PROTOC_PATH` environment variable. If both are set, `protoc.executablePath`
+takes precedence.
+
+‡ If you don't provide any import paths, the plugin uses the path to the
+configuration file on a per-source-file basis.
+
+Many of these options map to `protoc-gen-grpc-swift-2` and `protoc-gen-swift`
+options.
+
+If you require greater flexibility, you can specify more than one configuration
+file. Configuration files apply to all `.proto` files at or below them in
+the file hierarchy. A configuration file lower in the file hierarchy supersedes
+one above it.

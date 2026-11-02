@@ -1,0 +1,82 @@
+name: test
+
+defaults:
+  run:
+    shell: bash -eo pipefail {0}
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  run-tests:
+    name: test (Xcode ${{ matrix.xcode }}, ${{ matrix.label }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - xcode: '26.2'
+            runner: macos-26
+            destination: 'platform=macOS'
+            label: 'macOS'
+            cache-key: xcode-26.2-macos
+          - xcode: '26.2'
+            runner: macos-26
+            destination: 'platform=iOS Simulator,name=iPhone 17,OS=26.2'
+            label: 'iOS 26.2'
+            cache-key: xcode-26.2-ios
+          - xcode: '26.2'
+            runner: macos-26
+            destination: 'platform=tvOS Simulator,name=Apple TV 4K (3rd generation),OS=26.2'
+            label: 'tvOS 26.2'
+            cache-key: xcode-26.2-tvos
+          - xcode: '26.2'
+            runner: macos-26
+            sdk: watchsimulator
+            label: 'watchOS 26.2'
+            cache-key: xcode-26.2-watchos
+
+          - xcode: '26.6'
+            runner: macos-26
+            destination: 'platform=macOS'
+            label: 'macOS'
+            cache-key: xcode-26.6-macos
+          - xcode: '26.6'
+            runner: macos-26
+            destination: 'platform=iOS Simulator,name=iPhone 17,OS=26.5'
+            label: 'iOS 26.5'
+            cache-key: xcode-26.6-ios
+          - xcode: '26.6'
+            runner: macos-26
+            destination: 'platform=tvOS Simulator,name=Apple TV 4K (3rd generation),OS=26.5'
+            label: 'tvOS 26.5'
+            cache-key: xcode-26.6-tvos
+          - xcode: '26.6'
+            runner: macos-26
+            sdk: watchsimulator
+            label: 'watchOS 26.5'
+            cache-key: xcode-26.6-watchos
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+      - name: Run tests
+        env:
+          DESTINATION: ${{ matrix.destination }}
+          SDK: ${{ matrix.sdk }}
+          DERIVED_DATA_PATH: build/DerivedData/${{ matrix.cache-key }}
+          XCODE_VERSION: ${{ matrix.xcode }}
+          FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: '60'
+          FASTLANE_XCODEBUILD_SETTINGS_RETRIES: '4'
+        run: bundle exec fastlane test_ci

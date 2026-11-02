@@ -1,69 +1,78 @@
 import UIKit
 import Combine
+@_spi(SinchChat) import SinchPushSDK
 
 public final class SinchChatSDK: @unchecked Sendable {
-    
+
     /// Contains all methods regarding push notifications. To be able to use push notifications you need to call `setIdentity` method.
-    private var _push: SinchPush?
+    ///
+    /// Push lives in `SinchPushSDK`. Chat re-exports it, and this forwards, so existing integrations keep calling
+    /// `SinchChatSDK.shared.push`.
     public var push: SinchPush {
-        if let existing = _push { return existing }
-        let new = MainActor.assumeIsolated { DefaultSinchPush(pushNotificationHandler: pushNotificationHandler) }
-        _push = new
-        return new
+        SinchPushSDK.shared.push
     }
-    
+
     /// Contains all methods connected with Chat. Before using the chat you should use method `setIdentity`.
     public var chat: SinchChat { _chat }
-    
+
     public static let shared = SinchChatSDK()
-    
-    let pushNotificationHandler: PushNotificationHandler = DefaultPushNotificationHandler()
-    lazy var _chat = DefaultSinchChat(pushPermissionHandler: pushNotificationHandler)
+
+    lazy var _chat = DefaultSinchChat(pushPermissionHandler: pushPermissionHandler)
 
     public var disabledFeatures: Set<SinchEnabledFeatures> = []
-    
+
     var options: SinchInitializeOptions?
-    
-    private(set) var config: SinchSDKConfig.AppConfig? {
+
+    /// The config of the latest identity. Only `SinchPushSDK` reads its fields: they are internal to that module, so
+    /// chat keeps it solely as the marker that an identity was configured, and takes the region from the push token.
+    private(set) var config: SinchSDKConfig.AppConfig?
+
+    /// The identity and token state of the push SDK, for the chat RPCs.
+    var tokenProvider: ChatTokenProvider? {
         didSet {
-            _chat.region = config?.region
+            _chat.tokenProvider = tokenProvider
         }
     }
-    var authDataSource: AuthDataSource? {
+
+    /// The region of the latest identity, for the chat gRPC host.
+    var region: Region? {
         didSet {
-            pushNotificationHandler.authDataSource = authDataSource
-            _chat.authDataSource = authDataSource
+            _chat.region = region
         }
     }
+
     var apiClient: APIClient? {
         didSet {
-            pushNotificationHandler.apiClient = apiClient
             _chat.apiClient = apiClient
         }
     }
-    
+
     public var additionalMetadata: SinchMetadataArray = []
     public lazy var eventListenerSubject = PassthroughSubject<SinchPluginEvent, Never>()
     public lazy var customMessageTypeHandlers: [(_ model: Message) -> Message?] = []
     public lazy var customMessageTypeHandlersAsync: [(Message, @escaping (Message?) -> Void) -> Void] = []
-    
-    private init() {}
-    
+
+    private let pushPermissionHandler = DefaultPushPermissionHandler()
+
     /// Initialization of SinchSDK
     /// - Parameters:
     ///   - Parameter options: Run sdk with options f.e: using sandbox push notification environment.
     public func initialize(_ options: SinchInitializeOptions = SinchInitializeOptions.standard) {
-        if options.pushNotificationsMode != .off {
-            registerForRemoteNotificationIfNeeded()
-            setPushRepositoryIfPossible()
-        }
+        self.options = options
+
+        // Push brings the identity, APNs, the relay, delivery reports and the in-app alerts.
+        SinchPushSDK.shared.initialize(
+            options: SinchPushInitializeOptions(environment: options.pushNotificationsMode.pushEnvironment,
+                                                appGroup: options.appGroup)
+        )
+        // Chat handles its own payloads as a registered addressee of the push APNs handler.
+        _chat.initilize()
+
         if options.plugins.isEmpty == false {
             options.plugins.forEach({ $0.initialize(methods: self) })
         }
-        self.options = options
-        
     }
-    
+
     /// Sets identity of the user.
     /// This method must be called `as soon as` we can authorize the user.
     /// Calling this method once again causes the token will be `regenerated`.
@@ -74,124 +83,70 @@ public final class SinchChatSDK: @unchecked Sendable {
     ///   - completion: Callback with result of user authorization.
     public func setIdentity(with config: SinchSDKConfig.AppConfig, identity: SinchSDKIdentity,
                             completion: (@Sendable (Result<Void, SinchSDKIdentityError>) -> Void)? = nil) {
-        self.config = config
-        let newApiClient = Default2APIClient(region: config.region)!
-        apiClient = newApiClient
-        let keychainStorage = KeychainAuthStorage(config: config)
-        _ = AuthStorageMigrator(keychainStorage: keychainStorage)
-        authDataSource = DefaultAuthDataSource(
-            authRepository: DefaultAuthRepository(
-                config: config,
-                client: newApiClient
-            ),
-            authStorage: keychainStorage
-        )
-
-        let capturedCompletion = completion
-        authDataSource?.generateToken(config: config, identity: identity, completion: { result in
-            self.setPushRepositoryIfPossible()
-
-            switch result {
-            case .failure(let error):
-                switch error {
-                case .internalError(tracingID: let tracingID):
-                    capturedCompletion?(.failure(.internalError(tracingID: tracingID)))
-                default:
-                    capturedCompletion?(.failure(.internalError(tracingID: "unknown")))
-                }
-            case .success(let token):
-                SinchChatSDK.shared.eventListenerSubject.send(.didSetIdentity(token))
-                self.reinitializeChat()
-
-                capturedCompletion?(.success(()))
-
+        SinchPushSDK.shared.setIdentity(with: config, identity: identity) { [weak self] result in
+            guard case .success = result else {
+                completion?(result)
+                return
             }
-        })
+            guard let self else {
+                completion?(result)
+                return
+            }
+            self.config = config
+            let provider = SinchPushSDK.shared.tokenProvider
+            self.tokenProvider = provider
+            if let region = provider.currentRegion {
+                // A new identity can point at another region: replace the chat channel, as `setIdentity` always did.
+                self.region = region
+                if let client = Default2APIClient(region: region) {
+                    self.apiClient = client
+                }
+            }
+            if let token = provider.currentAuthorization {
+                Self.shared.eventListenerSubject.send(.didSetIdentity(token))
+            }
+            self.reinitializeChat()
+
+            completion?(.success(()))
+        }
     }
-    
+
     /// Removes identity of the user.
     /// This method is logging out user. It removes token and other user data from the app.
     public func removeIdentity(_ completion: (@Sendable (Result<Void, Error>) -> Void)?) {
-        
-        guard let authDataSource = authDataSource else {
-            completion?(.success(()))
-            return
-        }
-        let currentAuthDataSource = authDataSource
-        let tempPushNottifications = DefaultPushNotificationHandler()
-        tempPushNottifications.authDataSource = authDataSource
-        tempPushNottifications.pushRepository = DefaultPushRepository(region: config?.region ?? .EU1,
-                                                                      authDataSource: authDataSource)
-        tempPushNottifications.unsubscribe { result in
-            switch result {
-            case .success:
-                currentAuthDataSource.deleteToken()
+        SinchPushSDK.shared.removeIdentity { result in
+            if case .success = result {
                 SinchChatSDK.shared.eventListenerSubject.send(.didRemoveIdentity)
-
-                completion?(.success(()))
-            case .failure(let error):
-                completion?(.failure(error))
             }
+            completion?(result)
         }
     }
-    // MARK: - Private
-    
-    private func registerForRemoteNotificationIfNeeded() {
-        if !UIApplication.shared.isRegisteredForRemoteNotifications {
-            UIApplication.shared.registerForRemoteNotifications()
-        }
-    }
-    
-    private func setPushRepositoryIfPossible() {
-        guard let authDataSource = authDataSource, authDataSource.isLoggedIn, let config = config else {
-            return
-        }
-        Logger.verbose("--------- SET PUSH REPOSITORY")
-        pushNotificationHandler.pushRepository = DefaultPushRepository(region: config.region,
-                                                                       authDataSource: authDataSource)
-    }
-    
+
     private func reinitializeChat() {
-             
         _chat.initilize()
-
     }
-    
+
+    /// The version chat reports in the metadata of its RPCs. Push reports its own.
     static var version: String {
-        "0.1.18" + (SinchChatSDK.shared.options?.pushNotificationsMode == .prod ? "-prod" : "-dev")
+        "2.0.0"
     }
-}
-
-public enum SinchSDKIdentity: Codable, Equatable, Sendable {
-    /// Creates anonymous session with random user identifier.
-    case anonymous
-    /// Creates session with a specific user identifier using a pre-computed
-    /// HMAC-SHA512(uuid, appSecret) digest as `secret`. Retained for
-    /// backwards compatibility with existing integrations.
-    case selfSigned(userId: String, secret: String)
-    /// Creates session with a specific user identifier. The SDK computes
-    /// HMAC-SHA512(uuid, appSecret) internally so host apps never handle
-    /// the hash directly. The raw `appSecret` is held in memory only for
-    /// the duration of `setIdentity` and is not persisted.
-    case selfSignedWithAppSecret(userId: String, appSecret: String)
-}
-
-public enum SinchSDKIdentityError: Error {
-    /// Our internal issue.
-    case internalError(tracingID: String)
-    /// Secret is invalid. Make sure it is generated correctly.
-    case invalidSecret
 }
 
 public struct SinchInitializeOptions: Sendable {
     public var pushNotificationsMode: SinchPushNotificationsMode = .prod
     public var plugins: [SinchPlugin] = []
+    /// The App Group the app shares with its Notification Service Extension. Set it to let the extension report
+    /// the delivery of a push (see `Documentation/NotificationServiceExtension.md`): the SDK then copies the access
+    /// token and the push API URL, never the identity secret, into the group's container. `nil` (the default)
+    /// shares nothing.
+    public var appGroup: String?
 
     public static let standard = SinchInitializeOptions(pushNotificationMode: .prod)
 
-    public init(pushNotificationMode: SinchPushNotificationsMode, plugins: [SinchPlugin] = []) {
+    public init(pushNotificationMode: SinchPushNotificationsMode, plugins: [SinchPlugin] = [], appGroup: String? = nil) {
         self.pushNotificationsMode = pushNotificationMode
         self.plugins = plugins
+        self.appGroup = appGroup
     }
 }
 
@@ -199,8 +154,17 @@ public enum SinchPushNotificationsMode: Sendable {
     case prod
     case sandbox
     case off
-    
+
+    /// The push SDK's environment for this mode.
+    var pushEnvironment: SinchPushEnvironment {
+        switch self {
+        case .prod: return .prod
+        case .sandbox: return .sandbox
+        case .off: return .off
+        }
+    }
 }
+
 public enum SinchEnabledFeatures {
     case sendImageMessageFromGallery
     case sendVideoMessageFromGallery

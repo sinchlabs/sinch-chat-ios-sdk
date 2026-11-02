@@ -7,41 +7,28 @@
 
 import XCTest
 @testable import SinchChatSDK
-import GRPC
+import GRPCCore
 
-final class MockAuthDataSource: AuthDataSource {
+final class MockTokenProvider: ChatTokenProvider, @unchecked Sendable {
+    var currentAuthorization: AuthModel?
+
     var isLoggedIn: Bool = false
-    
-    var identityHashValue: String?
-    
-    var currentConfigID: String = ""
-    
-    var generateTokenCompletion: Result<Void, AuthRepositoryError> = .success(())
-    var isTokenDeleted = false
-    
-    func generateToken(config: SinchSDKConfig.AppConfig, identity: SinchSDKIdentity, completion: @escaping (Result<Void, AuthRepositoryError>) -> Void) {
-        isLoggedIn = true
-        completion(generateTokenCompletion)
-    }
-    
-    func signRequest(_ callOptions: GRPC.CallOptions) throws -> GRPC.CallOptions {
-        return .standardCallOptions
-    }
-    
-    func deleteToken() {
-        isLoggedIn = true
+
+    func currentAccessToken() throws -> String {
+        "token"
     }
 }
 
+@MainActor
 final class RootCordinatorTests: XCTestCase {
     var rootCordinator: RootCoordinator!
     
     override func setUpWithError() throws {
-        rootCordinator = DefaultRootCoordinator(messageDataSource: MessageDataSourceStub(), authDataSource: MockAuthDataSource(), pushPermissionHandler: PushNotificationHandlerStub())
+        rootCordinator = DefaultRootCoordinator(messageDataSource: MessageDataSourceStub(), tokenProvider: MockTokenProvider(), pushPermissionHandler: PushNotificationHandlerStub())
     }
 
     func testCreatingOfChatViewController() {
-        let viewController =  rootCordinator.getRootViewController(uiConfig: .defaultValue, localizationConfig: .defaultValue)
+        let viewController =  rootCordinator.getRootViewController(uiConfig: .defaultValue, localizationConfig: .defaultValue, sendDocumentAsText: false)
         XCTAssertNotNil(viewController)
 
     }

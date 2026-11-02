@@ -5,7 +5,7 @@ protocol InboxViewModel {
     
     var delegate: InboxViewModelDelegate? { get }
     var apiClient: APIClient { get }
-    var authDataSource: AuthDataSource { get }
+    var tokenProvider: ChatTokenProvider { get }
     var channelsArray: [Sinch_Chat_Sdk_V1alpha2_Channel] { get }
     var isLoadingMore: Bool { get }
 
@@ -35,7 +35,7 @@ final class DefaultInboxViewModel: InboxViewModel, @unchecked Sendable {
     weak var delegate: InboxViewModelDelegate?
     private let pushPermissionHandler: PushNofiticationPermissionHandler
     var apiClient: APIClient
-    var authDataSource: AuthDataSource
+    var tokenProvider: ChatTokenProvider
     var dataSource: DefaultInboxDataSource // todo protocol
     var channelsArray: [Sinch_Chat_Sdk_V1alpha2_Channel] = []
     var firstPage: Bool = true
@@ -52,11 +52,11 @@ final class DefaultInboxViewModel: InboxViewModel, @unchecked Sendable {
         }
     }
     
-    init(pushPermissionHandler: PushNofiticationPermissionHandler, apiClient: APIClient, authDataSource: AuthDataSource) {
+    init(pushPermissionHandler: PushNofiticationPermissionHandler, apiClient: APIClient, tokenProvider: ChatTokenProvider) {
         self.pushPermissionHandler = pushPermissionHandler
         self.apiClient = apiClient
-        self.authDataSource = authDataSource
-        self.dataSource = DefaultInboxDataSource(apiClient:  self.apiClient, authDataSource:  self.authDataSource)
+        self.tokenProvider = tokenProvider
+        self.dataSource = DefaultInboxDataSource(apiClient:  self.apiClient, tokenProvider:  self.tokenProvider)
         dataSource.delegate = self
     }
     
@@ -136,7 +136,7 @@ final class DefaultInboxViewModel: InboxViewModel, @unchecked Sendable {
 
                 case .failure(let error):
                     self.isLoadingMore = false
-                    Logger.verbose(error)
+                    chatLog(error)
                     self.error = error
                     self.delegate?.handleError(error)
                 }
@@ -180,7 +180,7 @@ final class DefaultInboxViewModel: InboxViewModel, @unchecked Sendable {
                 let nsError = error
                 Task { @MainActor [weak self] in
                     guard let self = self else { return }
-                    Logger.verbose(nsError)
+                    chatLog(nsError)
                     self.error = nsError
                 }
             }

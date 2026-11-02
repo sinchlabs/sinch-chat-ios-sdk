@@ -1,0 +1,35 @@
+// Trimmed copy of DevApp/proto/sinch/chat/sdk/v1alpha2/sdk.proto (Sinch chat SDK v1alpha2).
+//
+// Only the token RPCs are kept: the upstream file also declares Send / GetHistory /
+// SubscribeToStream / UploadMedia / ... whose messages drag in the whole
+// sinch.conversationapi.* tree. Field numbers and types are copied verbatim from
+// upstream, so the wire format is identical.
+//
+// Upstream: DevApp/proto/sinch/chat/sdk/v1alpha2/sdk.proto
+
+syntax = "proto3";
+
+package sinch.chat.sdk.v1alpha2;
+
+option go_package = "sinch-sdk-send-service/pkg/gen/proto/sinch/chat/sdk/v1alpha2";
+option java_package = "com.sinch.chat.sdk.v1alpha2";
+
+message IssueAnonymousTokenRequest {
+    string project_id = 1;
+    string client_id = 2;
+}
+
+message IssueAnonymousTokenResponse {
+    string access_token = 1;
+}
+
+message IssueTokenWithSignedUuidRequest {
+    string project_id = 1;
+    string client_id = 2;
+    string uuid = 3;
+    string uuid_hash = 4;
+}
+
+message IssueTokenWithSignedUuidResponse {
+    string access_token = 1;
+}

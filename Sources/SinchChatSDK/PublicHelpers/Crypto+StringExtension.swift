@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 public extension String {
 
@@ -11,17 +12,16 @@ public extension String {
     ///   removed algorithm returns an empty string instead of crashing.
     @available(*, deprecated, message: "Use SinchSDKIdentity.selfSignedWithAppSecret — the SDK computes the HMAC internally.")
     func hmac(algorithm: CryptoAlgorithm, key: String) -> String {
-        do {
-            switch algorithm {
-            case .SHA512:
-                return try HMACSigner.sha512Hex(message: self, key: key)
-            default:
-                // Other algorithms were never used by the SDK; returning an
-                // empty string avoids surfacing CommonCrypto APIs in the
-                // public surface after the migration.
-                return ""
-            }
-        } catch {
+        switch algorithm {
+        case .SHA512:
+            // Push owns the identity and its HMAC; this public helper only needs SHA-512 locally.
+            guard !isEmpty, !key.isEmpty else { return "" }
+            let mac = HMAC<SHA512>.authenticationCode(for: Data(utf8), using: SymmetricKey(data: Data(key.utf8)))
+            return mac.map { String(format: "%02x", $0) }.joined()
+        default:
+            // Other algorithms were never used by the SDK; returning an
+            // empty string avoids surfacing CommonCrypto APIs in the
+            // public surface after the migration.
             return ""
         }
     }

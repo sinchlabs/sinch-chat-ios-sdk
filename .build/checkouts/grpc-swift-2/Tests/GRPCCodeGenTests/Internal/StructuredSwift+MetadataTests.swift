@@ -1,0 +1,298 @@
+/*
+ * Copyright 2024, gRPC Authors All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import Testing
+
+@testable import GRPCCodeGen
+
+extension StructuredSwiftTests {
+  @Suite("Metadata")
+  struct Metadata {
+    @Test("typealias Input = <Name>", arguments: AccessModifier.allCases)
+    @available(gRPCSwift 2.0, *)
+    func methodInputTypealias(access: AccessModifier) {
+      let decl: TypealiasDescription = .methodInput(accessModifier: access, name: "Foo")
+      let expected = "\(access) typealias Input = Foo"
+      #expect(render(.typealias(decl)) == expected)
+    }
+
+    @Test("typealias Output = <Name>", arguments: AccessModifier.allCases)
+    @available(gRPCSwift 2.0, *)
+    func methodOutputTypealias(access: AccessModifier) {
+      let decl: TypealiasDescription = .methodOutput(accessModifier: access, name: "Foo")
+      let expected = "\(access) typealias Output = Foo"
+      #expect(render(.typealias(decl)) == expected)
+    }
+
+    struct RPCType: CaseIterable {
+      var name: String
+      var isInputStreaming: Bool
+      var isOutputStreaming: Bool
+
+      static let allCases: [Self] = [
+        RPCType(name: "unary", isInputStreaming: false, isOutputStreaming: false),
+        RPCType(name: "clientStreaming", isInputStreaming: true, isOutputStreaming: false),
+        RPCType(name: "serverStreaming", isInputStreaming: false, isOutputStreaming: true),
+        RPCType(name: "bidirectionalStreaming", isInputStreaming: true, isOutputStreaming: true),
+      ]
+    }
+
+    @Test(
+      "static let descriptor = GRPCCore.MethodDescriptor(...)",
+      arguments: AccessModifier.allCases,
+      RPCType.allCases
+    )
+    @available(gRPCSwift 2.0, *)
+    func staticMethodDescriptorProperty(access: AccessModifier, rpcType: RPCType) {
+      let decl: VariableDescription = .methodDescriptor(
+        accessModifier: access,
+        literalFullyQualifiedService: "foo.Foo",
+        literalMethodName: "Bar",
+        isInputStreaming: rpcType.isInputStreaming,
+        isOutputStreaming: rpcType.isOutputStreaming
+      )
+
+      let expected = """
+        \(access) static let descriptor = GRPCCore.MethodDescriptor(
+          service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "foo.Foo"),
+          method: "Bar",
+          type: .\(rpcType.name)
+        )
+        """
+      #expect(render(.variable(decl)) == expected)
+    }
+
+    @Test(
+      "static let descriptor = GRPCCore.ServiceDescriptor(fullyQualifiedService:)",
+      arguments: AccessModifier.allCases
+    )
+    @available(gRPCSwift 2.0, *)
+    func staticServiceDescriptorProperty(access: AccessModifier) {
+      let decl: VariableDescription = .serviceDescriptor(
+        accessModifier: access,
+        literalFullyQualifiedService: "foo.Bar"
+      )
+
+      let expected = """
+        \(access) static let descriptor = GRPCCore.ServiceDescriptor(fullyQualifiedService: "foo.Bar")
+        """
+      #expect(render(.variable(decl)) == expected)
+    }
+
+    @Test("extension GRPCCore.ServiceDescriptor { ... }", arguments: AccessModifier.allCases)
+    @available(gRPCSwift 2.0, *)
+    func staticServiceDescriptorPropertyExtension(access: AccessModifier) {
+      let decl: ExtensionDescription = .serviceDescriptor(
+        accessModifier: access,
+        propertyName: "foo",
+        literalFullyQualifiedService: "echo.EchoService"
+      )
+
+      let expected = """
+        extension GRPCCore.ServiceDescriptor {
+          /// Service descriptor for the "echo.EchoService" service.
+          \(access) static let foo = GRPCCore.ServiceDescriptor(fullyQualifiedService: "echo.EchoService")
+        }
+        """
+      #expect(render(.extension(decl)) == expected)
+    }
+
+    @Test(
+      "static let descriptors: [GRPCCore.MethodDescriptor] = [...]",
+      arguments: AccessModifier.allCases
+    )
+    @available(gRPCSwift 2.0, *)
+    func staticMethodDescriptorsArray(access: AccessModifier) {
+      let decl: VariableDescription = .methodDescriptorsArray(
+        accessModifier: access,
+        methodNamespaceNames: ["Foo", "Bar", "Baz"]
+      )
+
+      let expected = """
+        \(access) static let descriptors: [GRPCCore.MethodDescriptor] = [
+          Foo.descriptor,
+          Bar.descriptor,
+          Baz.descriptor
+        ]
+        """
+      #expect(render(.variable(decl)) == expected)
+    }
+
+    @Test("enum <Method>: Sendable { ... }", arguments: AccessModifier.allCases)
+    @available(gRPCSwift 2.0, *)
+    func methodNamespaceEnum(access: AccessModifier) {
+      let decl: EnumDescription = .methodNamespace(
+        accessModifier: access,
+        name: "Foo",
+        literalMethod: "Foo",
+        literalFullyQualifiedService: "bar.Bar",
+        inputType: "FooInput",
+        outputType: "FooOutput",
+        isInputStreaming: false,
+        isOutputStreaming: false
+      )
+
+      let expected = """
+        \(access) enum Foo: Sendable {
+          /// Request type for "Foo".
+          \(access) typealias Input = FooInput
+          /// Response type for "Foo".
+          \(access) typealias Output = FooOutput
+          /// Descriptor for "Foo".
+          \(access) static let descriptor = GRPCCore.MethodDescriptor(
+            service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "bar.Bar"),
+            method: "Foo",
+            type: .unary
+          )
+        }
+        """
+      #expect(render(.enum(decl)) == expected)
+    }
+
+    @Test("enum Method: Sendable { ... }", arguments: AccessModifier.allCases)
+    @available(gRPCSwift 2.0, *)
+    func methodsNamespaceEnum(access: AccessModifier) {
+      let decl: EnumDescription = .methodsNamespace(
+        accessModifier: access,
+        literalFullyQualifiedService: "bar.Bar",
+        methods: [
+          .init(
+            documentation: "",
+            name: MethodName(identifyingName: "Foo", typeName: "Foo", functionName: "foo"),
+            isInputStreaming: false,
+            isOutputStreaming: false,
+            inputType: "FooInput",
+            outputType: "FooOutput"
+          )
+        ]
+      )
+
+      let expected = """
+        \(access) enum Method: Sendable {
+          /// Namespace for "Foo" metadata.
+          \(access) enum Foo: Sendable {
+            /// Request type for "Foo".
+            \(access) typealias Input = FooInput
+            /// Response type for "Foo".
+            \(access) typealias Output = FooOutput
+            /// Descriptor for "Foo".
+            \(access) static let descriptor = GRPCCore.MethodDescriptor(
+              service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "bar.Bar"),
+              method: "Foo",
+              type: .unary
+            )
+          }
+          /// Descriptors for all methods in the "bar.Bar" service.
+          \(access) static let descriptors: [GRPCCore.MethodDescriptor] = [
+            Foo.descriptor
+          ]
+        }
+        """
+      #expect(render(.enum(decl)) == expected)
+    }
+
+    @Test("enum Method: Sendable { ... } (no methods)", arguments: AccessModifier.allCases)
+    @available(gRPCSwift 2.0, *)
+    func methodsNamespaceEnumNoMethods(access: AccessModifier) {
+      let decl: EnumDescription = .methodsNamespace(
+        accessModifier: access,
+        literalFullyQualifiedService: "bar.Bar",
+        methods: []
+      )
+
+      let expected = """
+        \(access) enum Method: Sendable {
+          /// Descriptors for all methods in the "bar.Bar" service.
+          \(access) static let descriptors: [GRPCCore.MethodDescriptor] = []
+        }
+        """
+      #expect(render(.enum(decl)) == expected)
+    }
+
+    @Test("enum <Service>: Sendable { ... }", arguments: AccessModifier.allCases)
+    @available(gRPCSwift 2.0, *)
+    func serviceNamespaceEnum(access: AccessModifier) {
+      let decl: EnumDescription = .serviceNamespace(
+        accessModifier: access,
+        name: "Foo",
+        literalFullyQualifiedService: "Foo",
+        methods: [
+          .init(
+            documentation: "",
+            name: MethodName(identifyingName: "Bar", typeName: "Bar", functionName: "bar"),
+            isInputStreaming: false,
+            isOutputStreaming: false,
+            inputType: "BarInput",
+            outputType: "BarOutput"
+          )
+        ]
+      )
+
+      let expected = """
+        \(access) enum Foo: Sendable {
+          /// Service descriptor for the "Foo" service.
+          \(access) static let descriptor = GRPCCore.ServiceDescriptor(fullyQualifiedService: "Foo")
+          /// Namespace for method metadata.
+          \(access) enum Method: Sendable {
+            /// Namespace for "Bar" metadata.
+            \(access) enum Bar: Sendable {
+              /// Request type for "Bar".
+              \(access) typealias Input = BarInput
+              /// Response type for "Bar".
+              \(access) typealias Output = BarOutput
+              /// Descriptor for "Bar".
+              \(access) static let descriptor = GRPCCore.MethodDescriptor(
+                service: GRPCCore.ServiceDescriptor(fullyQualifiedService: "Foo"),
+                method: "Bar",
+                type: .unary
+              )
+            }
+            /// Descriptors for all methods in the "Foo" service.
+            \(access) static let descriptors: [GRPCCore.MethodDescriptor] = [
+              Bar.descriptor
+            ]
+          }
+        }
+        """
+      #expect(render(.enum(decl)) == expected)
+    }
+
+    @Test("enum <Service>: Sendable { ... } (no methods)", arguments: AccessModifier.allCases)
+    @available(gRPCSwift 2.0, *)
+    func serviceNamespaceEnumNoMethods(access: AccessModifier) {
+      let decl: EnumDescription = .serviceNamespace(
+        accessModifier: access,
+        name: "Foo",
+        literalFullyQualifiedService: "Foo",
+        methods: []
+      )
+
+      let expected = """
+        \(access) enum Foo: Sendable {
+          /// Service descriptor for the "Foo" service.
+          \(access) static let descriptor = GRPCCore.ServiceDescriptor(fullyQualifiedService: "Foo")
+          /// Namespace for method metadata.
+          \(access) enum Method: Sendable {
+            /// Descriptors for all methods in the "Foo" service.
+            \(access) static let descriptors: [GRPCCore.MethodDescriptor] = []
+          }
+        }
+        """
+
+      #expect(render(.enum(decl)) == expected)
+    }
+  }
+}

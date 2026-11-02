@@ -1,5 +1,6 @@
 import UIKit
 import GRPCCore
+@_spi(SinchChat) import SinchPushSDK
 
 extension CallOptions {
 
@@ -21,7 +22,7 @@ extension SinchChatSDK {
         metadata.addString(Bundle.main.bundleIdentifier ?? "", forKey: "bundleID")
         metadata.addString((Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "",
                            forKey: "appVersion")
-        metadata.addString(SinchChatSDK.shared.config?.locale.identifier ?? "", forKey: "lang")
+        metadata.addString(SinchPushSDK.shared.locale.identifier, forKey: "lang")
         metadata.addString(SinchChatSDK.version, forKey: "sdkVersion")
         metadata.addString(UIDevice.current.systemName, forKey: "system")
         metadata.addString(UIDevice.current.systemVersion, forKey: "systemVersion")
@@ -40,7 +41,7 @@ extension SinchChatSDK {
     }
 }
 
-extension AuthDataSource {
+extension ChatTokenProvider {
 
     /// Build a `ClientRequest` for the given input, attaching the standard
     /// SDK metadata plus the current access token (if any).

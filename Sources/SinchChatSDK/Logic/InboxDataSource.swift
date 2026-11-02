@@ -43,7 +43,7 @@ private struct InboxState: Sendable {
 
 final class DefaultInboxDataSource: InboxDataSource, @unchecked Sendable {
 
-    var authDataSource: AuthDataSource
+    var tokenProvider: ChatTokenProvider
     var client: APIClient
 
     weak var delegate: InboxDataSourceDelegate?
@@ -55,9 +55,9 @@ final class DefaultInboxDataSource: InboxDataSource, @unchecked Sendable {
 
     private let jsonEncoder = JSONEncoder()
 
-    init(apiClient: APIClient, authDataSource: AuthDataSource, options: GetChatViewControllerOptions? = nil) {
+    init(apiClient: APIClient, tokenProvider: ChatTokenProvider, options: GetChatViewControllerOptions? = nil) {
         self.client = apiClient
-        self.authDataSource = authDataSource
+        self.tokenProvider = tokenProvider
         self.options = options
     }
 
@@ -98,7 +98,7 @@ final class DefaultInboxDataSource: InboxDataSource, @unchecked Sendable {
 
         let signed: ClientRequest<Sinch_Chat_Sdk_V1alpha2_GetChannelsRequest>
         do {
-            signed = try authDataSource.signedRequest(request)
+            signed = try tokenProvider.signedRequest(request)
         } catch {
             throw InboxDataSourceError.notLoggedIn
         }
@@ -160,7 +160,7 @@ final class DefaultInboxDataSource: InboxDataSource, @unchecked Sendable {
         let request = Sinch_Chat_Sdk_V1alpha2_SubscribeToChannelsStreamRequest()
         let signed: ClientRequest<Sinch_Chat_Sdk_V1alpha2_SubscribeToChannelsStreamRequest>
         do {
-            signed = try authDataSource.signedRequest(request)
+            signed = try tokenProvider.signedRequest(request)
         } catch {
             continuation.finish()
             return
@@ -242,11 +242,11 @@ final class DefaultInboxDataSource: InboxDataSource, @unchecked Sendable {
 
     func cancelSubscription() {
         let task = state.withLock { state -> Task<Void, Never>? in
-            let t = state.subscriptionTask
+            let pending = state.subscriptionTask
             state.subscriptionTask = nil
             state.nextPageToken = nil
             state.firstPage = true
-            return t
+            return pending
         }
         task?.cancel()
     }

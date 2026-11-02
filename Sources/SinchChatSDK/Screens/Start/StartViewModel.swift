@@ -10,20 +10,20 @@ private enum AgentDebugLog {
     static func write(_ payload: [String: Any]) {
         var line = "{"
         var first = true
-        for (k, v) in payload {
+        for (key, value) in payload {
             if !first { line += "," }
             first = false
             let json: String
-            if let s = v as? String {
-                json = "\"\(s.replacingOccurrences(of: "\"", with: "\\\""))\""
-            } else if let b = v as? Bool {
-                json = b ? "true" : "false"
-            } else if let n = v as? NSNumber {
-                json = n.stringValue
+            if let text = value as? String {
+                json = "\"\(text.replacingOccurrences(of: "\"", with: "\\\""))\""
+            } else if let flag = value as? Bool {
+                json = flag ? "true" : "false"
+            } else if let number = value as? NSNumber {
+                json = number.stringValue
             } else {
-                json = "\"\(v)\""
+                json = "\"\(value)\""
             }
-            line += "\"\(k)\":\(json)"
+            line += "\"\(key)\":\(json)"
         }
         line += "}\n"
 
@@ -193,6 +193,8 @@ final class DefaultStartViewModel: StartViewModel {
                 self?.notificationPermission.askForPermissions(completion: nil)
             case .notDetermined:
                 self?.notificationPermission.askForPermissions(completion: nil)
+            @unknown default:
+                break
             }
         }
     }
@@ -613,7 +615,7 @@ final class DefaultStartViewModel: StartViewModel {
                 let nsError = error
                 Task { @MainActor [weak self] in
                     guard let self = self else { return }
-                    Logger.verbose(nsError)
+                    chatLog(nsError)
                     self.error = nsError
                 }
             }
@@ -647,7 +649,7 @@ final class DefaultStartViewModel: StartViewModel {
                 let nsError = error
                 Task { @MainActor [weak self] in
                     guard let self = self else { return }
-                    Logger.verbose(nsError)
+                    chatLog(nsError)
                     self.error = nsError
                     self.delegate?.errorLoadingMoreHistory(error: nsError)
                 }
@@ -757,7 +759,7 @@ final class DefaultStartViewModel: StartViewModel {
                     let nsError = error
                     Task { @MainActor [weak self] in
                         guard let self = self else { return }
-                        Logger.verbose(nsError)
+                        chatLog(nsError)
                         self.error = nsError
                         // The optimistic insert already showed a `.sending`
                         // cell; flip it to `.notSent` in place instead of
@@ -862,7 +864,7 @@ final class DefaultStartViewModel: StartViewModel {
                 let nsError = error
                 Task { @MainActor in
                     self.isEventSent = false
-                    Logger.verbose(nsError)
+                    chatLog(nsError)
                 }
             }
         }
@@ -897,7 +899,7 @@ final class DefaultStartViewModel: StartViewModel {
                 let nsError = error
                 Task { @MainActor [weak self] in
                     guard let self = self else { return }
-                    Logger.verbose(nsError)
+                    chatLog(nsError)
                     self.error = nsError
                     completion(.failure(nsError))
                 }

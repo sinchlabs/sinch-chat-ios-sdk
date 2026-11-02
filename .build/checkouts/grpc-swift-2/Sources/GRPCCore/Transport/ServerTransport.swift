@@ -1,0 +1,83 @@
+/*
+ * Copyright 2023, gRPC Authors All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/// A type that provides a bidirectional communication channel with a client.
+///
+/// The server transport is responsible for handling connections created by a client and
+/// multiplexing those connections into streams corresponding to RPCs.
+///
+/// gRPC provides an in-process transport in the `GRPCInProcessTransport` module and an HTTP/2
+/// transport built on top of SwiftNIO in the https://github.com/grpc/grpc-swift-nio-transport
+/// package.
+@available(gRPCSwift 2.0, *)
+public protocol ServerTransport<Bytes>: Sendable {
+  /// The bag-of-bytes type used by the transport.
+  associatedtype Bytes: GRPCContiguousBytes & Sendable
+
+  typealias Inbound = RPCAsyncSequence<RPCRequestPart<Bytes>, any Error>
+  typealias Outbound = RPCWriter<RPCResponsePart<Bytes>>.Closable
+
+  /// Provides the transport with information about the server before it starts listening.
+  ///
+  /// The server calls this method exactly once, before calling ``listen(streamHandler:)``.
+  /// Transports can use the provided context to set up any state that depends on the registered
+  /// methods.
+  @available(gRPCSwift 2.3, *)
+  func configure(context: GRPCServerContext)
+
+  /// Starts the transport.
+  ///
+  /// Implementations will typically bind to a listening port when you call this function
+  /// and start accepting new connections. Implementations hand each accepted inbound RPC stream
+  /// over to the provided `streamHandler` to handle accordingly.
+  ///
+  /// Call ``beginGracefulShutdown()`` to stop the transport from accepting new streams.
+  /// Transports must allow existing streams to complete naturally. However, transports may also
+  /// enforce a grace period after which they may cancel any open streams. Alternatively, cancel
+  /// the task running ``listen(streamHandler:)`` to abruptly close connections and streams.
+  func listen(
+    streamHandler:
+      @escaping @Sendable (
+        _ stream: RPCStream<Inbound, Outbound>,
+        _ context: ServerContext
+      ) async -> Void
+  ) async throws
+
+  /// Indicates to the transport that it should not accept new streams.
+  ///
+  /// The transport permits existing streams to run to completion. However, it may also enforce
+  /// a grace period, after which it cancels remaining streams.
+  func beginGracefulShutdown()
+}
+
+@available(gRPCSwift 2.3, *)
+extension ServerTransport {
+  public func configure(context: GRPCServerContext) {
+    // Default implementation to avoid API breakage.
+  }
+}
+
+/// Information about the gRPC server passed to it before it starts.
+@available(gRPCSwift 2.3, *)
+public struct GRPCServerContext: Sendable {
+  /// Descriptors for all methods registered with the server.
+  public var methods: [MethodDescriptor]
+
+  /// Creates a new context.
+  public init() {
+    self.methods = []
+  }
+}

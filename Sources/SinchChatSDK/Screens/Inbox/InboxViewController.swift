@@ -186,7 +186,7 @@ extension InboxViewController: UITableViewDelegate {
     
     func showChat() {
         
-        if let userID = viewModel.authDataSource.currentAuthorization?.getUserID() {
+        if let userID = viewModel.tokenProvider.currentAuthorization?.getUserID() {
             customOptions.topicID = "\(UUID().uuidString)"
         }
         

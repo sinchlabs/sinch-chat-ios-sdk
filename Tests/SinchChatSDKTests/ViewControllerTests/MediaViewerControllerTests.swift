@@ -1,7 +1,7 @@
 import XCTest
 @testable import SinchChatSDK
 
-final class MockMediaViewerViewModel: MediaViewerViewModel {
+final class MockMediaViewerViewModel: MediaViewerViewModel, @unchecked Sendable {
       
     weak var delegate: MediaViewerModelDelegate?
     var url: URL
@@ -17,6 +17,7 @@ final class MockMediaViewerViewModel: MediaViewerViewModel {
    
 }
 
+@MainActor
 final class MediaViewerViewModelTests: XCTestCase {
 
     var mediaModel: MockMediaViewerViewModel!

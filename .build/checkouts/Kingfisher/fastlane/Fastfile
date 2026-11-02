@@ -1,0 +1,213 @@
+fastlane_version "1.37.0"
+
+default_platform :ios
+
+platform :ios do
+  def derived_data_path(destination)
+    return File.expand_path(ENV["DERIVED_DATA_PATH"], Dir.pwd) unless ENV["DERIVED_DATA_PATH"].to_s.empty?
+
+    run_id = ENV["GITHUB_RUN_ID"] || "local"
+    xcode = ENV["XCODE_VERSION"] || "default-xcode"
+    destination_key = destination.to_s.gsub(/[^A-Za-z0-9_.-]/, "_")
+    File.expand_path("../build/DerivedData/#{run_id}-#{xcode}-#{destination_key}", __dir__)
+  end
+
+  desc "Runs all the tests"
+  lane :tests do
+    test(destination: "platform=macOS")
+    test(destination: "platform=iOS Simulator,name=iPhone 18 Pro,OS=27.0")
+    test(destination: "platform=tvOS Simulator,name=Apple TV 4K (3rd generation),OS=27.0")
+    test(destination: "platform=visionOS Simulator,name=Apple Vision Pro,OS=27.0")
+    build(destination: "platform=watchOS Simulator,name=Apple Watch Series 12 (42mm),OS=27.0")
+  end
+
+  lane :test_ci do
+    if !ENV["SDK"].to_s.empty?
+        build(sdk: ENV["SDK"])
+    elsif ENV["DESTINATION"].include? "watchOS" then
+        build(destination: ENV["DESTINATION"])
+    else
+        test(destination: ENV["DESTINATION"])
+    end
+  end
+
+  lane :build_ci do
+    if ENV["SDK"].to_s.empty?
+      build(destination: ENV["DESTINATION"])
+    else
+      build(sdk: ENV["SDK"])
+    end
+  end
+
+  lane :test do |options|
+    scan(
+      scheme: "Kingfisher",
+      clean: true,
+      derived_data_path: derived_data_path(options[:destination]),
+      xcargs: "SWIFT_VERSION=5.0",
+      destination: options[:destination],
+      # CI runner VMs occasionally stall for tens of seconds, blowing async
+      # expectation budgets. Retry failed tests instead of inflating timeouts;
+      # a real regression still fails all attempts.
+      number_of_retries: 2
+    )
+  end
+
+  lane :build do |options|
+    build_options = {
+      workspace: "Kingfisher.xcworkspace",
+      configuration: "Debug",
+      scheme: "Kingfisher",
+      derivedDataPath: derived_data_path(options[:destination] || options[:sdk]),
+      clean: true,
+      build: true,
+      build_settings: {
+        "SWIFT_VERSION" => "5.0"
+      }
+    }
+
+    if options[:sdk].to_s.empty?
+      build_options[:destination] = options[:destination]
+    else
+      build_options[:sdk] = options[:sdk]
+    end
+
+    xcodebuild(build_options)
+  end
+
+  desc "Lint"
+  lane :lint do
+    pod_lib_lint
+    spm
+  end
+
+  desc "Release new version"
+  lane :release do |options|
+    target_version = options[:version]
+    raise "The version is missed. Use `fastlane release version:{version_number}`.`" if target_version.nil?
+
+    ensure_git_branch
+    ensure_git_status_clean
+
+    skip_tests =  options[:skip_tests]
+    tests unless skip_tests
+
+    lint
+
+    sync_build_number_to_git
+    increment_version_number(version_number: target_version)
+    version_bump_podspec(path: "Kingfisher.podspec", version_number: target_version)
+
+    log = extract_current_change_log(version: target_version)
+    release_log = update_change_log(log: log)
+
+    git_commit_all(message: "Bump version to #{target_version}")
+
+    Actions.sh("git tag -s #{target_version} -m ''")
+
+    push_to_git_remote
+
+    xcframework(version: target_version)
+    set_github_release(
+      repository_name: "onevcat/Kingfisher",
+      api_token: ENV['GITHUB_TOKEN'],
+      name: release_log[:title],
+      tag_name: target_version,
+      description: release_log[:text],
+      upload_assets: [
+        "build/Kingfisher-#{target_version}.xcframework.zip",
+        "build/Kingfisher-iOS-#{target_version}.xcframework.zip"
+      ]
+    )
+
+    pod_push
+  end
+
+  lane :xcframework do |options|
+    version = options[:version]
+    swift_version = options[:swift_version] || "5.0"
+    xcode_version = options[:xcode_version] || "27.0"
+
+    xcodes(version: xcode_version, select_for_current_build_only: true)
+    FileUtils.rm_rf '../build'
+
+    # Define platform to SDKs mapping
+    PLATFORM_SDKS = {
+      all: [
+        "macosx",
+        "iphoneos", "iphonesimulator",
+        "appletvos", "appletvsimulator",
+        "watchos", "watchsimulator",
+        "xros", "xrsimulator"
+      ],
+      ios: ["iphoneos", "iphonesimulator"]
+    }
+
+    def create_archives(sdks, swift_version)
+      frameworks = {}
+      sdks.each do |sdk|
+        archive_path = "build/Kingfisher-#{sdk}.xcarchive"
+        xcodebuild(
+          archive: true,
+          archive_path: archive_path,
+          scheme: "Kingfisher",
+          sdk: sdk,
+          build_settings: {
+            "BUILD_LIBRARY_FOR_DISTRIBUTION" => "YES",
+            "SKIP_INSTALL" => "NO",
+            "SWIFT_VERSION" => swift_version
+          }
+        )
+
+        framework_path = "#{archive_path}/Products/Library/Frameworks/Kingfisher.framework"
+        dsym_path = "#{Dir.pwd}/../#{archive_path}/dSYMs/Kingfisher.framework.dSYM"
+        frameworks[framework_path] = { dsyms: dsym_path }
+      end
+      frameworks
+    end
+
+    def create_and_package_xcframework(frameworks, output_name, version)
+      output_base_name = if output_name.empty?
+        "Kingfisher-#{version}"
+      else
+        "Kingfisher-#{output_name}-#{version}"
+      end
+
+      output_xcframework_path = "build/#{output_base_name}/Kingfisher.xcframework"
+
+      create_xcframework(
+        frameworks_with_dsyms: frameworks,
+        output: output_xcframework_path
+      )
+
+      Actions.sh("codesign --timestamp -v --sign 'Apple Distribution: Wei Wang (A4YJ9MRZ66)' ../build/#{output_base_name}/Kingfisher.xcframework")
+
+      zip(
+        path: output_xcframework_path,
+        output_path: "build/#{output_base_name}.xcframework.zip",
+        symlinks: true
+      )
+    end
+
+    # Create full platform xcframework
+    all_frameworks = create_archives(PLATFORM_SDKS[:all], swift_version)
+    create_and_package_xcframework(all_frameworks, "", version)
+
+    # Create iOS only xcframework
+    ios_frameworks = create_archives(PLATFORM_SDKS[:ios], swift_version)
+    create_and_package_xcframework(ios_frameworks, "iOS", version)
+  end
+
+  before_all do |lane|
+    xcode_version = ENV["XCODE_VERSION"] || "27.0"
+    xcodes(version: xcode_version, select_for_current_build_only: true)
+  end
+
+  after_all do |lane|
+
+  end
+
+  error do |lane, exception|
+
+  end
+end

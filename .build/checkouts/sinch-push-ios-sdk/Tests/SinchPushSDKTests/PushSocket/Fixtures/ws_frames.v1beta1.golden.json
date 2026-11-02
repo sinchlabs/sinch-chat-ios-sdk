@@ -1,0 +1,762 @@
+{
+  "version": 1,
+  "package": "sinch.push.delivery.v1beta1.ws",
+  "proto_file": "proto/sinch/push/delivery/v1beta1/ws/websocket.proto",
+  "framing": "[1 byte type tag][varint length N][N bytes protobuf payload]; the tag is the field number of the `oneof payload` member in the frame message for that direction",
+  "generator": "internal/ws TestGoldenVectors (-update-golden); every payload is encoded with protobuf deterministic marshalling",
+  "size_contract": {
+    "max_frame_payload_bytes": 65536,
+    "max_frame_envelope_bytes": 11,
+    "max_wire_frame_bytes": 65547,
+    "canonical_envelope_max_bytes": 4,
+    "note": "max_frame_payload_bytes is the PROTOBUF PAYLOAD only and excludes the tag byte and the length prefix; max_wire_frame_bytes is the largest whole WebSocket message accepted, i.e. payload + a tolerated up-to-10-byte varint envelope. Length varints are read leniently (zero-padded encodings accepted, as in protobuf), but a varint whose value exceeds uint64, or whose tenth byte carries more than one bit, is rejected."
+  },
+  "frame_types": [
+    {
+      "direction": "client_to_server",
+      "tag": 1,
+      "frame_type": "ClientFrame.hello",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Hello"
+    },
+    {
+      "direction": "client_to_server",
+      "tag": 2,
+      "frame_type": "ClientFrame.poll",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Poll"
+    },
+    {
+      "direction": "client_to_server",
+      "tag": 3,
+      "frame_type": "ClientFrame.delivery_report",
+      "message_type": "sinch.push.delivery.v1beta1.ws.DeliveryReport"
+    },
+    {
+      "direction": "client_to_server",
+      "tag": 4,
+      "frame_type": "ClientFrame.pong",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Pong"
+    },
+    {
+      "direction": "server_to_client",
+      "tag": 1,
+      "frame_type": "ServerFrame.auth_challenge",
+      "message_type": "sinch.push.delivery.v1beta1.ws.AuthChallenge"
+    },
+    {
+      "direction": "server_to_client",
+      "tag": 2,
+      "frame_type": "ServerFrame.hello_ack",
+      "message_type": "sinch.push.delivery.v1beta1.ws.HelloAck"
+    },
+    {
+      "direction": "server_to_client",
+      "tag": 3,
+      "frame_type": "ServerFrame.message",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Message"
+    },
+    {
+      "direction": "server_to_client",
+      "tag": 4,
+      "frame_type": "ServerFrame.ack",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Ack"
+    },
+    {
+      "direction": "server_to_client",
+      "tag": 5,
+      "frame_type": "ServerFrame.ping",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Ping"
+    },
+    {
+      "direction": "server_to_client",
+      "tag": 6,
+      "frame_type": "ServerFrame.pong",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Pong"
+    },
+    {
+      "direction": "server_to_client",
+      "tag": 7,
+      "frame_type": "ServerFrame.close",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Close"
+    }
+  ],
+  "frames": [
+    {
+      "name": "client_hello_empty",
+      "direction": "client_to_server",
+      "tag": 1,
+      "frame_type": "ClientFrame.hello",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Hello",
+      "payload_len": 0,
+      "frame_hex": "0100",
+      "frame_base64": "AQA=",
+      "payload_hex": "",
+      "notes": "minimal ClientFrame.hello; zero-length payload, so the length prefix is a single 0x00 byte"
+    },
+    {
+      "name": "client_hello_full",
+      "direction": "client_to_server",
+      "tag": 1,
+      "frame_type": "ClientFrame.hello",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Hello",
+      "payload_len": 68,
+      "frame_hex": "01440a186865616465722e7061796c6f61642e7369676e6174757265120670726f6a2d311a056170702d312206757365722d31280230013a066d2d6c6173744205312e322e33",
+      "frame_base64": "AUQKGGhlYWRlci5wYXlsb2FkLnNpZ25hdHVyZRIGcHJvai0xGgVhcHAtMSIGdXNlci0xKAIwAToGbS1sYXN0QgUxLjIuMw==",
+      "payload_hex": "0a186865616465722e7061796c6f61642e7369676e6174757265120670726f6a2d311a056170702d312206757365722d31280230013a066d2d6c6173744205312e322e33"
+    },
+    {
+      "name": "client_hello_device_info",
+      "direction": "client_to_server",
+      "tag": 1,
+      "frame_type": "ClientFrame.hello",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Hello",
+      "payload_len": 131,
+      "frame_hex": "0183010a186865616465722e7061796c6f61642e7369676e6174757265120670726f6a2d311a056170702d312206757365722d3128013a066d2d6c6173744205312e322e334a2436663163326139652d336237642d346538612d396332312d356434623761306531663233520431382e315a11636f6d2e73696e63682e6578616d706c656001",
+      "frame_base64": "AYMBChhoZWFkZXIucGF5bG9hZC5zaWduYXR1cmUSBnByb2otMRoFYXBwLTEiBnVzZXItMSgBOgZtLWxhc3RCBTEuMi4zSiQ2ZjFjMmE5ZS0zYjdkLTRlOGEtOWMyMS01ZDRiN2EwZTFmMjNSBDE4LjFaEWNvbS5zaW5jaC5leGFtcGxlYAE=",
+      "payload_hex": "0a186865616465722e7061796c6f61642e7369676e6174757265120670726f6a2d311a056170702d312206757365722d3128013a066d2d6c6173744205312e322e334a2436663163326139652d336237642d346538612d396332312d356434623761306531663233520431382e315a11636f6d2e73696e63682e6578616d706c656001",
+      "notes": "iOS foreground Hello with fields 9-12 (installation_id, os_version, bundle_id, background_service); they are additive, so an old decoder ignores them and the handshake is unchanged"
+    },
+    {
+      "name": "client_hello_android_bg_running",
+      "direction": "client_to_server",
+      "tag": 1,
+      "frame_type": "ClientFrame.hello",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Hello",
+      "payload_len": 131,
+      "frame_hex": "0183010a186865616465722e7061796c6f61642e7369676e6174757265120670726f6a2d311a056170702d312206757365722d31280230013a066d2d6c6173744205312e322e334a2430623866336435322d376331652d346139362d623564302d326539663661346338643137520231345a11636f6d2e73696e63682e6578616d706c656003",
+      "frame_base64": "AYMBChhoZWFkZXIucGF5bG9hZC5zaWduYXR1cmUSBnByb2otMRoFYXBwLTEiBnVzZXItMSgCMAE6Bm0tbGFzdEIFMS4yLjNKJDBiOGYzZDUyLTdjMWUtNGE5Ni1iNWQwLTJlOWY2YTRjOGQxN1ICMTRaEWNvbS5zaW5jaC5leGFtcGxlYAM=",
+      "payload_hex": "0a186865616465722e7061796c6f61642e7369676e6174757265120670726f6a2d311a056170702d312206757365722d31280230013a066d2d6c6173744205312e322e334a2430623866336435322d376331652d346139362d623564302d326539663661346338643137520231345a11636f6d2e73696e63682e6578616d706c656003",
+      "notes": "Hello fields 9-12 are additive and an old decoder ignores them; background=true with background_service=ENABLED_RUNNING is the only pairing the relay treats as reachable in the background"
+    },
+    {
+      "name": "client_hello_relay_disabled",
+      "direction": "client_to_server",
+      "tag": 1,
+      "frame_type": "ClientFrame.hello",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Hello",
+      "payload_len": 129,
+      "frame_hex": "0181010a186865616465722e7061796c6f61642e7369676e6174757265120670726f6a2d311a056170702d312206757365722d3128023a066d2d6c6173744205312e322e334a2433633965316637612d353262342d346430382d396136652d316237633264356538663430520231345a11636f6d2e73696e63682e6578616d706c656005",
+      "frame_base64": "AYEBChhoZWFkZXIucGF5bG9hZC5zaWduYXR1cmUSBnByb2otMRoFYXBwLTEiBnVzZXItMSgCOgZtLWxhc3RCBTEuMi4zSiQzYzllMWY3YS01MmI0LTRkMDgtOWE2ZS0xYjdjMmQ1ZThmNDBSAjE0WhFjb20uc2luY2guZXhhbXBsZWAF",
+      "payload_hex": "0a186865616465722e7061796c6f61642e7369676e6174757265120670726f6a2d311a056170702d312206757365722d3128023a066d2d6c6173744205312e322e334a2433633965316637612d353262342d346430382d396136652d316237633264356538663430520231345a11636f6d2e73696e63682e6578616d706c656005",
+      "notes": "background_service=RELAY_DISABLED (5): the SDK reports that the relay is turned off in the app, so sinch-push does not route over the relay for this installation. The relay still accepts the Hello and stores the session foreground-only, never background"
+    },
+    {
+      "name": "client_hello_unknown_background_service",
+      "direction": "client_to_server",
+      "tag": 1,
+      "frame_type": "ClientFrame.hello",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Hello",
+      "payload_len": 131,
+      "frame_hex": "0183010a186865616465722e7061796c6f61642e7369676e6174757265120670726f6a2d311a056170702d312206757365722d31280230013a066d2d6c6173744205312e322e334a2430623866336435322d376331652d346139362d623564302d326539663661346338643137520231345a11636f6d2e73696e63682e6578616d706c656063",
+      "frame_base64": "AYMBChhoZWFkZXIucGF5bG9hZC5zaWduYXR1cmUSBnByb2otMRoFYXBwLTEiBnVzZXItMSgCMAE6Bm0tbGFzdEIFMS4yLjNKJDBiOGYzZDUyLTdjMWUtNGE5Ni1iNWQwLTJlOWY2YTRjOGQxN1ICMTRaEWNvbS5zaW5jaC5leGFtcGxlYGM=",
+      "payload_hex": "0a186865616465722e7061796c6f61642e7369676e6174757265120670726f6a2d311a056170702d312206757365722d31280230013a066d2d6c6173744205312e322e334a2430623866336435322d376331652d346139362d623564302d326539663661346338643137520231345a11636f6d2e73696e63682e6578616d706c656063",
+      "notes": "background_service carries an enum value unknown to this proto version; decoders must accept it (open enum) so adding a state later does not break old SDKs"
+    },
+    {
+      "name": "client_poll_empty",
+      "direction": "client_to_server",
+      "tag": 2,
+      "frame_type": "ClientFrame.poll",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Poll",
+      "payload_len": 0,
+      "frame_hex": "0200",
+      "frame_base64": "AgA=",
+      "payload_hex": "",
+      "notes": "cursor is reserved and empty in v1beta1"
+    },
+    {
+      "name": "client_poll_cursor",
+      "direction": "client_to_server",
+      "tag": 2,
+      "frame_type": "ClientFrame.poll",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Poll",
+      "payload_len": 12,
+      "frame_hex": "020c0a0a637572736f722d616263",
+      "frame_base64": "AgwKCmN1cnNvci1hYmM=",
+      "payload_hex": "0a0a637572736f722d616263",
+      "notes": "reserved for a future time-based hint; not used by the relay today"
+    },
+    {
+      "name": "client_delivery_report_delivered",
+      "direction": "client_to_server",
+      "tag": 3,
+      "frame_type": "ClientFrame.delivery_report",
+      "message_type": "sinch.push.delivery.v1beta1.ws.DeliveryReport",
+      "payload_len": 24,
+      "frame_hex": "03180a036d2d311204736d2d31180122026f6b28e8d795ffbc31",
+      "frame_base64": "AxgKA20tMRIEc20tMRgBIgJvayjo15X/vDE=",
+      "payload_hex": "0a036d2d311204736d2d31180122026f6b28e8d795ffbc31",
+      "notes": "status 1 = DELIVERED"
+    },
+    {
+      "name": "client_delivery_report_displayed",
+      "direction": "client_to_server",
+      "tag": 3,
+      "frame_type": "ClientFrame.delivery_report",
+      "message_type": "sinch.push.delivery.v1beta1.ws.DeliveryReport",
+      "payload_len": 20,
+      "frame_hex": "03140a036d2d311204736d2d311802220573686f776e",
+      "frame_base64": "AxQKA20tMRIEc20tMRgCIgVzaG93bg==",
+      "payload_hex": "0a036d2d311204736d2d311802220573686f776e",
+      "notes": "status 2 = DISPLAYED"
+    },
+    {
+      "name": "client_delivery_report_failed",
+      "direction": "client_to_server",
+      "tag": 3,
+      "frame_type": "ClientFrame.delivery_report",
+      "message_type": "sinch.push.delivery.v1beta1.ws.DeliveryReport",
+      "payload_len": 43,
+      "frame_hex": "032b0a1374656e616e743a34323a726567696f6e3a65751204736d2d311803220c72656e646572206572726f72",
+      "frame_base64": "AysKE3RlbmFudDo0MjpyZWdpb246ZXUSBHNtLTEYAyIMcmVuZGVyIGVycm9y",
+      "payload_hex": "0a1374656e616e743a34323a726567696f6e3a65751204736d2d311803220c72656e646572206572726f72",
+      "notes": "status 3 = FAILED; the message_id contains colons, which the Ack token carries through verbatim"
+    },
+    {
+      "name": "client_delivery_report_dismissed",
+      "direction": "client_to_server",
+      "tag": 3,
+      "frame_type": "ClientFrame.delivery_report",
+      "message_type": "sinch.push.delivery.v1beta1.ws.DeliveryReport",
+      "payload_len": 26,
+      "frame_hex": "031a0a036d2d311204736d2d311804220b7377697065642061776179",
+      "frame_base64": "AxoKA20tMRIEc20tMRgEIgtzd2lwZWQgYXdheQ==",
+      "payload_hex": "0a036d2d311204736d2d311804220b7377697065642061776179",
+      "notes": "status 4 = DISMISSED"
+    },
+    {
+      "name": "client_delivery_report_status_unspecified",
+      "direction": "client_to_server",
+      "tag": 3,
+      "frame_type": "ClientFrame.delivery_report",
+      "message_type": "sinch.push.delivery.v1beta1.ws.DeliveryReport",
+      "payload_len": 11,
+      "frame_hex": "030b0a036d2d311204736d2d31",
+      "frame_base64": "AwsKA20tMRIEc20tMQ==",
+      "payload_hex": "0a036d2d311204736d2d31",
+      "notes": "status 0; the relay rejects this with Ack.error=unsupported_status rather than forwarding it"
+    },
+    {
+      "name": "client_delivery_report_future_status",
+      "direction": "client_to_server",
+      "tag": 3,
+      "frame_type": "ClientFrame.delivery_report",
+      "message_type": "sinch.push.delivery.v1beta1.ws.DeliveryReport",
+      "payload_len": 7,
+      "frame_hex": "03070a036d2d311807",
+      "frame_base64": "AwcKA20tMRgH",
+      "payload_hex": "0a036d2d311807",
+      "notes": "a status from a future SDK; present so a decoder preserves unknown enum values instead of dropping them"
+    },
+    {
+      "name": "client_pong_empty",
+      "direction": "client_to_server",
+      "tag": 4,
+      "frame_type": "ClientFrame.pong",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Pong",
+      "payload_len": 0,
+      "frame_hex": "0400",
+      "frame_base64": "BAA=",
+      "payload_hex": "",
+      "notes": "client pong is tag 4, NOT the same tag as the server pong"
+    },
+    {
+      "name": "client_pong_correlation_id",
+      "direction": "client_to_server",
+      "tag": 4,
+      "frame_type": "ClientFrame.pong",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Pong",
+      "payload_len": 8,
+      "frame_hex": "04080a0670696e672d37",
+      "frame_base64": "BAgKBnBpbmctNw==",
+      "payload_hex": "0a0670696e672d37"
+    },
+    {
+      "name": "client_hello_long_payload",
+      "direction": "client_to_server",
+      "tag": 1,
+      "frame_type": "ClientFrame.hello",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Hello",
+      "payload_len": 823,
+      "frame_hex": "01b7060a9003787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878781a056170702d312206757365722d31280142900378787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878",
+      "frame_base64": "AbcGCpADeHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eBoFYXBwLTEiBnVzZXItMSgBQpADeHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==",
+      "payload_hex": "0a9003787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878781a056170702d312206757365722d31280142900378787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878",
+      "notes": "payload well over 127 bytes, so the length prefix is a multi-byte varint"
+    },
+    {
+      "name": "server_auth_challenge_empty",
+      "direction": "server_to_client",
+      "tag": 1,
+      "frame_type": "ServerFrame.auth_challenge",
+      "message_type": "sinch.push.delivery.v1beta1.ws.AuthChallenge",
+      "payload_len": 0,
+      "frame_hex": "0100",
+      "frame_base64": "AQA=",
+      "payload_hex": "",
+      "notes": "ServerFrame.auth_challenge is tag 1, which is a DIFFERENT frame from ClientFrame.hello on the same tag"
+    },
+    {
+      "name": "server_auth_challenge_full",
+      "direction": "server_to_client",
+      "tag": 1,
+      "frame_type": "ServerFrame.auth_challenge",
+      "message_type": "sinch.push.delivery.v1beta1.ws.AuthChallenge",
+      "payload_len": 23,
+      "frame_hex": "01170a0e6e6f6e63652d64656164626565661080d095ffbc31",
+      "frame_base64": "ARcKDm5vbmNlLWRlYWRiZWVmEIDQlf+8MQ==",
+      "payload_hex": "0a0e6e6f6e63652d64656164626565661080d095ffbc31"
+    },
+    {
+      "name": "server_hello_ack_empty",
+      "direction": "server_to_client",
+      "tag": 2,
+      "frame_type": "ServerFrame.hello_ack",
+      "message_type": "sinch.push.delivery.v1beta1.ws.HelloAck",
+      "payload_len": 0,
+      "frame_hex": "0200",
+      "frame_base64": "AgA=",
+      "payload_hex": "",
+      "notes": "ServerFrame.hello_ack is tag 2, which is a DIFFERENT frame from ClientFrame.poll on the same tag"
+    },
+    {
+      "name": "server_hello_ack_with_messages",
+      "direction": "server_to_client",
+      "tag": 2,
+      "frame_type": "ServerFrame.hello_ack",
+      "message_type": "sinch.push.delivery.v1beta1.ws.HelloAck",
+      "payload_len": 222,
+      "frame_hex": "02de010a08636f6e6e2d78797a12ba010a036d2d311204736d2d311aa5010a07747261636b2d31125e0a2fc39c6e69636f646520e2809420e2988320736e6f776d616e2c20e697a5e69cace8aa9e2c20656d6f6a6920f09f9a80122b6c696e65206f6e650a6c696e652074776f09746162626564202271756f74656422205c657363617065645c1a0e0a05616c706861120566697273741a0b0a026d751205677265656b1a0c0a047a65746112046c61737420022a0d747269676765722d76616c75652080d095ffbc3112120a036d2d311204736d2d312080d095ffbc31188827",
+      "frame_base64": "At4BCghjb25uLXh5ehK6AQoDbS0xEgRzbS0xGqUBCgd0cmFjay0xEl4KL8Ocbmljb2RlIOKAlCDimIMgc25vd21hbiwg5pel5pys6KqeLCBlbW9qaSDwn5qAEitsaW5lIG9uZQpsaW5lIHR3bwl0YWJiZWQgInF1b3RlZCIgXGVzY2FwZWRcGg4KBWFscGhhEgVmaXJzdBoLCgJtdRIFZ3JlZWsaDAoEemV0YRIEbGFzdCACKg10cmlnZ2VyLXZhbHVlIIDQlf+8MRISCgNtLTESBHNtLTEggNCV/7wxGIgn",
+      "payload_hex": "0a08636f6e6e2d78797a12ba010a036d2d311204736d2d311aa5010a07747261636b2d31125e0a2fc39c6e69636f646520e2809420e2988320736e6f776d616e2c20e697a5e69cace8aa9e2c20656d6f6a6920f09f9a80122b6c696e65206f6e650a6c696e652074776f09746162626564202271756f74656422205c657363617065645c1a0e0a05616c706861120566697273741a0b0a026d751205677265656b1a0c0a047a65746112046c61737420022a0d747269676765722d76616c75652080d095ffbc3112120a036d2d311204736d2d312080d095ffbc31188827",
+      "notes": "backlog delivered in the handshake; the current upgrader leaves it empty and drains via Poll"
+    },
+    {
+      "name": "server_message_empty",
+      "direction": "server_to_client",
+      "tag": 3,
+      "frame_type": "ServerFrame.message",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Message",
+      "payload_len": 0,
+      "frame_hex": "0300",
+      "frame_base64": "AwA=",
+      "payload_hex": "",
+      "notes": "ServerFrame.message is tag 3, which is a DIFFERENT frame from ClientFrame.delivery_report on the same tag"
+    },
+    {
+      "name": "server_message_nested_notification",
+      "direction": "server_to_client",
+      "tag": 3,
+      "frame_type": "ServerFrame.message",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Message",
+      "payload_len": 194,
+      "frame_hex": "03c2010a036d2d3112ba010a036d2d311204736d2d311aa5010a07747261636b2d31125e0a2fc39c6e69636f646520e2809420e2988320736e6f776d616e2c20e697a5e69cace8aa9e2c20656d6f6a6920f09f9a80122b6c696e65206f6e650a6c696e652074776f09746162626564202271756f74656422205c657363617065645c1a0e0a05616c706861120566697273741a0b0a026d751205677265656b1a0c0a047a65746112046c61737420022a0d747269676765722d76616c75652080d095ffbc31",
+      "frame_base64": "A8IBCgNtLTESugEKA20tMRIEc20tMRqlAQoHdHJhY2stMRJeCi/DnG5pY29kZSDigJQg4piDIHNub3dtYW4sIOaXpeacrOiqniwgZW1vamkg8J+agBIrbGluZSBvbmUKbGluZSB0d28JdGFiYmVkICJxdW90ZWQiIFxlc2NhcGVkXBoOCgVhbHBoYRIFZmlyc3QaCwoCbXUSBWdyZWVrGgwKBHpldGESBGxhc3QgAioNdHJpZ2dlci12YWx1ZSCA0JX/vDE=",
+      "payload_hex": "0a036d2d3112ba010a036d2d311204736d2d311aa5010a07747261636b2d31125e0a2fc39c6e69636f646520e2809420e2988320736e6f776d616e2c20e697a5e69cace8aa9e2c20656d6f6a6920f09f9a80122b6c696e65206f6e650a6c696e652074776f09746162626564202271756f74656422205c657363617065645c1a0e0a05616c706861120566697273741a0b0a026d751205677265656b1a0c0a047a65746112046c61737420022a0d747269676765722d76616c75652080d095ffbc31",
+      "notes": "unicode title/message and a 3-entry map; ack_token must equal pooled message_id"
+    },
+    {
+      "name": "server_message_long_payload",
+      "direction": "server_to_client",
+      "tag": 3,
+      "frame_type": "ServerFrame.message",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Message",
+      "payload_len": 1621,
+      "frame_hex": "03d50c0a90037474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747412bf090a90036d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d1aa90612a6060a90037878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787812900378787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878",
+      "frame_base64": "A9UMCpADdHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dHR0dBK/CQqQA21tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW0aqQYSpgYKkAN4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4EpADeHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==",
+      "payload_hex": "0a90037474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747474747412bf090a90036d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d1aa90612a6060a90037878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787812900378787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878",
+      "notes": "multi-byte length prefix"
+    },
+    {
+      "name": "server_ack_accepted_empty_token",
+      "direction": "server_to_client",
+      "tag": 4,
+      "frame_type": "ServerFrame.ack",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Ack",
+      "payload_len": 2,
+      "frame_hex": "04021001",
+      "frame_base64": "BAIQAQ==",
+      "payload_hex": "1001",
+      "notes": "legacy shape: the pre-v1beta1-relay Ack had an empty token. Kept so a client tolerating it stays tolerant"
+    },
+    {
+      "name": "server_ack_accepted",
+      "direction": "server_to_client",
+      "tag": 4,
+      "frame_type": "ServerFrame.ack",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Ack",
+      "payload_len": 9,
+      "frame_hex": "04090a056d2d313a311001",
+      "frame_base64": "BAkKBW0tMToxEAE=",
+      "payload_hex": "0a056d2d313a311001",
+      "notes": "token is `\u003cmessage_id\u003e:\u003cnumeric status\u003e`; DELIVERED = 1"
+    },
+    {
+      "name": "server_ack_rejected_upstream",
+      "direction": "server_to_client",
+      "tag": 4,
+      "frame_type": "ServerFrame.ack",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Ack",
+      "payload_len": 32,
+      "frame_hex": "04200a056d2d313a311a17757073747265616d5f666f72776172645f6661696c6564",
+      "frame_base64": "BCAKBW0tMToxGhd1cHN0cmVhbV9mb3J3YXJkX2ZhaWxlZA==",
+      "payload_hex": "0a056d2d313a311a17757073747265616d5f666f72776172645f6661696c6564",
+      "notes": "same token as the accepted Ack; accepted/error carry the outcome, never the token"
+    },
+    {
+      "name": "server_ack_rejected_unsupported_status",
+      "direction": "server_to_client",
+      "tag": 4,
+      "frame_type": "ServerFrame.ack",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Ack",
+      "payload_len": 27,
+      "frame_hex": "041b0a056d2d313a301a12756e737570706f727465645f737461747573",
+      "frame_base64": "BBsKBW0tMTowGhJ1bnN1cHBvcnRlZF9zdGF0dXM=",
+      "payload_hex": "0a056d2d313a301a12756e737570706f727465645f737461747573",
+      "notes": "the rejected status is still visible to the client via the token suffix"
+    },
+    {
+      "name": "server_ack_rejected_missing_message_id",
+      "direction": "server_to_client",
+      "tag": 4,
+      "frame_type": "ServerFrame.ack",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Ack",
+      "payload_len": 20,
+      "frame_hex": "04141a126d697373696e675f6d6573736167655f6964",
+      "frame_base64": "BBQaEm1pc3NpbmdfbWVzc2FnZV9pZA==",
+      "payload_hex": "1a126d697373696e675f6d6573736167655f6964",
+      "notes": "an uncorrelatable report is rejected with an EMPTY token rather than a token that looks correlatable"
+    },
+    {
+      "name": "server_ping_empty",
+      "direction": "server_to_client",
+      "tag": 5,
+      "frame_type": "ServerFrame.ping",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Ping",
+      "payload_len": 0,
+      "frame_hex": "0500",
+      "frame_base64": "BQA=",
+      "payload_hex": "",
+      "notes": "ServerFrame.ping is tag 5 and has NO client-direction counterpart"
+    },
+    {
+      "name": "server_ping_correlation_id",
+      "direction": "server_to_client",
+      "tag": 5,
+      "frame_type": "ServerFrame.ping",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Ping",
+      "payload_len": 8,
+      "frame_hex": "05080a0670696e672d37",
+      "frame_base64": "BQgKBnBpbmctNw==",
+      "payload_hex": "0a0670696e672d37"
+    },
+    {
+      "name": "server_pong_empty",
+      "direction": "server_to_client",
+      "tag": 6,
+      "frame_type": "ServerFrame.pong",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Pong",
+      "payload_len": 0,
+      "frame_hex": "0600",
+      "frame_base64": "BgA=",
+      "payload_hex": "",
+      "notes": "ServerFrame.pong is tag 6 and has NO client-direction counterpart"
+    },
+    {
+      "name": "server_pong_correlation_id",
+      "direction": "server_to_client",
+      "tag": 6,
+      "frame_type": "ServerFrame.pong",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Pong",
+      "payload_len": 8,
+      "frame_hex": "06080a0670696e672d37",
+      "frame_base64": "BggKBnBpbmctNw==",
+      "payload_hex": "0a0670696e672d37"
+    },
+    {
+      "name": "server_close_empty",
+      "direction": "server_to_client",
+      "tag": 7,
+      "frame_type": "ServerFrame.close",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Close",
+      "payload_len": 0,
+      "frame_hex": "0700",
+      "frame_base64": "BwA=",
+      "payload_hex": "",
+      "notes": "ServerFrame.close is tag 7 and has NO client-direction counterpart; reason 0 = UNSPECIFIED"
+    },
+    {
+      "name": "server_close_shutdown",
+      "direction": "server_to_client",
+      "tag": 7,
+      "frame_type": "ServerFrame.close",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Close",
+      "payload_len": 18,
+      "frame_hex": "07120806120e72656c617920647261696e696e67",
+      "frame_base64": "BxIIBhIOcmVsYXkgZHJhaW5pbmc=",
+      "payload_hex": "0806120e72656c617920647261696e696e67",
+      "notes": "reason 6; what the SDK sees on SIGTERM before the socket closes"
+    },
+    {
+      "name": "server_close_internal_protocol_violation",
+      "direction": "server_to_client",
+      "tag": 7,
+      "frame_type": "ServerFrame.close",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Close",
+      "payload_len": 23,
+      "frame_hex": "07170804121377726f6e675f646972656374696f6e5f746167",
+      "frame_base64": "BxcIBBITd3JvbmdfZGlyZWN0aW9uX3RhZw==",
+      "payload_hex": "0804121377726f6e675f646972656374696f6e5f746167",
+      "notes": "the relay's answer to an inbound server-only tag (5..7) or an unknown tag"
+    },
+    {
+      "name": "server_close_internal_unknown_tag",
+      "direction": "server_to_client",
+      "tag": 7,
+      "frame_type": "ServerFrame.close",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Close",
+      "payload_len": 20,
+      "frame_hex": "071408041210756e6b6e6f776e5f747970655f746167",
+      "frame_base64": "BxQIBBIQdW5rbm93bl90eXBlX3RhZw==",
+      "payload_hex": "08041210756e6b6e6f776e5f747970655f746167"
+    },
+    {
+      "name": "server_close_internal_too_large",
+      "direction": "server_to_client",
+      "tag": 7,
+      "frame_type": "ServerFrame.close",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Close",
+      "payload_len": 19,
+      "frame_hex": "07130804120f6672616d655f746f6f5f6c61726765",
+      "frame_base64": "BxMIBBIPZnJhbWVfdG9vX2xhcmdl",
+      "payload_hex": "0804120f6672616d655f746f6f5f6c61726765"
+    },
+    {
+      "name": "server_close_unauthorized",
+      "direction": "server_to_client",
+      "tag": 7,
+      "frame_type": "ServerFrame.close",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Close",
+      "payload_len": 11,
+      "frame_hex": "070b08011207626164206a7774",
+      "frame_base64": "BwsIARIHYmFkIGp3dA==",
+      "payload_hex": "08011207626164206a7774"
+    },
+    {
+      "name": "server_close_stale",
+      "direction": "server_to_client",
+      "tag": 7,
+      "frame_type": "ServerFrame.close",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Close",
+      "payload_len": 15,
+      "frame_hex": "070f0802120b74746c2065787069726564",
+      "frame_base64": "Bw8IAhILdHRsIGV4cGlyZWQ=",
+      "payload_hex": "0802120b74746c2065787069726564"
+    },
+    {
+      "name": "int64_boundary_auth_challenge_max",
+      "direction": "server_to_client",
+      "tag": 1,
+      "frame_type": "ServerFrame.auth_challenge",
+      "message_type": "sinch.push.delivery.v1beta1.ws.AuthChallenge",
+      "payload_len": 13,
+      "frame_hex": "010d0a016e10ffffffffffffffff7f",
+      "frame_base64": "AQ0KAW4Q//////////9/",
+      "payload_hex": "0a016e10ffffffffffffffff7f",
+      "notes": "int64 max; protobuf encodes it as a full 10-byte varint"
+    },
+    {
+      "name": "int64_boundary_auth_challenge_min",
+      "direction": "server_to_client",
+      "tag": 1,
+      "frame_type": "ServerFrame.auth_challenge",
+      "message_type": "sinch.push.delivery.v1beta1.ws.AuthChallenge",
+      "payload_len": 14,
+      "frame_hex": "010e0a016e1080808080808080808001",
+      "frame_base64": "AQ4KAW4QgICAgICAgICAAQ==",
+      "payload_hex": "0a016e1080808080808080808001",
+      "notes": "int64 min; sign-extends to a 10-byte varint, the longest a signed field can produce"
+    },
+    {
+      "name": "int64_boundary_auth_challenge_zero",
+      "direction": "server_to_client",
+      "tag": 1,
+      "frame_type": "ServerFrame.auth_challenge",
+      "message_type": "sinch.push.delivery.v1beta1.ws.AuthChallenge",
+      "payload_len": 3,
+      "frame_hex": "01030a016e",
+      "frame_base64": "AQMKAW4=",
+      "payload_hex": "0a016e",
+      "notes": "explicit zero; proto3 omits it, so this frame has an empty payload for that field"
+    },
+    {
+      "name": "int64_boundary_delivery_report_max",
+      "direction": "client_to_server",
+      "tag": 3,
+      "frame_type": "ClientFrame.delivery_report",
+      "message_type": "sinch.push.delivery.v1beta1.ws.DeliveryReport",
+      "payload_len": 15,
+      "frame_hex": "030f0a036d2d3128ffffffffffffffff7f",
+      "frame_base64": "Aw8KA20tMSj//////////38=",
+      "payload_hex": "0a036d2d3128ffffffffffffffff7f"
+    },
+    {
+      "name": "int64_boundary_delivery_report_min",
+      "direction": "client_to_server",
+      "tag": 3,
+      "frame_type": "ClientFrame.delivery_report",
+      "message_type": "sinch.push.delivery.v1beta1.ws.DeliveryReport",
+      "payload_len": 16,
+      "frame_hex": "03100a036d2d312880808080808080808001",
+      "frame_base64": "AxAKA20tMSiAgICAgICAgIAB",
+      "payload_hex": "0a036d2d312880808080808080808001"
+    },
+    {
+      "name": "int64_boundary_pooled_message_max",
+      "direction": "server_to_client",
+      "tag": 3,
+      "frame_type": "ServerFrame.message",
+      "message_type": "sinch.push.delivery.v1beta1.ws.Message",
+      "payload_len": 22,
+      "frame_hex": "03160a036d2d31120f0a036d2d3120ffffffffffffffff7f",
+      "frame_base64": "AxYKA20tMRIPCgNtLTEg//////////9/",
+      "payload_hex": "0a036d2d31120f0a036d2d3120ffffffffffffffff7f"
+    },
+    {
+      "name": "int32_boundary_hello_ack_poll_interval_max",
+      "direction": "server_to_client",
+      "tag": 2,
+      "frame_type": "ServerFrame.hello_ack",
+      "message_type": "sinch.push.delivery.v1beta1.ws.HelloAck",
+      "payload_len": 9,
+      "frame_hex": "02090a016318ffffffff07",
+      "frame_base64": "AgkKAWMY/////wc=",
+      "payload_hex": "0a016318ffffffff07",
+      "notes": "int32 max, still a 5-byte varint"
+    },
+    {
+      "name": "int32_boundary_hello_ack_poll_interval_min",
+      "direction": "server_to_client",
+      "tag": 2,
+      "frame_type": "ServerFrame.hello_ack",
+      "message_type": "sinch.push.delivery.v1beta1.ws.HelloAck",
+      "payload_len": 14,
+      "frame_hex": "020e0a01631880808080f8ffffffff01",
+      "frame_base64": "Ag4KAWMYgICAgPj/////AQ==",
+      "payload_hex": "0a01631880808080f8ffffffff01",
+      "notes": "int32 min; sign-extends to 10 bytes"
+    }
+  ],
+  "negative_cases": [
+    {
+      "name": "body_truncated",
+      "direction": "client_to_server",
+      "tag": 2,
+      "frame_hex": "0210",
+      "expect": "unexpected EOF",
+      "description": "frame declares 16 payload bytes and delivers none"
+    },
+    {
+      "name": "length_over_payload_limit",
+      "direction": "client_to_server",
+      "tag": 2,
+      "frame_hex": "02818004",
+      "expect": "frame_too_large",
+      "description": "declared payload exceeds max_frame_payload_bytes (65536); rejected before any allocation"
+    },
+    {
+      "name": "length_tenth_byte_overflow",
+      "direction": "client_to_server",
+      "tag": 2,
+      "frame_hex": "0280808080808080808002",
+      "expect": "varint overflows uint64",
+      "description": "a 10-byte varint may carry only one bit in its tenth byte"
+    },
+    {
+      "name": "length_truncated_varint",
+      "direction": "client_to_server",
+      "tag": 2,
+      "frame_hex": "0280",
+      "expect": "unexpected EOF",
+      "description": "length prefix has a continuation bit set and then the stream ends"
+    },
+    {
+      "name": "length_uint32_overflow",
+      "direction": "client_to_server",
+      "tag": 2,
+      "frame_hex": "028080808010",
+      "expect": "frame_too_large",
+      "description": "length prefix decodes to 2^32; a reader that narrows to uint32 would see 0 or wrap and mis-frame the stream"
+    },
+    {
+      "name": "length_uint64_max",
+      "direction": "client_to_server",
+      "tag": 3,
+      "frame_hex": "03ffffffffffffffffff01",
+      "expect": "frame_too_large",
+      "description": "the largest decodable varint, 2^64-1, is a legal encoding but declares an impossible payload; refused on the size bound without allocating"
+    },
+    {
+      "name": "length_zero_padded_accepted",
+      "direction": "client_to_server",
+      "tag": 2,
+      "frame_hex": "0280808080808080808000",
+      "expect": "accepted",
+      "description": "a zero-padded 10-byte varint for length 0; tolerated as in protobuf, and still bounded by max_frame_payload_bytes"
+    },
+    {
+      "name": "unknown_tag_0",
+      "direction": "client_to_server",
+      "tag": 0,
+      "frame_hex": "0000",
+      "expect": "unknown_type_tag",
+      "description": "no payload member has this field number in either direction"
+    },
+    {
+      "name": "unknown_tag_200",
+      "direction": "client_to_server",
+      "tag": 200,
+      "frame_hex": "c800",
+      "expect": "unknown_type_tag",
+      "description": "no payload member has this field number in either direction"
+    },
+    {
+      "name": "unknown_tag_255",
+      "direction": "client_to_server",
+      "tag": 255,
+      "frame_hex": "ff00",
+      "expect": "unknown_type_tag",
+      "description": "no payload member has this field number in either direction"
+    },
+    {
+      "name": "unknown_tag_8",
+      "direction": "client_to_server",
+      "tag": 8,
+      "frame_hex": "0800",
+      "expect": "unknown_type_tag",
+      "description": "no payload member has this field number in either direction"
+    },
+    {
+      "name": "wrong_direction_serverframe.close",
+      "direction": "client_to_server",
+      "tag": 7,
+      "frame_hex": "07020801",
+      "expect": "wrong_direction_tag",
+      "description": "a ServerFrame.close frame sent by a client; the relay closes with Close(INTERNAL) detail=wrong_direction_tag"
+    },
+    {
+      "name": "wrong_direction_serverframe.ping",
+      "direction": "client_to_server",
+      "tag": 5,
+      "frame_hex": "05020801",
+      "expect": "wrong_direction_tag",
+      "description": "a ServerFrame.ping frame sent by a client; the relay closes with Close(INTERNAL) detail=wrong_direction_tag"
+    },
+    {
+      "name": "wrong_direction_serverframe.pong",
+      "direction": "client_to_server",
+      "tag": 6,
+      "frame_hex": "06020801",
+      "expect": "wrong_direction_tag",
+      "description": "a ServerFrame.pong frame sent by a client; the relay closes with Close(INTERNAL) detail=wrong_direction_tag"
+    }
+  ]
+}

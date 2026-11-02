@@ -1,0 +1,55 @@
+/*
+ * Copyright 2023, gRPC Authors All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/// Serializes a message into a sequence of bytes.
+///
+/// Message serializers convert an input message to a sequence of bytes. gRPC uses
+/// serializers to convert messages into a form suitable for sending over a network. A
+/// ``MessageDeserializer`` performs the reverse operation, deserialization.
+///
+/// Callers use serializers frequently, so implementations should take care to ensure that
+/// serialization is as cheap as possible.
+@available(gRPCSwift 2.0, *)
+public protocol MessageSerializer<Message>: Sendable {
+  /// The type of message this serializer can serialize.
+  associatedtype Message
+
+  /// Serializes a message into a sequence of bytes.
+  ///
+  /// - Parameter message: The message to serialize.
+  /// - Returns: The serialized bytes of a message.
+  func serialize<Bytes: GRPCContiguousBytes>(_ message: Message) throws -> Bytes
+}
+
+/// Deserializes a sequence of bytes into a message.
+///
+/// Message deserializers convert a sequence of bytes into a message. gRPC uses
+/// deserializers to convert bytes received from the network into an application-specific
+/// message. A ``MessageSerializer`` performs the reverse operation, serialization.
+///
+/// Callers use deserializers frequently, so implementations should take care to ensure that
+/// deserialization is as cheap as possible.
+@available(gRPCSwift 2.0, *)
+public protocol MessageDeserializer<Message>: Sendable {
+  /// The type of message this deserializer can deserialize.
+  associatedtype Message
+
+  /// Deserializes a sequence of bytes into a message.
+  ///
+  /// - Parameter serializedMessageBytes: The bytes to deserialize.
+  /// - Returns: The deserialized message.
+  func deserialize<Bytes: GRPCContiguousBytes>(_ serializedMessageBytes: Bytes) throws -> Message
+}

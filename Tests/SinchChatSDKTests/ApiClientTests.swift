@@ -1,75 +1,58 @@
 import XCTest
-import GRPC
-import Logging
 
 @testable import SinchChatSDK
 
 final class ApiClientTests: XCTestCase {
 
     var client: APIClient?
-    
+
     override func tearDown() {
         super.tearDown()
         client?.closeChannel()
         client = nil
     }
-    func testInititializationEU() {
-        client = DefaultAPIClient(region: .EU1)
 
-        XCTAssertNotNil(client?.getChannel(), "The channel should not be nil.")
-        XCTAssertTrue(client?.isChannelStarted ?? true)
-        
+    func testInititializationEU() {
+        client = Default2APIClient(region: .EU1)
+
+        XCTAssertNotNil(client)
+        XCTAssertTrue(client?.isChannelStarted ?? false)
+
     }
     func testInititializationUS() {
 
-        expectFatalError(expectedMessage: "there is no url for US region provided yet") {
-            self.client = DefaultAPIClient(region: .US1)
+        self.client = Default2APIClient(region: .US1)
 
-        }
+        XCTAssertNotNil(client)
+        XCTAssertTrue(client?.isChannelStarted ?? false)
+
     }
     func testInititializationCustom() {
 
-        client = DefaultAPIClient(region: .custom(host: "sdk.sinch-chat.unauth.prod.sinch.com", pushAPIHost: ""))
+        client = Default2APIClient(region: .custom(
+            host: "sdk.sinch-chat.unauth.prod.sinch.com",
+            pushAPIHost: "",
+            port: nil,
+            isSecure: true
+        ))
 
-        XCTAssertNotNil(client?.getChannel(), "The channel should not be nil.")
-        XCTAssertTrue(client?.isChannelStarted ?? true)
+        XCTAssertNotNil(client)
+        XCTAssertTrue(client?.isChannelStarted ?? false)
     }
-    
-    func testStartingChannelInititialization() {
-        client = DefaultAPIClient(region: .EU1)
+
+    func testStartingChannelInitialization() {
+        client = Default2APIClient(region: .EU1)
         client?.closeChannel()
         client?.startChannel()
-        
-        XCTAssertNotNil(client?.getChannel(), "The channel should not be nil.")
-        XCTAssertTrue(client?.isChannelStarted ?? true)
-        
+
+        XCTAssertNotNil(client)
+        XCTAssertTrue(client?.isChannelStarted ?? false)
+
     }
     func testCloseChannel() {
-        client = DefaultAPIClient(region: .EU1)
+        client = Default2APIClient(region: .EU1)
         client?.closeChannel()
 
-        XCTAssertFalse(client?.isChannelStarted ?? false)
-    }
-}
-extension XCTestCase {
-    func expectFatalError(expectedMessage: String, testcase: @escaping () -> Void) {
-        let expectation = self.expectation(description: "expectingFatalError")
-        var assertionMessage: String = ""
-
-        triggerFatalError = { (message, _, _) in
-            assertionMessage = message()
-            DispatchQueue.main.async {
-                expectation.fulfill()
-            }
-            Thread.exit()
-            Swift.fatalError("will never be executed since thread exits")
-        }
-
-        Thread(block: testcase).start()
-
-        waitForExpectations(timeout: 0.1) { _ in
-            XCTAssertEqual(expectedMessage, assertionMessage)
-            triggerFatalError = Swift.fatalError
-        }
+        XCTAssertTrue(client?.isChannelStarted ?? false)
     }
 }

@@ -1,0 +1,7 @@
+version: 1
+builder:
+  configs:
+    - documentation_targets: [GRPCCore, GRPCCodeGen]
+    - documentation_targets: [GRPCInProcessTransport]
+      # Don't include @_exported types from GRPCCore
+      custom_documentation_parameters: [--exclude-extended-types]

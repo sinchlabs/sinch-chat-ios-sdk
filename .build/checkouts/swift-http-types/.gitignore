@@ -1,0 +1,14 @@
+.DS_Store
+.swift-version
+
+.build
+/Packages
+.xcode
+/*.xcodeproj
+DerivedData
+
+.swiftpm/
+Package.resolved
+
+# DocC generated files
+.docc-build

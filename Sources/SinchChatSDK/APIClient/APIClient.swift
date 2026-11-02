@@ -3,12 +3,6 @@ import GRPCCore
 import GRPCNIOTransportHTTP2
 import GRPCNIOTransportHTTP2Posix
 
-public enum Region: Codable, Equatable, Sendable {
-    case EU1
-    case US1
-    case custom(host: String, pushAPIHost: String, port: Int?, isSecure: Bool?)
-}
-
 internal nonisolated(unsafe) var triggerFatalError = Swift.fatalError
 
 /// Abstraction over the chat gRPC transport.
@@ -39,10 +33,12 @@ final class Default2APIClient: APIClient, @unchecked Sendable {
             self.host = "grpc.sinch-chat.us1.prod.sinch.com"
             self.port = 443
             self.isSecure = true
-        case .custom(let host, _, let port, let isSecure):
+        case .custom(let host, _, let port, let isSecure, _):
             self.host = host
             self.port = port ?? 443
             self.isSecure = isSecure ?? true
+        @unknown default:
+            return nil
         }
 
         guard (try? Self.makeTransport(host: self.host, port: self.port, isSecure: self.isSecure)) != nil else {

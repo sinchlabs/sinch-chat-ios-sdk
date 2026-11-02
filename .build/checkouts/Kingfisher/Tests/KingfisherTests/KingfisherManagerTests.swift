@@ -1,0 +1,3139 @@
+//
+//  KingfisherManagerTests.swift
+//  Kingfisher
+//
+//  Created by Wei Wang on 15/10/22.
+//
+//  Copyright (c) 2019 Wei Wang <onevcat@gmail.com>
+//
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in
+//  all copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+//  THE SOFTWARE.
+
+import XCTest
+@testable import Kingfisher
+
+actor CallingChecker {
+    var called = false
+    func mark() {
+        called = true
+    }
+    
+    func checkCancelBehavior(
+        stub: LSStubResponseDSL,
+        block: @escaping () async throws -> Void
+    ) async throws {
+        let task = Task {
+            do {
+                _ = try await block()
+                XCTFail()
+            } catch {
+                mark()
+                if let error = error as? KingfisherError {
+                    let isExpectedCancellation: Bool
+                    if case .requestError(reason: .asyncTaskContextCancelled) = error {
+                        isExpectedCancellation = true
+                    } else {
+                        isExpectedCancellation = error.isTaskCancelled
+                    }
+                    XCTAssertTrue(isExpectedCancellation)
+                } else {
+                    XCTAssertTrue(error is CancellationError)
+                }
+            }
+        }
+        try await Task.sleep(nanoseconds: NSEC_PER_SEC / 10)
+        task.cancel()
+        _ = stub.go()
+        await task.value
+        XCTAssertTrue(called)
+    }
+}
+
+class KingfisherManagerTests: XCTestCase {
+    
+    var manager: KingfisherManager!
+    
+    override class func setUp() {
+        super.setUp()
+        LSNocilla.sharedInstance().start()
+    }
+    
+    override class func tearDown() {
+        LSNocilla.sharedInstance().stop()
+        super.tearDown()
+    }
+    
+    override func setUp() {
+        super.setUp()
+        // Put setup code here. This method is called before the invocation of each test method in the class.
+        let uuid = UUID()
+        let downloader = ImageDownloader(name: "test.manager.\(uuid.uuidString)")
+        let cache = ImageCache(name: "test.cache.\(uuid.uuidString)")
+        
+        manager = KingfisherManager(downloader: downloader, cache: cache)
+        manager.defaultOptions = [.waitForCache]
+    }
+    
+    override func tearDown() {
+        clearStubs(afterCancelling: manager)
+        clearCaches([manager.cache])
+        cleanDefaultCache()
+        manager = nil
+        super.tearDown()
+    }
+    
+    func testRetrieveImage() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+
+        let manager = self.manager!
+        manager.retrieveImage(with: url) { result in
+            XCTAssertNotNil(result.value?.image)
+            XCTAssertEqual(result.value!.cacheType, .none)
+
+        manager.retrieveImage(with: url) { result in
+            XCTAssertNotNil(result.value?.image)
+            XCTAssertEqual(result.value!.cacheType, .memory)
+
+        manager.cache.clearMemoryCache()
+        manager.retrieveImage(with: url) { result in
+            XCTAssertNotNil(result.value?.image)
+            XCTAssertEqual(result.value!.cacheType, .disk)
+
+        manager.cache.clearMemoryCache()
+        manager.cache.clearDiskCache {
+            manager.retrieveImage(with: url) { result in
+                XCTAssertNotNil(result.value?.image)
+                XCTAssertEqual(result.value!.cacheType, .none)
+                exp.fulfill()
+        }}}}}
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    func testRetrieveImageAsync() async throws {
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+
+        let manager = self.manager!
+        
+        var result = try await manager.retrieveImage(with: url)
+        XCTAssertNotNil(result.image)
+        XCTAssertEqual(result.cacheType, .none)
+        
+        result = try await manager.retrieveImage(with: url)
+        XCTAssertNotNil(result.image)
+        XCTAssertEqual(result.cacheType, .memory)
+        
+        manager.cache.clearMemoryCache()
+        result = try await manager.retrieveImage(with: url)
+        XCTAssertNotNil(result.image)
+        XCTAssertEqual(result.cacheType, .disk)
+        
+        manager.cache.clearMemoryCache()
+        await manager.cache.clearDiskCache()
+        result = try await manager.retrieveImage(with: url)
+        XCTAssertNotNil(result.image)
+        XCTAssertEqual(result.cacheType, .none)
+    }
+    
+    func testRetrieveImageWithProcessor() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+        let p = RoundCornerImageProcessor(cornerRadius: 20)
+        let manager = self.manager!
+
+        manager.retrieveImage(with: url, options: [.processor(p)]) { result in
+            XCTAssertNotNil(result.value?.image)
+            XCTAssertEqual(result.value!.cacheType, .none)
+            
+        manager.retrieveImage(with: url) { result in
+            XCTAssertNotNil(result.value?.image)
+            XCTAssertEqual(result.value!.cacheType, .none,
+                           "Need a processor to get correct image. Cannot get from cache, need download again.")
+
+        manager.retrieveImage(with: url, options: [.processor(p)]) { result in
+            XCTAssertNotNil(result.value?.image)
+            XCTAssertEqual(result.value!.cacheType, .memory)
+                    
+        self.manager.cache.clearMemoryCache()
+        manager.retrieveImage(with: url, options: [.processor(p)]) { result in
+            XCTAssertNotNil(result.value?.image)
+            XCTAssertEqual(result.value!.cacheType, .disk)
+                        
+        self.manager.cache.clearMemoryCache()
+        self.manager.cache.clearDiskCache {
+            self.manager.retrieveImage(with: url, options: [.processor(p)]) { result in
+                XCTAssertNotNil(result.value?.image)
+                XCTAssertEqual(result.value!.cacheType, .none)
+
+                exp.fulfill()
+        }}}}}}
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testRetrieveImageOriginalCacheClaimsCachedButReturnsNoneShouldStillCallback() {
+        let exp = expectation(description: #function)
+
+        let uuid = UUID()
+        let originalCache = ImageCache(name: "test.original.\(uuid.uuidString)")
+        let targetCache = ImageCache(name: "test.target.\(uuid.uuidString)")
+
+        addTeardownBlock {
+            clearCaches([originalCache, targetCache])
+        }
+
+        let url = testURLs[0]
+        let key = url.cacheKey
+
+        stub(url, data: testImageData)
+
+        // Store invalid data as the "original" image. This makes `imageCachedType` report `.disk`,
+        // while `retrieveImage` returns `.none` due to deserialization failure.
+        do {
+            try originalCache.diskStorage.store(value: Data([0x01, 0x02, 0x03]), forKey: key)
+        } catch {
+            XCTFail("Failed to prepare original cache: \(error)")
+            return
+        }
+
+        XCTAssertTrue(
+            originalCache.imageCachedType(forKey: key, processorIdentifier: DefaultImageProcessor.default.identifier).cached
+        )
+
+        let p = RoundCornerImageProcessor(cornerRadius: 20)
+        manager.retrieveImage(
+            with: url,
+            options: [
+                .processor(p),
+                .originalCache(originalCache),
+                .targetCache(targetCache)
+            ]
+        ) { result in
+            // It should never hang without calling the completion handler.
+            XCTAssertNotNil(result.value?.image)
+            XCTAssertEqual(result.value?.cacheType, CacheType.none)
+            exp.fulfill()
+        }
+
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    func testRetrieveImageForceRefresh() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+        
+        manager.cache.store(
+            testImage,
+            original: testImageData,
+            forKey: url.cacheKey,
+            processorIdentifier: DefaultImageProcessor.default.identifier,
+            cacheSerializer: DefaultCacheSerializer.default,
+            toDisk: true)
+        {
+            _ in
+            XCTAssertTrue(self.manager.cache.imageCachedType(forKey: url.cacheKey).cached)
+            self.manager.retrieveImage(with: url, options: [.forceRefresh]) { result in
+                XCTAssertNotNil(result.value?.image)
+                XCTAssertEqual(result.value!.cacheType, .none)
+                exp.fulfill()
+            }
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    func testRetrieveImageCancel() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        let stub = delayedStub(url, data: testImageData, length: 123)
+
+        let task = manager.retrieveImage(with: url) {
+            result in
+            XCTAssertNotNil(result.error)
+            XCTAssertTrue(result.error!.isTaskCancelled)
+            exp.fulfill()
+        }
+
+        XCTAssertNotNil(task)
+        task?.cancel()
+        _ = stub.go()
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    func testRetrieveImageCancelAsync() async throws {
+        let url = testURLs[0]
+        let stub = delayedStub(url, data: testImageData, length: 123)
+
+        let checker = CallingChecker()
+        try await checker.checkCancelBehavior(stub: stub) {
+            _ = try await self.manager.retrieveImage(with: url)
+        }
+    }
+    
+    /// Test to reproduce the Swift Task Continuation Misuse issue
+    /// This test verifies that continuations are properly resumed even under rapid cancellation scenarios
+    /// 
+    /// NOTE: Single test run may not reproduce the issue, but running this test repeatedly 
+    /// (e.g., 100 times in Xcode) will almost certainly trigger the SWIFT TASK CONTINUATION MISUSE warning.
+    /// This confirms the existence of a race condition in the async retrieveImage implementation.
+    func testRetrieveImageContinuationMisuseReproduction() async throws {
+        let url = testURLs[0]
+        let stub = delayedStub(url, data: testImageData, length: 123)
+        
+        // Create multiple concurrent tasks that are cancelled quickly
+        // This should reproduce the continuation leak scenario
+        let taskCount = 50 // Increased to make race condition more likely
+        var tasks: [Task<Void, Never>] = []
+        
+        for i in 0..<taskCount {
+            let task = Task {
+                do {
+                    _ = try await self.manager.retrieveImage(with: url)
+                    // If we reach here without cancellation, something is wrong
+                    print("Task \(i) completed without cancellation - unexpected")
+                } catch {
+                    // This should be a cancellation error
+                    if let kfError = error as? KingfisherError, kfError.isTaskCancelled {
+                        // Expected cancellation
+                    } else if error is CancellationError {
+                        // Expected cancellation
+                    } else {
+                        print("Task \(i) failed with unexpected error: \(error)")
+                    }
+                }
+            }
+            tasks.append(task)
+            
+            // Cancel immediately after creation to create race conditions
+            task.cancel()
+            
+            // Add a tiny delay to create more variation in timing
+            if i % 5 == 0 {
+                try await Task.sleep(nanoseconds: NSEC_PER_SEC / 1000) // 1ms
+            }
+        }
+        
+        // Wait a bit to ensure all tasks have had a chance to start and be cancelled
+        try await Task.sleep(nanoseconds: NSEC_PER_SEC / 10) // 100ms
+        
+        // Complete the stub to allow any pending operations to finish
+        _ = stub.go()
+        
+        // Wait for all tasks to complete
+        for task in tasks {
+            await task.value
+        }
+        
+        // If we get here without hanging, the continuation handling is working correctly
+        // The test passes if no SWIFT TASK CONTINUATION MISUSE warning is printed to console
+    }
+    
+    /// Another test that creates a more specific race condition scenario
+    /// This test checks the exact timing described in the issue
+    /// 
+    /// NOTE: Like the previous test, run this repeatedly to increase chances of reproducing the issue.
+    func testRetrieveImageRaceConditionSpecific() async throws {
+        let url = testURLs[0]
+        let stub = delayedStub(url, data: testImageData, length: 5000) // Longer delay
+        
+        // This creates the specific race condition:
+        // 1. Task starts
+        // 2. Gets to the withCheckedThrowingContinuation
+        // 3. Cancel happens before the inner retrieveImage call completes setup
+        let task = Task {
+            do {
+                _ = try await self.manager.retrieveImage(with: url)
+                XCTFail("Task should have been cancelled")
+            } catch {
+                // Should be cancelled
+                if let error = error as? KingfisherError {
+                    let isExpectedCancellation: Bool
+                    if case .requestError(reason: .asyncTaskContextCancelled) = error {
+                        isExpectedCancellation = true
+                    } else {
+                        isExpectedCancellation = error.isTaskCancelled
+                    }
+                    XCTAssertTrue(isExpectedCancellation)
+                } else {
+                    XCTAssertTrue(error is CancellationError)
+                }
+            }
+        }
+        
+        // Very short delay to let the task start but not complete
+        try await Task.sleep(nanoseconds: NSEC_PER_SEC / 1000) // 1ms
+        
+        // Cancel before the network stub is triggered
+        task.cancel()
+        
+        // Now trigger the network response
+        _ = stub.go()
+        
+        // Wait for the task to complete
+        await task.value
+    }
+    
+    func testSuccessCompletionHandlerRunningOnMainQueueByDefault() {
+        let progressExpectation = expectation(description: "progressBlock running on main queue")
+        let completionExpectation = expectation(description: "completionHandler running on main queue")
+
+        let url = testURLs[0]
+        stub(url, data: testImageData, length: 123)
+        
+        manager.retrieveImage(with: url, options: nil, progressBlock: { _, _ in
+            XCTAssertTrue(Thread.isMainThread)
+            progressExpectation.fulfill()})
+        {
+            result in
+            XCTAssertNil(result.error)
+            XCTAssertTrue(Thread.isMainThread)
+            completionExpectation.fulfill()
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testShouldNotDownloadImageIfCacheOnlyAndNotInCache() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+
+        manager.retrieveImage(with: url, options: [.onlyFromCache]) { result in
+            XCTAssertNil(result.value)
+            XCTAssertNotNil(result.error)
+            if case .cacheError(reason: .imageNotExisting(let key)) = result.error! {
+                XCTAssertEqual(key, url.cacheKey)
+            } else {
+                XCTFail()
+            }
+            exp.fulfill()
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testErrorCompletionHandlerRunningOnMainQueueByDefault() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData, statusCode: 404)
+
+        manager.retrieveImage(with: url) { result in
+            XCTAssertNotNil(result.error)
+            XCTAssertTrue(Thread.isMainThread)
+            XCTAssertTrue(result.error!.isInvalidResponseStatusCode(404))
+            exp.fulfill()
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testSuccessCompletionHandlerRunningOnCustomQueue() {
+        let progressExpectation = expectation(description: "progressBlock running on custom queue")
+        let completionExpectation = expectation(description: "completionHandler running on custom queue")
+
+        let url = testURLs[0]
+        stub(url, data: testImageData, length: 123)
+
+        let customQueue = DispatchQueue(label: "com.kingfisher.testQueue")
+        let options: KingfisherOptionsInfo = [.callbackQueue(.dispatch(customQueue))]
+        manager.retrieveImage(with: url, options: options, progressBlock: { _, _ in
+            XCTAssertTrue(Thread.isMainThread)
+            progressExpectation.fulfill()
+        })
+        {
+            result in
+            XCTAssertNil(result.error)
+            dispatchPrecondition(condition: .onQueue(customQueue))
+            completionExpectation.fulfill()
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testLoadCacheCompletionHandlerRunningOnCustomQueue() {
+        let completionExpectation = expectation(description: "completionHandler running on custom queue")
+
+        let url = testURLs[0]
+        manager.cache.store(testImage, forKey: url.cacheKey)
+
+        let customQueue = DispatchQueue(label: "com.kingfisher.testQueue")
+        manager.retrieveImage(with: url, options: [.callbackQueue(.dispatch(customQueue))]) {
+            result in
+            XCTAssertNil(result.error)
+            dispatchPrecondition(condition: .onQueue(customQueue))
+            completionExpectation.fulfill()
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testOnlyFromCacheMissCompletionHandlerRunningOnCustomQueue() {
+        let completionExpectation = expectation(description: "completionHandler running on custom queue")
+        let customQueue = DispatchQueue(label: "com.kingfisher.testQueue.onlyFromCache")
+        let queueKey = DispatchSpecificKey<String>()
+        customQueue.setSpecific(key: queueKey, value: customQueue.label)
+
+        let url = URL(string: "https://example.com/only-from-cache-miss")!
+        manager.retrieveImage(
+            with: url,
+            options: [.onlyFromCache, .callbackQueue(.dispatch(customQueue))]
+        ) { result in
+            XCTAssertNil(result.value)
+            XCTAssertNotNil(result.error)
+            XCTAssertEqual(DispatchQueue.getSpecific(key: queueKey), customQueue.label)
+            completionExpectation.fulfill()
+        }
+
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    func testDefaultOptionCouldApply() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+        
+        manager.defaultOptions = [.scaleFactor(2)]
+        manager.retrieveImage(with: url, completionHandler: { result in
+            #if !os(macOS)
+            XCTAssertEqual(result.value!.image.scale, 2.0)
+            #endif
+            exp.fulfill()
+        })
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    func testOriginalImageCouldBeStored() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+
+        let manager = self.manager!
+        let p = SimpleProcessor()
+        let options = KingfisherParsedOptionsInfo([.processor(p), .cacheOriginalImage])
+        let source = Source.network(url)
+        let context = RetrievingContext(options: options, originalSource: source)
+        manager.loadAndCacheImage(source: .network(url), context: context) { result in
+            
+            var imageCached = manager.cache.imageCachedType(forKey: url.cacheKey, processorIdentifier: p.identifier)
+            var originalCached = manager.cache.imageCachedType(forKey: url.cacheKey)
+
+            XCTAssertEqual(imageCached, .memory)
+
+            delay(0.3) {
+                manager.cache.clearMemoryCache()
+                
+                imageCached = manager.cache.imageCachedType(forKey: url.cacheKey, processorIdentifier: p.identifier)
+                originalCached = manager.cache.imageCachedType(forKey: url.cacheKey)
+                XCTAssertEqual(imageCached, .disk)
+                XCTAssertEqual(originalCached, .disk)
+                
+                exp.fulfill()
+            }
+        }
+
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    func testOriginalImageNotBeStoredWithoutOptionSet() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+
+        let p = SimpleProcessor()
+        let options = KingfisherParsedOptionsInfo([.processor(p), .waitForCache])
+        let source = Source.network(url)
+        let context = RetrievingContext(options: options, originalSource: source)
+        manager.loadAndCacheImage(source: .network(url), context: context) {
+            result in
+            var imageCached = self.manager.cache.imageCachedType(forKey: url.cacheKey, processorIdentifier: p.identifier)
+            var originalCached = self.manager.cache.imageCachedType(forKey: url.cacheKey)
+            
+            XCTAssertEqual(imageCached, .memory)
+            XCTAssertEqual(originalCached, .none)
+            
+            self.manager.cache.clearMemoryCache()
+            
+            imageCached = self.manager.cache.imageCachedType(forKey: url.cacheKey, processorIdentifier: p.identifier)
+            originalCached = self.manager.cache.imageCachedType(forKey: url.cacheKey)
+            XCTAssertEqual(imageCached, .disk)
+            XCTAssertEqual(originalCached, .none)
+            
+            exp.fulfill()
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    func testCouldProcessOnOriginalImage() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        
+        manager.cache.store(
+            testImage,
+            original: testImageData,
+            forKey: url.cacheKey,
+            processorIdentifier: DefaultImageProcessor.default.identifier,
+            cacheSerializer: DefaultCacheSerializer.default,
+            toDisk: true)
+        {
+            _ in
+            let p = SimpleProcessor()
+            
+            let cached = self.manager.cache.imageCachedType(forKey: url.cacheKey, processorIdentifier: p.identifier)
+            XCTAssertFalse(cached.cached)
+            
+            // No downloading will happen
+            self.manager.retrieveImage(with: url, options: [.processor(p)]) { result in
+                XCTAssertNotNil(result.value?.image)
+                XCTAssertEqual(result.value!.cacheType, .none)
+                XCTAssertTrue(p.processed)
+                
+                // The processed image should be cached
+                let cached = self.manager.cache.imageCachedType(forKey: url.cacheKey, processorIdentifier: p.identifier)
+                XCTAssertTrue(cached.cached)
+                exp.fulfill()
+            }
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    func testFailingProcessOnOriginalImage() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        
+        manager.cache.store(
+            testImage,
+            original: testImageData,
+            forKey: url.cacheKey,
+            processorIdentifier: DefaultImageProcessor.default.identifier,
+            cacheSerializer: DefaultCacheSerializer.default,
+            toDisk: true)
+        {
+            _ in
+            let p = FailingProcessor()
+            
+            let cached = self.manager.cache.imageCachedType(forKey: url.cacheKey, processorIdentifier: p.identifier)
+            XCTAssertFalse(cached.cached)
+            
+            // No downloading will happen
+            self.manager.retrieveImage(with: url, options: [.processor(p)]) { result in
+                XCTAssertNotNil(result.error)
+                XCTAssertTrue(p.processed)
+                if case .processorError(reason: .processingFailed(let processor, _)) = result.error! {
+                    XCTAssertEqual(processor.identifier, p.identifier)
+                } else {
+                    XCTFail()
+                }
+                exp.fulfill()
+            }
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    func testFailingProcessOnDataProviderImage() {
+        let exp = expectation(description: #function)
+        let provider = SimpleImageDataProvider(cacheKey: "key") { .success(testImageData) }
+        let p = FailingProcessor()
+        let options = [KingfisherOptionsInfoItem.processor(p), .processingQueue(.mainCurrentOrAsync)]
+        _ = manager.retrieveImage(with: .provider(provider), options: options) { result in
+            XCTAssertNotNil(result.error)
+            if case .processorError(reason: .processingFailed(let processor, _)) = result.error! {
+                XCTAssertEqual(processor.identifier, p.identifier)
+            } else {
+                XCTFail()
+            }
+            exp.fulfill()
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    func testCacheOriginalImageWithOriginalCache() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        
+        let originalCache = ImageCache(name: "test.original.\(UUID().uuidString)")
+        addTeardownBlock {
+            clearCaches([originalCache])
+        }
+        
+        // Clear original cache first.
+        originalCache.clearMemoryCache()
+        originalCache.clearDiskCache {
+            
+            XCTAssertEqual(originalCache.imageCachedType(forKey: url.cacheKey), .none)
+            
+            stub(url, data: testImageData)
+            
+            let p = RoundCornerImageProcessor(cornerRadius: 20)
+            self.manager.retrieveImage(
+                with: url,
+                options: [.processor(p), .cacheOriginalImage, .originalCache(originalCache)])
+            {
+                result in
+                let originalCached = originalCache.imageCachedType(forKey: url.cacheKey)
+                XCTAssertEqual(originalCached, .disk)
+                exp.fulfill()
+            }
+        }
+        waitForExpectations(timeout: 10, handler: nil)
+    }
+    
+    func testCouldProcessOnOriginalImageWithOriginalCache() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        
+        let originalCache = ImageCache(name: "test.original.\(UUID().uuidString)")
+        addTeardownBlock {
+            clearCaches([originalCache])
+        }
+        
+        // Clear original cache first.
+        originalCache.clearMemoryCache()
+        originalCache.clearDiskCache {
+            originalCache.store(
+                testImage,
+                original: testImageData,
+                forKey: url.cacheKey,
+                processorIdentifier: DefaultImageProcessor.default.identifier,
+                cacheSerializer: DefaultCacheSerializer.default,
+                toDisk: true)
+            {
+                _ in
+                let p = SimpleProcessor()
+                
+                let cached = self.manager.cache.imageCachedType(forKey: url.cacheKey, processorIdentifier: p.identifier)
+                XCTAssertFalse(cached.cached)
+                
+                // No downloading will happen
+                self.manager.retrieveImage(with: url, options: [.processor(p), .originalCache(originalCache)]) {
+                    result in
+                    XCTAssertNotNil(result.value?.image)
+                    XCTAssertEqual(result.value!.cacheType, .none)
+                    XCTAssertTrue(p.processed)
+                    
+                    // The processed image should be cached
+                    let cached = self.manager.cache.imageCachedType(forKey: url.cacheKey, processorIdentifier: p.identifier)
+                    XCTAssertTrue(cached.cached)
+                    exp.fulfill()
+                }
+            }
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    func testCouldProcessDoNotHappenWhenSerializerCachesTheProcessedData() async throws {
+        let provider = SimpleImageDataProvider(cacheKey: #function) { .success(testImageData) }
+        let s = DefaultCacheSerializer()
+
+        let p1 = SimpleProcessor()
+        let options1: KingfisherOptionsInfo = [.processor(p1), .cacheSerializer(s), .waitForCache]
+        let source = Source.provider(provider)
+
+        let first = try await manager.retrieveImage(with: source, options: options1)
+        XCTAssertEqual(first.cacheType, .none)
+        XCTAssertTrue(p1.processed)
+
+        let p2 = SimpleProcessor()
+        let options2: KingfisherOptionsInfo = [.processor(p2), .cacheSerializer(s), .waitForCache]
+        manager.cache.clearMemoryCache()
+
+        let second = try await manager.retrieveImage(with: source, options: options2)
+        XCTAssertNotNil(second.image)
+        XCTAssertEqual(second.cacheType, .disk)
+        XCTAssertFalse(p2.processed)
+    }
+    
+    func testCouldProcessAgainWhenSerializerCachesOriginalData() async throws {
+        let provider = SimpleImageDataProvider(cacheKey: #function) { .success(testImageData) }
+        var s = DefaultCacheSerializer()
+        s.preferCacheOriginalData = true
+
+        let p1 = SimpleProcessor()
+        let options1: KingfisherOptionsInfo = [.processor(p1), .cacheSerializer(s), .waitForCache]
+        let source = Source.provider(provider)
+
+        let first = try await manager.retrieveImage(with: source, options: options1)
+        XCTAssertEqual(first.cacheType, .none)
+        XCTAssertTrue(p1.processed)
+
+        let p2 = SimpleProcessor()
+        let options2: KingfisherOptionsInfo = [.processor(p2), .cacheSerializer(s), .waitForCache]
+        manager.cache.clearMemoryCache()
+
+        let second = try await manager.retrieveImage(with: source, options: options2)
+        XCTAssertNotNil(second.image)
+        XCTAssertEqual(second.cacheType, .disk)
+        XCTAssertTrue(p2.processed)
+    }
+    
+    func testWaitForCacheOnRetrieveImage() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+        
+        self.manager.retrieveImage(with: url) { result in
+            XCTAssertNotNil(result.value?.image)
+            XCTAssertEqual(result.value!.cacheType, .none)
+            
+            self.manager.cache.clearMemoryCache()
+            let cached = self.manager.cache.imageCachedType(forKey: url.cacheKey)
+            XCTAssertEqual(cached, .disk)
+            
+            exp.fulfill()
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    func testNotWaitForCacheOnRetrieveImage() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+
+        self.manager.defaultOptions = .empty
+        self.manager.retrieveImage(with: url, options: [.callbackQueue(.untouch)]) { result in
+            XCTAssertNotNil(result.value?.image)
+            XCTAssertEqual(result.value!.cacheType, .none)
+            
+            // We are not waiting for cache finishing here. So only sync memory cache is done.
+            XCTAssertEqual(self.manager.cache.imageCachedType(forKey: url.cacheKey), .memory)
+            
+            // Clear the memory cache.
+            self.manager.cache.clearMemoryCache()
+            // After some time, the disk cache should be done.
+            delay(0.5) {
+                XCTAssertEqual(self.manager.cache.imageCachedType(forKey: url.cacheKey), .disk)
+                exp.fulfill()
+            }
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    func testWaitForCacheOnRetrieveImageWithProcessor() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+        let p = RoundCornerImageProcessor(cornerRadius: 20)
+        self.manager.retrieveImage(with: url, options: [.processor(p)]) { result in
+            XCTAssertNotNil(result.value?.image)
+            XCTAssertEqual(result.value!.cacheType, .none)
+            
+            // `waitForCache` is enabled by default in test setup, so the processed image should already be cached to disk
+            // when the completion handler is called.
+            self.manager.cache.clearMemoryCache()
+            let cached = self.manager.cache.imageCachedType(forKey: url.cacheKey, processorIdentifier: p.identifier)
+            XCTAssertEqual(cached, .disk)
+
+            exp.fulfill()
+        }
+        waitForExpectations(timeout: 10, handler: nil)
+    }
+
+    func testImageShouldOnlyFromMemoryCacheOrRefreshCanBeGotFromMemory() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+
+        manager.retrieveImage(with: url, options: [.fromMemoryCacheOrRefresh]) { result in
+            // Can be downloaded and cached normally.
+            XCTAssertNotNil(result.value?.image)
+            XCTAssertEqual(result.value!.cacheType, .none)
+            
+            // Can still be got from memory even when disk cache cleared.
+            self.manager.cache.clearDiskCache {
+                self.manager.retrieveImage(with: url, options: [.fromMemoryCacheOrRefresh]) { result in
+                    XCTAssertNotNil(result.value?.image)
+                    XCTAssertEqual(result.value!.cacheType, .memory)
+                    
+                    exp.fulfill()
+                }
+            }
+        }
+        
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testImageShouldOnlyFromMemoryCacheOrRefreshCanRefreshIfNotInMemory() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+
+        manager.retrieveImage(with: url, options: [.fromMemoryCacheOrRefresh]) { result in
+            XCTAssertNotNil(result.value?.image)
+            XCTAssertEqual(result.value!.cacheType, .none)
+            XCTAssertEqual(self.manager.cache.imageCachedType(forKey: url.cacheKey), .memory)
+
+            self.manager.cache.clearMemoryCache()
+            XCTAssertEqual(self.manager.cache.imageCachedType(forKey: url.cacheKey), .disk)
+            
+            // Should skip disk cache and download again.
+            self.manager.retrieveImage(with: url, options: [.fromMemoryCacheOrRefresh]) { result in
+                XCTAssertNotNil(result.value?.image)
+                XCTAssertEqual(result.value!.cacheType, .none)
+                XCTAssertEqual(self.manager.cache.imageCachedType(forKey: url.cacheKey), .memory)
+
+                exp.fulfill()
+            }
+        }
+        waitForExpectations(timeout: 5, handler: nil)
+    }
+
+    func testShouldDownloadAndCacheProcessedImage() async throws {
+        let provider = SimpleImageDataProvider(cacheKey: #function) { .success(testImageData) }
+        let size = CGSize(width: 1, height: 1)
+        let processor = ResizingImageProcessor(referenceSize: size)
+        let source = Source.provider(provider)
+
+        let first = try await manager.retrieveImage(with: source, options: [.processor(processor)])
+        XCTAssertNotNil(first.image)
+        XCTAssertEqual(first.image.size, size)
+        XCTAssertEqual(first.cacheType, .none)
+
+        manager.cache.clearMemoryCache()
+        let cached = manager.cache.imageCachedType(
+            forKey: provider.cacheKey, processorIdentifier: processor.identifier)
+        XCTAssertEqual(cached, .disk)
+
+        let second = try await manager.retrieveImage(with: source, options: [.processor(processor)])
+        XCTAssertNotNil(second.image)
+        XCTAssertEqual(second.image.size, size)
+        XCTAssertEqual(second.cacheType, .disk)
+    }
+
+#if os(iOS) || os(tvOS) || os(watchOS) || os(visionOS)
+    func testShouldApplyImageModifierWhenDownload() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+        
+        let modifierCalled = LockIsolated(false)
+        let modifier = AnyImageModifier { image in
+            modifierCalled.setValue(true)
+            return image.withRenderingMode(.alwaysTemplate)
+        }
+        manager.retrieveImage(with: url, options: [.imageModifier(modifier)]) { result in
+            XCTAssertEqual(result.value?.image.renderingMode, .alwaysTemplate)
+            XCTAssertTrue(modifierCalled.value)
+            exp.fulfill()
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testShouldApplyImageModifierWhenLoadFromMemoryCache() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+        
+        let modifierCalled = LockIsolated(false)
+        let modifier = AnyImageModifier { image in
+            modifierCalled.setValue(true)
+            return image.withRenderingMode(.alwaysTemplate)
+        }
+
+        manager.cache.store(testImage, forKey: url.cacheKey)
+        manager.retrieveImage(with: url, options: [.imageModifier(modifier)]) { result in
+            XCTAssertEqual(result.value?.cacheType, .memory)
+            XCTAssertEqual(result.value?.image.renderingMode, .alwaysTemplate)
+            XCTAssertTrue(modifierCalled.value)
+            exp.fulfill()
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testShouldApplyImageModifierWhenLoadFromDiskCache() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+
+        let modifierCalled = LockIsolated(false)
+        let modifier = AnyImageModifier { image in
+            modifierCalled.setValue(true)
+            return image.withRenderingMode(.alwaysTemplate)
+        }
+
+        manager.cache.store(testImage, forKey: url.cacheKey) { _ in
+            self.manager.cache.clearMemoryCache()
+            self.manager.retrieveImage(with: url, options: [.imageModifier(modifier)]) { result in
+                XCTAssertEqual(result.value!.cacheType, .disk)
+                XCTAssertEqual(result.value!.image.renderingMode, .alwaysTemplate)
+                XCTAssertTrue(modifierCalled.value)
+                exp.fulfill()
+            }
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testImageModifierResultShouldNotBeCached() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+
+        let modifierCalled = LockIsolated(false)
+        let modifier = AnyImageModifier { image in
+            modifierCalled.setValue(true)
+            return image.withRenderingMode(.alwaysTemplate)
+        }
+        manager.retrieveImage(with: url, options: [.imageModifier(modifier)]) { result in
+            XCTAssertEqual(result.value?.image.renderingMode, .alwaysTemplate)
+
+            let memoryCached = self.manager.cache.retrieveImageInMemoryCache(forKey: url.absoluteString)
+            XCTAssertNotNil(memoryCached)
+            XCTAssertEqual(memoryCached?.renderingMode, .automatic)
+
+            self.manager.cache.retrieveImageInDiskCache(forKey: url.absoluteString) { result in
+                XCTAssertNotNil(result.value!)
+                XCTAssertEqual(result.value??.renderingMode, .automatic)
+                XCTAssertTrue(modifierCalled.value)
+                exp.fulfill()
+            }
+        }
+        
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+#endif
+    
+    func testRetrieveWithImageProvider() {
+        let exp = expectation(description: #function)
+        let provider = SimpleImageDataProvider(cacheKey: "key") { .success(testImageData) }
+        manager.defaultOptions = .empty
+        _ = manager.retrieveImage(with: .provider(provider), options: [.processingQueue(.mainCurrentOrAsync)]) {
+            result in
+            XCTAssertNotNil(result.value)
+            XCTAssertTrue(result.value!.image.renderEqual(to: testImage))
+            exp.fulfill()
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    func testRetrieveWithImageProviderFail() {
+        let exp = expectation(description: #function)
+        let provider = SimpleImageDataProvider(cacheKey: "key") { .failure(SimpleImageDataProvider.E()) }
+        _ = manager.retrieveImage(with: .provider(provider)) { result in
+            XCTAssertNotNil(result.error)
+            if case .imageSettingError(reason: .dataProviderError(_, let error)) = result.error! {
+                XCTAssertTrue(error is SimpleImageDataProvider.E)
+            } else {
+                XCTFail()
+            }
+            exp.fulfill()
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testContextRemovingAlternativeSource() {
+        let allSources: [Source] = [
+            .network(URL(string: "1")!),
+            .network(URL(string: "2")!)
+        ]
+        let info = KingfisherParsedOptionsInfo([.alternativeSources(allSources)])
+        let context = RetrievingContext<Source>(
+            options: info, originalSource: .network(URL(string: "0")!))
+
+        let source1 = context.popAlternativeSource()
+        XCTAssertNotNil(source1)
+        guard case .network(let r1) = source1! else {
+            XCTFail("Should be a network source, but \(source1!)")
+            return
+        }
+        XCTAssertEqual(r1.downloadURL.absoluteString, "1")
+
+        let source2 = context.popAlternativeSource()
+        XCTAssertNotNil(source2)
+        guard case .network(let r2) = source2! else {
+            XCTFail("Should be a network source, but \(source2!)")
+            return
+        }
+        XCTAssertEqual(r2.downloadURL.absoluteString, "2")
+
+        XCTAssertNil(context.popAlternativeSource())
+    }
+
+    // Regression test for a data race on `RetrievingContext`. The type is `@unchecked Sendable`
+    // and protects `_options` with `propertyQueue`, but `propagationErrors` used to be an
+    // unsynchronized `var` that is appended from `@Sendable` download completion handlers across
+    // alternative-source failovers. Hammering `appendError` concurrently must record every append
+    // (and stay clean under Thread Sanitizer); the unsynchronized version loses updates and races.
+    func testContextAppendErrorIsThreadSafe() {
+        let info = KingfisherParsedOptionsInfo(nil)
+        let source = Source.network(URL(string: "https://example.com/a.png")!)
+        let context = RetrievingContext<Source>(options: info, originalSource: source)
+        let error = KingfisherError.requestError(reason: .emptyRequest)
+
+        let workers = 8
+        let perWorker = 250
+        let queue = DispatchQueue(label: "test.context.append", attributes: .concurrent)
+        let group = DispatchGroup()
+        for _ in 0..<workers {
+            group.enter()
+            queue.async {
+                for _ in 0..<perWorker {
+                    context.appendError(error, to: source)
+                    _ = context.propagationErrors
+                }
+                group.leave()
+            }
+        }
+        group.wait()
+        XCTAssertEqual(context.propagationErrors.count, workers * perWorker)
+    }
+
+    // Regression test for the atomicity of `popAlternativeSource()`. The pop is a read-modify-write
+    // of `_options.alternativeSources`; if it were only synchronized per access instead of as one
+    // critical section, two concurrent failovers could pop the same source. Concurrent pops must
+    // hand out every alternative exactly once and then run dry.
+    func testContextPopAlternativeSourceIsThreadSafe() {
+        let sourceCount = 1000
+        let allSources: [Source] = (0..<sourceCount).map {
+            .network(URL(string: "https://example.com/alt-\($0).png")!)
+        }
+        let info = KingfisherParsedOptionsInfo([.alternativeSources(allSources)])
+        let context = RetrievingContext<Source>(
+            options: info, originalSource: .network(URL(string: "https://example.com/original.png")!))
+
+        let workers = 8
+        let queue = DispatchQueue(label: "test.context.pop", attributes: .concurrent)
+        let resultQueue = DispatchQueue(label: "test.context.pop.results")
+        let group = DispatchGroup()
+        var popped: [String] = []
+        for _ in 0..<workers {
+            group.enter()
+            queue.async {
+                var local: [String] = []
+                while let source = context.popAlternativeSource() {
+                    local.append(source.url!.absoluteString)
+                }
+                resultQueue.sync { popped.append(contentsOf: local) }
+                group.leave()
+            }
+        }
+        group.wait()
+
+        XCTAssertEqual(popped.count, sourceCount)
+        XCTAssertEqual(Set(popped).count, sourceCount, "Each alternative source must be popped exactly once")
+        XCTAssertNil(context.popAlternativeSource())
+    }
+
+    // Regression test for the low-data-mode fallback racing with alternative-source failover.
+    // Clearing `lowDataModeSource` through the `options` accessor is a get-modify-set of the whole
+    // options value: it can write back a stale snapshot and restore an alternative source that a
+    // concurrent `popAlternativeSource()` already consumed, letting the same source be selected
+    // twice. `takeLowDataModeSource()` must read and clear within one critical section, so racing
+    // takes and pops still hand out the low data source and every alternative exactly once.
+    func testContextTakeLowDataModeSourceIsThreadSafe() {
+        let sourceCount = 500
+        let allSources: [Source] = (0..<sourceCount).map {
+            .network(URL(string: "https://example.com/alt-\($0).png")!)
+        }
+        let lowDataURL = URL(string: "https://example.com/low-data.png")!
+        let info = KingfisherParsedOptionsInfo([
+            .alternativeSources(allSources),
+            .lowDataMode(.network(lowDataURL))
+        ])
+        let context = RetrievingContext<Source>(
+            options: info, originalSource: .network(URL(string: "https://example.com/original.png")!))
+
+        let popWorkers = 4
+        let takeWorkers = 4
+        let takesPerWorker = 250
+        let queue = DispatchQueue(label: "test.context.take", attributes: .concurrent)
+        let resultQueue = DispatchQueue(label: "test.context.take.results")
+        let group = DispatchGroup()
+        var popped: [String] = []
+        var taken: [String] = []
+
+        for _ in 0..<popWorkers {
+            group.enter()
+            queue.async {
+                var local: [String] = []
+                while let source = context.popAlternativeSource() {
+                    local.append(source.url!.absoluteString)
+                }
+                resultQueue.sync { popped.append(contentsOf: local) }
+                group.leave()
+            }
+        }
+        for _ in 0..<takeWorkers {
+            group.enter()
+            queue.async {
+                var local: [String] = []
+                for _ in 0..<takesPerWorker {
+                    if let source = context.takeLowDataModeSource() {
+                        local.append(source.url!.absoluteString)
+                    }
+                }
+                resultQueue.sync { taken.append(contentsOf: local) }
+                group.leave()
+            }
+        }
+        group.wait()
+
+        XCTAssertEqual(popped.count, sourceCount)
+        XCTAssertEqual(Set(popped).count, sourceCount, "A popped alternative source must not be reintroduced")
+        XCTAssertEqual(taken, [lowDataURL.absoluteString], "The low data mode source must be taken exactly once")
+        XCTAssertNil(context.popAlternativeSource())
+        XCTAssertNil(context.takeLowDataModeSource())
+        XCTAssertNil(context.options.lowDataModeSource)
+    }
+
+    func testRetrievingWithAlternativeSource() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+
+        let brokenURL = URL(string: "https://kingfisher.test/manager-alternative-source")!
+        stub(brokenURL, data: Data())
+
+        _ = manager.retrieveImage(
+            with: .network(brokenURL),
+            options: [.alternativeSources([.network(url)])])
+        {
+            result in
+
+            XCTAssertNotNil(result.value)
+            XCTAssertEqual(result.value!.source.url, url)
+            XCTAssertEqual(result.value!.originalSource.url, brokenURL)
+
+            exp.fulfill()
+        }
+
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testRetrievingErrorsWithAlternativeSource() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: Data())
+
+        let brokenURL = URL(string: "https://kingfisher.test/manager-alternative-errors-primary")!
+        stub(brokenURL, data: Data())
+
+        let anotherBrokenURL = URL(string: "https://kingfisher.test/manager-alternative-errors-secondary")!
+        stub(anotherBrokenURL, data: Data())
+
+        _ = manager.retrieveImage(
+            with: .network(brokenURL),
+            options: [.alternativeSources([.network(anotherBrokenURL), .network(url)])])
+        {
+            result in
+
+            defer { exp.fulfill() }
+
+            XCTAssertNil(result.value)
+            XCTAssertNotNil(result.error)
+
+            guard case .imageSettingError(reason: let reason) = result.error! else {
+                XCTFail("The error should be image setting error")
+                return
+            }
+
+            guard case .alternativeSourcesExhausted(let errorInfo) = reason else {
+                XCTFail("The error reason should be alternativeSourcesFailed")
+                return
+            }
+
+            XCTAssertEqual(errorInfo.count, 3)
+            XCTAssertEqual(errorInfo[0].source.url, brokenURL)
+            XCTAssertEqual(errorInfo[1].source.url, anotherBrokenURL)
+            XCTAssertEqual(errorInfo[2].source.url, url)
+        }
+
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testRetrievingAlternativeSourceTaskUpdateBlockCalled() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+
+        let brokenURL = URL(string: "https://kingfisher.test/manager-alternative-task-update")!
+        stub(brokenURL, data: Data())
+
+        let downloadTaskUpdatedCount = LockIsolated(0)
+        let task = manager.retrieveImage(
+          with: .network(brokenURL),
+          options: [.alternativeSources([.network(url)])],
+          downloadTaskUpdated: { newTask in
+              downloadTaskUpdatedCount.withValue { $0 += 1 }
+              XCTAssertEqual(newTask?.sessionTask?.task.currentRequest?.url, url)
+          })
+        {
+            result in
+            XCTAssertEqual(downloadTaskUpdatedCount.value, 1)
+            exp.fulfill()
+        }
+
+        XCTAssertEqual(task?.sessionTask?.task.currentRequest?.url, brokenURL)
+
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testRetrievingAlternativeSourceTaskUpdateBlockCalledBeforeCompletion() {
+        let exp = expectation(description: #function)
+        let brokenURL = URL(string: "https://kingfisher.test/manager-alternative-sync-primary")!
+        let alternativeURL = URL(string: "https://kingfisher.test/manager-alternative-sync-fallback")!
+        let downloader = ImmediateFailureImageDownloader(name: "test.manager.immediate")
+        let manager = KingfisherManager(downloader: downloader, cache: manager.cache)
+        let downloadTaskUpdated = LockIsolated(false)
+
+        _ = manager.retrieveImage(
+            with: .network(brokenURL),
+            options: [.alternativeSources([.network(alternativeURL)])],
+            downloadTaskUpdated: { newTask in
+                XCTAssertEqual(newTask?.sessionTask?.task.originalRequest?.url, alternativeURL)
+                downloadTaskUpdated.setValue(true)
+            })
+        {
+            result in
+            XCTAssertNotNil(result.error)
+            XCTAssertTrue(downloadTaskUpdated.value)
+            exp.fulfill()
+        }
+
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testRetrievingAlternativeSourceCancelled() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+
+        let brokenURL = URL(string: "https://kingfisher.test/manager-alternative-cancelled")!
+        let brokenStub = delayedStub(brokenURL, data: Data())
+
+        let task = manager.retrieveImage(
+            with: .network(brokenURL),
+            options: [.alternativeSources([.network(url)])]
+        )
+        {
+            result in
+            XCTAssertNotNil(result.error)
+            XCTAssertTrue(result.error?.isTaskCancelled ?? false)
+            exp.fulfill()
+        }
+        task?.cancel()
+        _ = brokenStub.go()
+
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testRetrievingAlternativeSourceCanCancelUpdatedTask() {
+        let updatedExp = expectation(description: "\(#function) updated")
+        let completionExp = expectation(description: "\(#function) completion")
+        let extraCompletionExp = expectation(description: "\(#function) extra completion")
+        extraCompletionExp.isInverted = true
+        let url = testURLs[0]
+        let dataStub = delayedStub(url, data: testImageData)
+        
+        let called = LockIsolated(false)
+        let completionCount = LockIsolated(0)
+        let isActive = LockIsolated(true)
+        defer { isActive.setValue(false) }
+
+        let brokenURL = URL(string: "https://kingfisher.test/manager-alternative-cancel-updated-task")!
+        stub(brokenURL, data: Data())
+
+        let task = manager.retrieveImage(
+            with: .network(brokenURL),
+            options: [.alternativeSources([.network(url)])],
+            downloadTaskUpdated: { newTask in
+                XCTAssertNotNil(newTask)
+                newTask?.cancel()
+                called.setValue(true)
+                updatedExp.fulfill()
+            }
+        )
+        {
+            result in
+            guard isActive.value else { return }
+            let callCount = completionCount.withValue {
+                $0 += 1
+                return $0
+            }
+            guard callCount == 1 else {
+                extraCompletionExp.fulfill()
+                return
+            }
+
+            XCTAssertNotNil(result.error)
+            XCTAssertTrue(result.error?.isTaskCancelled ?? false)
+            completionExp.fulfill()
+        }
+        
+        XCTAssertNotNil(task)
+        XCTAssertTrue(task!.isInitialized)
+
+        wait(for: [updatedExp], timeout: 3)
+        XCTAssertTrue(called.value)
+        _ = dataStub.go()
+        wait(for: [completionExp], timeout: 3)
+        wait(for: [extraCompletionExp], timeout: 0.3)
+    }
+    
+    func testDownsamplingHandleScale2x() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+        
+        _ = manager.retrieveImage(
+            with: .network(url),
+            options: [.processor(DownsamplingImageProcessor(size: .init(width: 4, height: 4))), .scaleFactor(2)])
+        {
+            result in
+
+            let image = result.value?.image
+            XCTAssertNotNil(image)
+            
+            #if os(macOS)
+            XCTAssertEqual(image?.size, .init(width: 8, height: 8))
+            XCTAssertEqual(image?.kf.scale, 1)
+            #else
+            XCTAssertEqual(image?.size, .init(width: 4, height: 4))
+            XCTAssertEqual(image?.kf.scale, 2)
+            #endif
+            
+            exp.fulfill()
+        }
+
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    func testDownsamplingHandleScale3x() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+        
+        _ = manager.retrieveImage(
+            with: .network(url),
+            options: [.processor(DownsamplingImageProcessor(size: .init(width: 4, height: 4))), .scaleFactor(3)])
+        {
+            result in
+
+            let image = result.value?.image
+            XCTAssertNotNil(image)
+            #if os(macOS)
+            XCTAssertEqual(image?.size, .init(width: 12, height: 12))
+            XCTAssertEqual(image?.kf.scale, 1)
+            #else
+            XCTAssertEqual(image?.size, .init(width: 4, height: 4))
+            XCTAssertEqual(image?.kf.scale, 3)
+            #endif
+            
+            exp.fulfill()
+        }
+
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testCacheCallbackCoordinatorStateChanging() {
+        var coordinator = CacheCallbackCoordinator(
+            shouldWaitForCache: false, shouldCacheOriginal: false)
+        var called = false
+        coordinator.apply(.cacheInitiated) {
+            called = true
+        }
+        XCTAssertTrue(called)
+        XCTAssertEqual(coordinator.state, .done)
+        coordinator.apply(.cachingImage) { XCTFail() }
+        XCTAssertEqual(coordinator.state, .done)
+
+        coordinator = CacheCallbackCoordinator(
+            shouldWaitForCache: true, shouldCacheOriginal: false)
+        called = false
+        coordinator.apply(.cacheInitiated) { XCTFail() }
+        XCTAssertEqual(coordinator.state, .idle)
+        coordinator.apply(.cachingImage) {
+            called = true
+        }
+        XCTAssertTrue(called)
+        XCTAssertEqual(coordinator.state, .done)
+
+        coordinator = CacheCallbackCoordinator(
+            shouldWaitForCache: false, shouldCacheOriginal: true)
+        coordinator.apply(.cacheInitiated) {
+            called = true
+        }
+        XCTAssertEqual(coordinator.state, .done)
+        coordinator.apply(.cachingOriginalImage) { XCTFail() }
+        XCTAssertEqual(coordinator.state, .done)
+
+        coordinator = CacheCallbackCoordinator(
+            shouldWaitForCache: true, shouldCacheOriginal: true)
+        coordinator.apply(.cacheInitiated) { XCTFail() }
+        XCTAssertEqual(coordinator.state, .idle)
+        coordinator.apply(.cachingOriginalImage) { XCTFail() }
+        XCTAssertEqual(coordinator.state, .originalImageCached)
+        coordinator.apply(.cachingImage) { called = true }
+        XCTAssertEqual(coordinator.state, .done)
+
+        coordinator = CacheCallbackCoordinator(
+            shouldWaitForCache: true, shouldCacheOriginal: true)
+        coordinator.apply(.cacheInitiated) { XCTFail() }
+        XCTAssertEqual(coordinator.state, .idle)
+        coordinator.apply(.cachingImage) { XCTFail() }
+        XCTAssertEqual(coordinator.state, .imageCached)
+        coordinator.apply(.cachingOriginalImage) { called = true }
+        XCTAssertEqual(coordinator.state, .done)
+    }
+    
+    func testCallbackClearAfterSuccess() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        
+        stub(url, data: testImageData)
+        
+        let task = LockIsolated<DownloadTask?>(nil)
+        let callbackCount = LockIsolated(0)
+        
+        let t: DownloadTask? = manager.retrieveImage(with: url) { result in
+            let count = callbackCount.withValue { value in
+                value += 1
+                return value
+            }
+
+            XCTAssertEqual(count, 1, "Callback should not be invoked again.")
+            XCTAssertNotNil(result.value?.image)
+
+            task.value?.cancel()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                exp.fulfill()
+            }
+        }
+
+        task.setValue(t)
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testCanUseCustomizeDefaultCacheSerializer() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+
+        var cacheSerializer = DefaultCacheSerializer()
+        cacheSerializer.preferCacheOriginalData = true
+
+        manager.cache.store(
+            testImage,
+            original: testImageData,
+            forKey: url.cacheKey,
+            processorIdentifier: DefaultImageProcessor.default.identifier,
+            cacheSerializer: cacheSerializer, toDisk: true) {
+                result in
+
+                let computedKey = url.cacheKey.computedKey(with: DefaultImageProcessor.default.identifier)
+                let fileURL = self.manager.cache.diskStorage.cacheFileURL(forKey: computedKey)
+                let data = try! Data(contentsOf: fileURL)
+                XCTAssertEqual(data, testImageData)
+
+                exp.fulfill()
+            }
+        waitForExpectations(timeout: 3.0)
+    }
+
+    func testCanUseCustomizeDefaultCacheSerializerStoreEncoded() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+
+        var cacheSerializer = DefaultCacheSerializer()
+        cacheSerializer.compressionQuality = 0.8
+
+        manager.cache.store(
+            testImage,
+            original: testImageJEPGData,
+            forKey: url.cacheKey,
+            processorIdentifier: DefaultImageProcessor.default.identifier,
+            cacheSerializer: cacheSerializer, toDisk: true) {
+                result in
+
+                let computedKey = url.cacheKey.computedKey(with: DefaultImageProcessor.default.identifier)
+                let fileURL = self.manager.cache.diskStorage.cacheFileURL(forKey: computedKey)
+                let data = try! Data(contentsOf: fileURL)
+                XCTAssertNotEqual(data, testImageJEPGData)
+                XCTAssertEqual(data, testImage.kf.jpegRepresentation(compressionQuality: 0.8))
+
+                exp.fulfill()
+            }
+        waitForExpectations(timeout: 3.0)
+    }
+    
+    func testImageResultContainsDataWhenDownloaded() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+        
+        manager.retrieveImage(with: url) { result in
+            XCTAssertNotNil(result.value?.data())
+            XCTAssertEqual(result.value!.data(), testImageData)
+            XCTAssertEqual(result.value!.cacheType, .none)
+            exp.fulfill()
+        }
+        
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    func testImageResultContainsDataWhenLoadFromMemoryCache() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+
+        manager.retrieveImage(with: url) { _ in
+            self.manager.retrieveImage(with: url) { result in
+                XCTAssertEqual(result.value!.cacheType, .memory)
+                XCTAssertNotNil(result.value?.data())
+                XCTAssertEqual(
+                    result.value!.data(),
+                    DefaultCacheSerializer.default.data(with: result.value!.image, original: nil)
+                )
+                exp.fulfill()
+            }
+        }
+        
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    func testImageResultContainsDataWhenLoadFromDiskCache() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+
+        manager.retrieveImage(with: url) { _ in
+            self.manager.cache.clearMemoryCache()
+            self.manager.retrieveImage(with: url) { result in
+                XCTAssertEqual(result.value!.cacheType, .disk)
+                XCTAssertNotNil(result.value?.data())
+                XCTAssertEqual(
+                    result.value!.data(),
+                    DefaultCacheSerializer.default.data(with: result.value!.image, original: nil)
+                )
+                exp.fulfill()
+            }
+        }
+        
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    // https://github.com/onevcat/Kingfisher/issues/1923
+    func testAnimatedImageShouldRecreateFromCache() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        let data = testImageGIFData
+        stub(url, data: data)
+        let p = SimpleProcessor()
+        manager.retrieveImage(with: url, options: [.processor(p), .onlyLoadFirstFrame]) { result in
+            XCTAssertTrue(p.processed)
+            XCTAssertTrue(result.value!.image.creatingOptions!.onlyFirstFrame)
+            p.processed = false
+            self.manager.retrieveImage(with: url, options: [.processor(p)]) { result in
+                XCTAssertTrue(p.processed)
+                XCTAssertFalse(result.value!.image.creatingOptions!.onlyFirstFrame)
+                exp.fulfill()
+            }
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    func testAnimatedImageShouldNotRecreateWithSameOptions() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        let data = testImageGIFData
+        stub(url, data: data)
+        let p = SimpleProcessor()
+        manager.retrieveImage(with: url, options: [.processor(p), .onlyLoadFirstFrame]) { result in
+            XCTAssertTrue(p.processed)
+            XCTAssertTrue(result.value!.image.creatingOptions!.onlyFirstFrame)
+            p.processed = false
+            self.manager.retrieveImage(with: url, options: [.processor(p), .onlyLoadFirstFrame]) { result in
+                XCTAssertFalse(p.processed)
+                XCTAssertTrue(result.value!.image.creatingOptions!.onlyFirstFrame)
+                exp.fulfill()
+            }
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    // MARK: - Synchronous memory cache retrieving
+
+    func testRetrieveImageInMemoryCacheSynchronously() async throws {
+        let url = testURLs[0]
+        try await manager.cache.store(testImage, forKey: url.cacheKey, toDisk: false)
+
+        let result = manager.retrieveImageInMemoryCacheSynchronously(
+            with: url.convertToSource(), options: .init(nil)
+        )
+
+        XCTAssertEqual(result?.cacheType, .memory)
+        XCTAssertTrue(result?.image === testImage)
+        XCTAssertEqual(result?.source.url, url)
+        XCTAssertEqual(result?.originalSource.url, url)
+    }
+
+    func testRetrieveImageInMemoryCacheSynchronouslyIgnoresDiskCache() async throws {
+        let url = testURLs[0]
+        try await manager.cache.store(testImage, forKey: url.cacheKey, toDisk: true)
+        manager.cache.clearMemoryCache()
+
+        let result = manager.retrieveImageInMemoryCacheSynchronously(
+            with: url.convertToSource(), options: .init(nil)
+        )
+
+        XCTAssertNil(result)
+    }
+
+    func testRetrieveImageInMemoryCacheSynchronouslyUsesTargetCache() async throws {
+        let url = testURLs[0]
+        let targetCache = ImageCache(name: "test.cache.target.\(UUID().uuidString)")
+        addTeardownBlock {
+            clearCaches([targetCache])
+        }
+        try await targetCache.store(testImage, forKey: url.cacheKey, toDisk: false)
+
+        XCTAssertNil(manager.retrieveImageInMemoryCacheSynchronously(
+            with: url.convertToSource(), options: .init(nil)
+        ))
+        XCTAssertNotNil(manager.retrieveImageInMemoryCacheSynchronously(
+            with: url.convertToSource(), options: .init([.targetCache(targetCache)])
+        ))
+    }
+
+    func testRetrieveImageInMemoryCacheSynchronouslyIgnoresCacheWhenForceRefresh() async throws {
+        let url = testURLs[0]
+        try await manager.cache.store(testImage, forKey: url.cacheKey, toDisk: false)
+
+        let result = manager.retrieveImageInMemoryCacheSynchronously(
+            with: url.convertToSource(), options: .init([.forceRefresh])
+        )
+
+        XCTAssertNil(result)
+    }
+
+    func testRetrieveImageInMemoryCacheSynchronouslyUsesProcessorIdentifier() async throws {
+        let url = testURLs[0]
+        let processor = RoundCornerImageProcessor(cornerRadius: 5)
+        try await manager.cache.store(
+            testImage, forKey: url.cacheKey, processorIdentifier: processor.identifier, toDisk: false
+        )
+
+        XCTAssertNotNil(manager.retrieveImageInMemoryCacheSynchronously(
+            with: url.convertToSource(), options: .init([.processor(processor)])
+        ))
+        XCTAssertNil(manager.retrieveImageInMemoryCacheSynchronously(
+            with: url.convertToSource(), options: .init(nil)
+        ))
+    }
+
+    func testRetrieveImageInMemoryCacheSynchronouslyAppliesImageModifier() async throws {
+        let url = testURLs[0]
+        try await manager.cache.store(testImage, forKey: url.cacheKey, toDisk: false)
+        let modifiedImage = KFCrossPlatformImage(data: testImagePNGData)!
+        let modifier = AnyImageModifier { _ in modifiedImage }
+
+        let result = manager.retrieveImageInMemoryCacheSynchronously(
+            with: url.convertToSource(), options: .init([.imageModifier(modifier)])
+        )
+
+        XCTAssertTrue(result?.image === modifiedImage)
+    }
+
+    // A serializer that uses the original data processes the cached image again, which must not happen synchronously.
+    func testRetrieveImageInMemoryCacheSynchronouslyIgnoresCacheWhenSerializerUsesOriginalData() async throws {
+        let url = testURLs[0]
+        try await manager.cache.store(testImage, forKey: url.cacheKey, toDisk: false)
+        var serializer = DefaultCacheSerializer()
+        serializer.preferCacheOriginalData = true
+
+        let result = manager.retrieveImageInMemoryCacheSynchronously(
+            with: url.convertToSource(), options: .init([.cacheSerializer(serializer)])
+        )
+
+        XCTAssertNil(result)
+    }
+
+    // https://github.com/onevcat/Kingfisher/issues/1923
+    // An animated image created with other options must be created again, which must not happen synchronously.
+    func testRetrieveImageInMemoryCacheSynchronouslyIgnoresAnimatedImageWithOtherCreatingOptions() async throws {
+        let url = testURLs[0]
+        let firstFrameOptions = KingfisherParsedOptionsInfo([.onlyLoadFirstFrame])
+        let image = try XCTUnwrap(KingfisherWrapper<KFCrossPlatformImage>.animatedImage(
+            data: testImageGIFData, options: firstFrameOptions.imageCreatingOptions
+        ))
+        try await manager.cache.store(image, forKey: url.cacheKey, toDisk: false)
+
+        XCTAssertNotNil(manager.retrieveImageInMemoryCacheSynchronously(
+            with: url.convertToSource(), options: firstFrameOptions
+        ))
+        XCTAssertNil(manager.retrieveImageInMemoryCacheSynchronously(
+            with: url.convertToSource(), options: .init(nil)
+        ))
+    }
+
+    // A subclass can override how the cache retrieves an image. The normal flow calls these overrides.
+    func testRetrieveImageInMemoryCacheSynchronouslyIgnoresCacheSubclass() async throws {
+        let url = testURLs[0]
+        let targetCache = OverridingImageCache(name: "test.cache.target.\(UUID().uuidString)")
+        addTeardownBlock {
+            clearCaches([targetCache])
+        }
+        try await targetCache.store(testImage, forKey: url.cacheKey, toDisk: false)
+
+        XCTAssertNil(manager.retrieveImageInMemoryCacheSynchronously(
+            with: url.convertToSource(), options: .init([.targetCache(targetCache)])
+        ))
+    }
+
+    func testMissingResourceOfLivePhotoFound() {
+        let resource = KF.ImageResource(downloadURL: LivePhotoURL.mov)
+        let source = LivePhotoSource(resources: [resource])
+        
+        let missing = manager.missingResources(source, options: .init(.empty))
+        XCTAssertEqual(missing.count, 1)
+    }
+    
+    func testMissingResourceOfLivePhotoNotFound() async throws {
+        let resource = KF.ImageResource(downloadURL: LivePhotoURL.mov)
+        
+        try await manager.cache.storeToDisk(
+            testImageData,
+            forKey: resource.cacheKey,
+            forcedExtension: resource.downloadURL.pathExtension
+        )
+        
+        let source = LivePhotoSource(resources: [resource])
+        let missing = manager.missingResources(source, options: .init(.empty))
+        XCTAssertEqual(missing.count, 0)
+    }
+    
+    func testMissingResourceOfLivePhotoFoundOne() async throws {
+        let resource1 = KF.ImageResource(downloadURL: LivePhotoURL.heic)
+        let resource2 = KF.ImageResource(downloadURL: LivePhotoURL.mov)
+        
+        try await manager.cache.storeToDisk(
+            testImageData,
+            forKey: resource1.cacheKey,
+            forcedExtension: resource1.downloadURL.pathExtension
+        )
+        
+        let source = LivePhotoSource(resources: [resource1, resource2])
+        let missing = manager.missingResources(source, options: .init(.empty))
+        XCTAssertEqual(missing.count, 1)
+        XCTAssertEqual(missing[0].downloadURL, resource2.downloadURL)
+    }
+    
+    func testMissingResourceOfLivePhotoForceRefresh() async throws {
+        let resource1 = KF.ImageResource(downloadURL: LivePhotoURL.heic)
+        let resource2 = KF.ImageResource(downloadURL: LivePhotoURL.mov)
+        
+        try await manager.cache.storeToDisk(
+            testImageData,
+            forKey: resource1.cacheKey,
+            forcedExtension: resource1.downloadURL.pathExtension
+        )
+        
+        let source = LivePhotoSource(resources: [resource1, resource2])
+        let missing = manager.missingResources(source, options: .init([.forceRefresh]))
+        XCTAssertEqual(missing.count, 2)
+        XCTAssertEqual(missing[0].downloadURL, resource1.downloadURL)
+        XCTAssertEqual(missing[1].downloadURL, resource2.downloadURL)
+    }
+    
+    func testDownloadAndCacheLivePhotoResourcesAll() async throws {
+        let resource1 = KF.ImageResource(downloadURL: LivePhotoURL.mov)
+        let resource2 = KF.ImageResource(downloadURL: LivePhotoURL.heic)
+        
+        stub(resource1.downloadURL, data: testImageData)
+        stub(resource2.downloadURL, data: testImageData)
+        
+        let result = try await manager.downloadAndCache(
+            resources: [resource1, resource2].map { LivePhotoResource.init(resource: $0)
+            },
+            options: .init(.empty))
+        XCTAssertEqual(result.count, 2)
+        
+        let urls = result.compactMap(\.url)
+        XCTAssertTrue(urls.contains(LivePhotoURL.mov))
+        XCTAssertTrue(urls.contains(LivePhotoURL.heic))
+        
+        let resourceCached1 = manager.cache.imageCachedType(
+            forKey: resource1.cacheKey,
+            forcedExtension: resource1.downloadURL.pathExtension
+        )
+        let resourceCached2 = manager.cache.imageCachedType(
+            forKey: resource2.cacheKey,
+            forcedExtension: resource2.downloadURL.pathExtension
+        )
+        XCTAssertEqual(resourceCached1, .disk)
+        XCTAssertEqual(resourceCached2, .disk)
+    }
+    
+    func testRetrieveLivePhotoFromNetwork() async throws {
+        let resource1 = KF.ImageResource(downloadURL: LivePhotoURL.mov)
+        let resource2 = KF.ImageResource(downloadURL: LivePhotoURL.heic)
+        
+        stub(resource1.downloadURL, data: testImageData)
+        stub(resource2.downloadURL, data: testImageData)
+        
+        let resource1Cached = manager.cache.isCached(
+            forKey: resource1.cacheKey,
+            processorIdentifier: LivePhotoImageProcessor.default.identifier
+        )
+        let resource2Cached = manager.cache.isCached(
+            forKey: resource2.cacheKey,
+            processorIdentifier: LivePhotoImageProcessor.default.identifier
+        )
+        XCTAssertFalse(resource1Cached)
+        XCTAssertFalse(resource2Cached)
+        
+        let source = LivePhotoSource(resources: [resource1, resource2])
+        let result = try await manager.retrieveLivePhoto(with: source)
+        XCTAssertEqual(result.fileURLs.count, 2)
+        result.fileURLs.forEach { url in
+            XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+        }
+        XCTAssertEqual(result.cacheType, .none)
+        XCTAssertEqual(result.data(), [testImageData, testImageData])
+        let urlsInSource = result.source.resources.map(\.downloadURL)
+        XCTAssertTrue(urlsInSource.contains(LivePhotoURL.mov))
+        XCTAssertTrue(urlsInSource.contains(LivePhotoURL.heic))
+    }
+    
+    func testRetrieveLivePhotoFromLocal() async throws {
+        let resource1 = KF.ImageResource(downloadURL: LivePhotoURL.mov)
+        let resource2 = KF.ImageResource(downloadURL: LivePhotoURL.heic)
+        
+        try await manager.cache.storeToDisk(
+            testImageData,
+            forKey: resource1.cacheKey,
+            processorIdentifier: LivePhotoImageProcessor.default.identifier,
+            forcedExtension: resource1.downloadURL.pathExtension
+        )
+        try await manager.cache.storeToDisk(
+            testImageData,
+            forKey: resource2.cacheKey,
+            processorIdentifier: LivePhotoImageProcessor.default.identifier,
+            forcedExtension: resource2.downloadURL.pathExtension
+        )
+        
+        let resource1Cached = manager.cache.isCached(
+            forKey: resource1.cacheKey,
+            processorIdentifier: LivePhotoImageProcessor.default.identifier,
+            forcedExtension: resource1.downloadURL.pathExtension
+        )
+        let resource2Cached = manager.cache.isCached(
+            forKey: resource2.cacheKey,
+            processorIdentifier: LivePhotoImageProcessor.default.identifier,
+            forcedExtension: resource2.downloadURL.pathExtension
+        )
+        XCTAssertTrue(resource1Cached)
+        XCTAssertTrue(resource2Cached)
+        
+        let source = LivePhotoSource(resources: [resource1, resource2])
+        let result = try await manager.retrieveLivePhoto(with: source)
+        XCTAssertEqual(result.fileURLs.count, 2)
+        result.fileURLs.forEach { url in
+            XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+        }
+        XCTAssertEqual(result.cacheType, .disk)
+        XCTAssertEqual(result.data(), [])
+        let urlsInSource = result.source.resources.map(\.downloadURL)
+        XCTAssertTrue(urlsInSource.contains(LivePhotoURL.mov))
+        XCTAssertTrue(urlsInSource.contains(LivePhotoURL.heic))
+    }
+    
+    func testRetrieveLivePhotoMixed() async throws {
+        let resource1 = KF.ImageResource(downloadURL: LivePhotoURL.mov)
+        let resource2 = KF.ImageResource(downloadURL: LivePhotoURL.heic)
+        
+        try await manager.cache.storeToDisk(
+            testImageData,
+            forKey: resource1.cacheKey,
+            processorIdentifier: LivePhotoImageProcessor.default.identifier,
+            forcedExtension: resource1.downloadURL.pathExtension
+        )
+        stub(resource2.downloadURL, data: testImageData)
+        
+        let resource1Cached = manager.cache.isCached(
+            forKey: resource1.cacheKey,
+            processorIdentifier: LivePhotoImageProcessor.default.identifier,
+            forcedExtension: resource1.downloadURL.pathExtension
+        )
+        let resource2Cached = manager.cache.isCached(
+            forKey: resource2.cacheKey,
+            processorIdentifier: LivePhotoImageProcessor.default.identifier,
+            forcedExtension: resource2.downloadURL.pathExtension
+        )
+        XCTAssertTrue(resource1Cached)
+        XCTAssertFalse(resource2Cached)
+        
+        let source = LivePhotoSource(resources: [resource1, resource2])
+        let result = try await manager.retrieveLivePhoto(with: source)
+        XCTAssertEqual(result.fileURLs.count, 2)
+        result.fileURLs.forEach { url in
+            XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+        }
+        XCTAssertEqual(result.cacheType, .none)
+        XCTAssertEqual(result.data(), [testImageData])
+        let urlsInSource = result.source.resources.map(\.downloadURL)
+        XCTAssertTrue(urlsInSource.contains(LivePhotoURL.mov))
+        XCTAssertTrue(urlsInSource.contains(LivePhotoURL.heic))
+    }
+    
+    func testRetrieveLivePhotoNetworkThenCache() async throws {
+        let resource1 = KF.ImageResource(downloadURL: LivePhotoURL.mov)
+        let resource2 = KF.ImageResource(downloadURL: LivePhotoURL.heic)
+        
+        stub(resource1.downloadURL, data: testImageData)
+        stub(resource2.downloadURL, data: testImageData)
+        
+        let resource1Cached = manager.cache.isCached(
+            forKey: resource1.cacheKey,
+            processorIdentifier: LivePhotoImageProcessor.default.identifier,
+            forcedExtension: resource1.downloadURL.pathExtension
+        )
+        let resource2Cached = manager.cache.isCached(
+            forKey: resource2.cacheKey,
+            processorIdentifier: LivePhotoImageProcessor.default.identifier,
+            forcedExtension: resource2.downloadURL.pathExtension
+        )
+        XCTAssertFalse(resource1Cached)
+        XCTAssertFalse(resource2Cached)
+        
+        let source = LivePhotoSource(resources: [resource1, resource2])
+        let result = try await manager.retrieveLivePhoto(with: source)
+        XCTAssertEqual(result.fileURLs.count, 2)
+        result.fileURLs.forEach { url in
+            XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+        }
+        XCTAssertEqual(result.cacheType, .none)
+        XCTAssertEqual(result.data(), [testImageData, testImageData])
+        let urlsInSource = result.source.resources.map(\.downloadURL)
+        XCTAssertTrue(urlsInSource.contains(LivePhotoURL.mov))
+        XCTAssertTrue(urlsInSource.contains(LivePhotoURL.heic))
+        
+        let localResult = try await manager.retrieveLivePhoto(with: source)
+        XCTAssertEqual(localResult.fileURLs.count, 2)
+        XCTAssertEqual(localResult.cacheType, .disk)
+    }
+    
+    func testDownloadAndCacheLivePhotoWithEmptyResources() async throws {
+        let result = try await manager.downloadAndCache(resources: [], options: .init([]))
+        XCTAssertTrue(result.isEmpty)
+    }
+    
+    func testDownloadAndCacheLivePhotoWithSingleResource() async throws {
+        let resource = LivePhotoResource(downloadURL: LivePhotoURL.heic)
+        stub(resource.downloadURL!, data: testImageData)
+        
+        let result = try await manager.downloadAndCache(resources: [resource], options: .init([]))
+        XCTAssertEqual(result.count, 1)
+        
+        let t = manager.cache.imageCachedType(forKey: resource.cacheKey, forcedExtension: "heic")
+        XCTAssertEqual(t, .disk)
+    }
+    
+    func testDownloadAndCacheLivePhotoWithSingleResourceGuessingUnsupportedExtension() async throws {
+        let resource = LivePhotoResource(downloadURL: URL(string: "https://example.com")!)
+        stub(resource.downloadURL!, data: testImageData)
+        
+        XCTAssertEqual(resource.referenceFileType, .other(""))
+        
+        let result = try await manager.downloadAndCache(resources: [resource], options: .init([]))
+        XCTAssertEqual(result.count, 1)
+        
+        var cacheType = manager.cache.imageCachedType(forKey: resource.cacheKey, forcedExtension: "heic")
+        XCTAssertEqual(cacheType, .none)
+        
+        cacheType = manager.cache.imageCachedType(forKey: resource.cacheKey)
+        XCTAssertEqual(cacheType, .disk)
+    }
+    
+    func testDownloadAndCacheLivePhotoWithSingleResourceExplicitSetExtension() async throws {
+        let resource = LivePhotoResource(downloadURL: URL(string: "https://example.com")!, fileType: .heic)
+        stub(resource.downloadURL!, data: testImageData)
+        
+        XCTAssertEqual(resource.referenceFileType, .heic)
+        
+        let result = try await manager.downloadAndCache(resources: [resource], options: .init([]))
+        XCTAssertEqual(result.count, 1)
+        
+        var cacheType = manager.cache.imageCachedType(forKey: resource.cacheKey, forcedExtension: "heic")
+        XCTAssertEqual(cacheType, .disk)
+        
+        cacheType = manager.cache.imageCachedType(forKey: resource.cacheKey)
+        XCTAssertEqual(cacheType, .none)
+    }
+    
+    func testDownloadAndCacheLivePhotoWithSingleResourceGuessingHEICExtension() async throws {
+        let resource = LivePhotoResource(downloadURL: URL(string: "https://example.com")!)
+        stub(resource.downloadURL!, data: partitalHEICData)
+        
+        XCTAssertEqual(resource.referenceFileType, .other(""))
+        
+        let result = try await manager.downloadAndCache(resources: [resource], options: .init([]))
+        XCTAssertEqual(result.count, 1)
+        
+        var cacheType = manager.cache.imageCachedType(forKey: resource.cacheKey, forcedExtension: "heic")
+        XCTAssertEqual(cacheType, .disk)
+        
+        cacheType = manager.cache.imageCachedType(forKey: resource.cacheKey)
+        XCTAssertEqual(cacheType, .none)
+    }
+    
+    func testDownloadAndCacheLivePhotoWithSingleResourceGuessingMOVExtension() async throws {
+        let resource = LivePhotoResource(downloadURL: URL(string: "https://example.com")!)
+        stub(resource.downloadURL!, data: partitalMOVData)
+        
+        XCTAssertEqual(resource.referenceFileType, .other(""))
+        
+        let result = try await manager.downloadAndCache(resources: [resource], options: .init([]))
+        XCTAssertEqual(result.count, 1)
+        
+        var cacheType = manager.cache.imageCachedType(forKey: resource.cacheKey, forcedExtension: "mov")
+        XCTAssertEqual(cacheType, .disk)
+        
+        cacheType = manager.cache.imageCachedType(forKey: resource.cacheKey)
+        XCTAssertEqual(cacheType, .none)
+    }
+
+    func testRetrieveImageFromDiskCacheWithForcedExtension() async throws {
+        let url = URL(string: "https://example.com/forced-extension-target")!
+        stub(url, data: testImageData)
+
+        let options: KingfisherOptionsInfo = [.forcedCacheFileExtension("heic")]
+
+        var result = try await manager.retrieveImage(with: url, options: options)
+        XCTAssertEqual(result.cacheType, .none)
+
+        manager.cache.clearMemoryCache()
+        LSNocilla.sharedInstance().clearStubs()
+
+        result = try await manager.retrieveImage(with: url, options: options)
+        XCTAssertEqual(result.cacheType, .disk)
+    }
+
+    func testRetrieveImageFromOriginalCacheWithForcedExtension() async throws {
+        let url = URL(string: "https://example.com/forced-extension-original")!
+        let originalCache = ImageCache(name: "test-original-forced-\(UUID().uuidString)")
+        addTeardownBlock {
+            clearCaches([originalCache])
+        }
+
+        try await originalCache.store(
+            testImage,
+            original: testImageData,
+            forKey: url.cacheKey,
+            processorIdentifier: DefaultImageProcessor.default.identifier,
+            forcedExtension: "heic",
+            toDisk: true
+        )
+        originalCache.clearMemoryCache()
+        manager.cache.clearMemoryCache()
+        LSNocilla.sharedInstance().clearStubs()
+
+        let processor = RoundCornerImageProcessor(cornerRadius: 20)
+        let result = try await manager.retrieveImage(
+            with: url,
+            options: [
+                .processor(processor),
+                .originalCache(originalCache),
+                .forcedCacheFileExtension("heic")
+            ]
+        )
+
+        XCTAssertEqual(result.cacheType, .none)
+        XCTAssertTrue(
+            manager.cache.imageCachedType(
+                forKey: url.cacheKey,
+                processorIdentifier: processor.identifier,
+                forcedExtension: "heic"
+            ).cached
+        )
+    }
+    
+    // MARK: - Async cache-type check (issue #2512)
+
+    func testRetrieveImageWithAsyncCacheTypeCheckAcrossCacheStates() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+
+        let manager = self.manager!
+        let expectedCacheTypes: [CacheType] = [.none, .memory, .disk, .none]
+
+        @Sendable func runStep(_ index: Int) {
+            manager.retrieveImage(with: url, options: [.asyncCacheTypeCheck]) { result in
+                guard let value = result.value else {
+                    XCTFail("Expected cached image result at step \(index), got \(String(describing: result.error))")
+                    exp.fulfill()
+                    return
+                }
+
+                XCTAssertNotNil(value.image)
+                XCTAssertEqual(value.cacheType, expectedCacheTypes[index])
+
+                switch index {
+                case 0:
+                    runStep(1)
+                case 1:
+                    manager.cache.clearMemoryCache()
+                    runStep(2)
+                case 2:
+                    manager.cache.clearMemoryCache()
+                    manager.cache.clearDiskCache {
+                        runStep(3)
+                    }
+                default:
+                    exp.fulfill()
+                }
+            }
+        }
+
+        runStep(0)
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testRetrieveImageWithAsyncCacheTypeCheckReturnsCancellableShellOnMiss() {
+        let completionExp = expectation(description: "\(#function) completion")
+        let downloadStartedExp = expectation(description: "\(#function) download started")
+        let url = testURLs[0]
+        let stub = delayedStub(url, data: testImageData, length: 123)
+        let asyncModifier = AsyncURLModifier(url: url, onDownloadTaskStarted: { task in
+            XCTAssertNotNil(task)
+            downloadStartedExp.fulfill()
+        })
+        let rewrittenURL = URL(string: "https://example.com/async-cache-type-check-shell")!
+
+        let task = manager.retrieveImage(
+            with: rewrittenURL,
+            options: [.asyncCacheTypeCheck, .requestModifier(asyncModifier)]
+        ) { result in
+            XCTAssertNotNil(result.error)
+            XCTAssertTrue(result.error!.isTaskCancelled)
+            completionExp.fulfill()
+        }
+        XCTAssertNotNil(task, "asyncCacheTypeCheck path should return a task shell synchronously.")
+
+        wait(for: [downloadStartedExp], timeout: 2)
+        task?.cancel()
+        _ = stub.go()
+        wait(for: [completionExp], timeout: 5)
+    }
+
+    func testRetrieveImageWithAsyncCacheTypeCheckHonoursOnlyFromCache() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+
+        manager.retrieveImage(with: url, options: [.asyncCacheTypeCheck, .onlyFromCache]) { result in
+            XCTAssertNil(result.value)
+            XCTAssertNotNil(result.error)
+            if case .cacheError(reason: .imageNotExisting) = result.error! {
+                // expected
+            } else {
+                XCTFail("Expected imageNotExisting error but got \(String(describing: result.error))")
+            }
+            exp.fulfill()
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testRetrieveImageWithAsyncCacheTypeCheckUsesOriginalCacheFallback() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData)
+
+        let processor = RoundCornerImageProcessor(cornerRadius: 20)
+        let manager = self.manager!
+
+        // Warm the default cache (which acts as `originalCache`) with the unprocessed image.
+        manager.retrieveImage(with: url) { result in
+            XCTAssertNotNil(result.value?.image)
+            XCTAssertEqual(result.value!.cacheType, .none)
+
+            // Drop the memory layer so the async probe must hit the disk path.
+            manager.cache.clearMemoryCache()
+
+            manager.retrieveImage(
+                with: url,
+                options: [.processor(processor), .asyncCacheTypeCheck, .cacheOriginalImage]
+            ) { result in
+                // Original was cached, processed image built from it; first time returns .none.
+                XCTAssertNotNil(result.value?.image)
+                XCTAssertEqual(result.value!.cacheType, .none)
+
+                manager.retrieveImage(
+                    with: url,
+                    options: [.processor(processor), .asyncCacheTypeCheck]
+                ) { result in
+                    XCTAssertNotNil(result.value?.image)
+                    XCTAssertEqual(result.value!.cacheType, .memory)
+                    exp.fulfill()
+                }
+            }
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testRetrieveImageWithAsyncCacheTypeCheckCancelsProviderBackedShell() {
+        let providerStarted = expectation(description: "\(#function) provider started")
+        let completionExp = expectation(description: "\(#function) completion")
+
+        let provider = AsyncCacheTypeCheckProvider(
+            cacheKey: "provider-\(UUID().uuidString)",
+            payload: testImageData,
+            onStart: { providerStarted.fulfill() }
+        )
+
+        let task = manager.retrieveImage(with: .provider(provider), options: [.asyncCacheTypeCheck]) { result in
+            switch result {
+            case .success:
+                XCTFail("provider-backed asyncCacheTypeCheck shell should cancel the underlying load")
+            case .failure(let error):
+                guard case .requestError(reason: .dataProviderCancelled) = error else {
+                    XCTFail("expected .dataProviderCancelled, got: \(error)")
+                    completionExp.fulfill()
+                    return
+                }
+            }
+            completionExp.fulfill()
+        }
+
+        XCTAssertNotNil(task, "asyncCacheTypeCheck should still return a cancellable shell for provider sources.")
+        wait(for: [providerStarted], timeout: 2)
+        task?.cancel()
+        wait(for: [completionExp], timeout: 2)
+    }
+
+    func testRetrieveImageWithAsyncCacheTypeCheckCancelsAsyncRequestModifierShell() {
+        let downloadStarted = expectation(description: "\(#function) download started")
+        let completionExp = expectation(description: "\(#function) completion")
+        let url = testURLs[0]
+        let delayedResponse = delayedStub(url, data: testImageData, length: 123)
+
+        let asyncModifier = AsyncURLModifier(url: url, onDownloadTaskStarted: { task in
+            XCTAssertNotNil(task)
+            downloadStarted.fulfill()
+        })
+
+        let rewrittenURL = URL(string: "https://example.com/async-modifier-shell")!
+        let task = manager.retrieveImage(
+            with: rewrittenURL,
+            options: [.asyncCacheTypeCheck, .requestModifier(asyncModifier)]
+        ) { result in
+            guard let error = result.error else {
+                XCTFail("async request modifier shell should cancel the underlying download")
+                completionExp.fulfill()
+                return
+            }
+            XCTAssertTrue(error.isTaskCancelled)
+            completionExp.fulfill()
+        }
+
+        XCTAssertNotNil(task, "asyncCacheTypeCheck should always return a shell synchronously.")
+        wait(for: [downloadStarted], timeout: 2)
+        task?.cancel()
+        _ = delayedResponse.go()
+        wait(for: [completionExp], timeout: 2)
+    }
+
+    // A finished download must release its session task while the manager and its downloader stay alive. The
+    // `onTaskDone` handler used to keep the download context, whose request modifier leads back to the task.
+    func testRetrieveImageWithAsyncCacheTypeCheckReleasesSessionTaskAfterDownload() {
+        let downloadStarted = expectation(description: "\(#function) download started")
+        let completionExp = expectation(description: "\(#function) completion")
+        let url = testURLs[0]
+        let delayedResponse = delayedStub(url, data: testImageData)
+        let delegate = SessionTaskTrackingDelegate(started: downloadStarted)
+        manager.downloader.delegate = delegate
+
+        manager.retrieveImage(with: url, options: [.asyncCacheTypeCheck]) { result in
+            XCTAssertNotNil(result.value?.image)
+            XCTAssertEqual(result.value?.cacheType, CacheType.none)
+            completionExp.fulfill()
+        }
+
+        wait(for: [downloadStarted], timeout: 2)
+        XCTAssertNotNil(delegate.sessionTask)
+        _ = delayedResponse.go()
+        wait(for: [completionExp], timeout: 3)
+        XCTAssertTrue(delegate.waitUntilSessionTaskReleased(), "A finished download should release its session task.")
+    }
+
+    func testRetrieveImageWithAsyncCacheTypeCheckReleasesSessionTaskAfterFailedDownload() {
+        let downloadStarted = expectation(description: "\(#function) download started")
+        let completionExp = expectation(description: "\(#function) completion")
+        let url = testURLs[0]
+        let delayedResponse = delayedStub(url, data: testImageData, statusCode: 404)
+        let delegate = SessionTaskTrackingDelegate(started: downloadStarted)
+        manager.downloader.delegate = delegate
+
+        manager.retrieveImage(with: url, options: [.asyncCacheTypeCheck]) { result in
+            XCTAssertTrue(result.error?.isInvalidResponseStatusCode(404) ?? false)
+            completionExp.fulfill()
+        }
+
+        wait(for: [downloadStarted], timeout: 2)
+        XCTAssertNotNil(delegate.sessionTask)
+        _ = delayedResponse.go()
+        wait(for: [completionExp], timeout: 3)
+        XCTAssertTrue(delegate.waitUntilSessionTaskReleased(), "A failed download should release its session task.")
+    }
+
+    func testRetrieveImageWithAsyncCacheTypeCheckReleasesSessionTaskAfterCancellingInitiatingRequest() {
+        let downloadStarted = expectation(description: "\(#function) download started")
+        let cancelledExp = expectation(description: "\(#function) cancelled")
+        let completionExp = expectation(description: "\(#function) completion")
+        let url = testURLs[0]
+        let delayedResponse = delayedStub(url, data: testImageData)
+        let delegate = SessionTaskTrackingDelegate(started: downloadStarted)
+        manager.downloader.delegate = delegate
+
+        autoreleasepool {
+            let initiatingTask = manager.retrieveImage(with: url, options: [.asyncCacheTypeCheck]) { result in
+                XCTAssertTrue(result.error?.isTaskCancelled ?? false)
+                cancelledExp.fulfill()
+            }
+            wait(for: [downloadStarted], timeout: 2)
+            XCTAssertTrue(delegate.waitUntilSessionTaskStarted())
+
+            // Without the async cache type check, this request joins the running download synchronously.
+            let otherTask = manager.retrieveImage(with: url) { result in
+                XCTAssertNotNil(result.value?.image)
+                completionExp.fulfill()
+            }
+            XCTAssertTrue(otherTask?.sessionTask === delegate.sessionTask)
+            initiatingTask?.cancel()
+        }
+        wait(for: [cancelledExp], timeout: 3)
+        XCTAssertNotNil(delegate.sessionTask, "The other request should keep the shared download running.")
+
+        _ = delayedResponse.go()
+        wait(for: [completionExp], timeout: 3)
+        XCTAssertTrue(delegate.waitUntilSessionTaskReleased(), "The shared session task should be released.")
+    }
+}
+
+private var imageCreatingOptionsKey: Void?
+
+extension KFCrossPlatformImage {
+    var creatingOptions: ImageCreatingOptions? {
+        get { return getAssociatedObject(self, &imageCreatingOptionsKey) }
+        set { setRetainedAssociatedObject(self, &imageCreatingOptionsKey, newValue) }
+    }
+}
+
+final class SimpleProcessor: ImageProcessor, @unchecked Sendable {
+    public let identifier = "id"
+    var processed = false
+    /// Initialize a `DefaultImageProcessor`
+    public init() {}
+    
+    /// Process an input `ImageProcessItem` item to an image for this processor.
+    ///
+    /// - parameter item:    Input item which will be processed by `self`
+    /// - parameter options: Options when processing the item.
+    ///
+    /// - returns: The processed image.
+    ///
+    /// - Note: See documentation of `ImageProcessor` protocol for more.
+    public func process(item: ImageProcessItem, options: KingfisherParsedOptionsInfo) -> KFCrossPlatformImage? {
+        processed = true
+        switch item {
+        case .image(let image):
+            return image
+        case .data(let data):
+            let creatingOptions = options.imageCreatingOptions
+            let image = KingfisherWrapper<KFCrossPlatformImage>.image(data: data, options: creatingOptions)
+            image?.creatingOptions = creatingOptions
+            return image
+        }
+    }
+}
+
+private final class AsyncCacheTypeCheckProvider: ImageDataProvider, @unchecked Sendable {
+    let cacheKey: String
+    private let payload: Data
+    private let onStart: @Sendable () -> Void
+
+    init(cacheKey: String, payload: Data, onStart: @escaping @Sendable () -> Void) {
+        self.cacheKey = cacheKey
+        self.payload = payload
+        self.onStart = onStart
+    }
+
+    func data() async throws -> Data {
+        onStart()
+        try await Task.sleep(nanoseconds: 1_000_000_000)
+        return payload
+    }
+}
+
+private final class ImmediateFailureImageDownloader: ImageDownloader, @unchecked Sendable {
+    private var sessions = [URLSession]()
+
+    override func downloadImage(
+        with url: URL,
+        options: KingfisherParsedOptionsInfo,
+        completionHandler: (@Sendable (Result<ImageLoadingResult, KingfisherError>) -> Void)? = nil
+    ) -> DownloadTask {
+        let session = URLSession(configuration: .ephemeral)
+        sessions.append(session)
+        let sessionTask = SessionDataTask(task: session.dataTask(with: url))
+        let task = DownloadTask(sessionTask: sessionTask, cancelToken: 0)
+        completionHandler?(.failure(.processorError(
+            reason: .processingFailed(processor: DefaultImageProcessor.default, item: .data(Data()))
+        )))
+        return task
+    }
+}
+
+final class FailingProcessor: ImageProcessor, @unchecked Sendable {
+    public let identifier = "FailingProcessor"
+    var processed = false
+    public init() {}
+    public func process(item: ImageProcessItem, options: KingfisherParsedOptionsInfo) -> KFCrossPlatformImage? {
+        processed = true
+        return nil
+    }
+}
+
+struct SimpleImageDataProvider: ImageDataProvider, @unchecked Sendable {
+    let cacheKey: String
+    let provider: () -> (Result<Data, any Error>)
+    
+    func data(handler: @escaping (Result<Data, any Error>) -> Void) {
+        handler(provider())
+    }
+    
+    struct E: Error {}
+}
+
+actor ActorArray<Element> {
+    var value: [Element]
+    init(_ value: [Element]) {
+        self.value = value
+    }
+    
+    func append(_ newElement: Element) {
+        value.append(newElement)
+    }
+}
+
+// MARK: - Original cache hit
+
+/// Records which `ImageProcessItem` case it was given, and how often it ran.
+final class ItemRecordingProcessor: ImageProcessor, @unchecked Sendable {
+
+    let identifier: String
+
+    init(identifier: String = "com.onevcat.Kingfisher.test.ItemRecordingProcessor") {
+        self.identifier = identifier
+    }
+
+    private let lock = NSLock()
+    private var _dataCount = 0
+    private var _imageCount = 0
+    private var _processedImage: KFCrossPlatformImage?
+
+    var dataCount: Int { lock.lock(); defer { lock.unlock() }; return _dataCount }
+    var imageCount: Int { lock.lock(); defer { lock.unlock() }; return _imageCount }
+    var runCount: Int { dataCount + imageCount }
+    var processedImage: KFCrossPlatformImage? { lock.lock(); defer { lock.unlock() }; return _processedImage }
+
+    func process(item: ImageProcessItem, options: KingfisherParsedOptionsInfo) -> KFCrossPlatformImage? {
+        lock.lock()
+        switch item {
+        case .data: _dataCount += 1
+        case .image: _imageCount += 1
+        }
+        lock.unlock()
+        let image = DefaultImageProcessor.default.process(item: item, options: options)
+        lock.lock()
+        _processedImage = image
+        lock.unlock()
+        return image
+    }
+}
+
+/// Serializes like the default one, but does not declare its data decodable, and counts deserializations.
+final class RecordingCacheSerializer: CacheSerializer, @unchecked Sendable {
+
+    let producesDecodableImageData: Bool
+
+    init(declaresDecodableData: Bool = false) {
+        self.producesDecodableImageData = declaresDecodableData
+    }
+
+    private let lock = NSLock()
+    private var _imageCallCount = 0
+    var imageCallCount: Int { lock.lock(); defer { lock.unlock() }; return _imageCallCount }
+
+    func data(with image: KFCrossPlatformImage, original: Data?) -> Data? {
+        DefaultCacheSerializer.default.data(with: image, original: original)
+    }
+
+    func image(with data: Data, options: KingfisherParsedOptionsInfo) -> KFCrossPlatformImage? {
+        lock.lock()
+        _imageCallCount += 1
+        lock.unlock()
+        return DefaultCacheSerializer.default.image(with: data, options: options)
+    }
+}
+
+extension KingfisherManagerTests {
+
+    func testOriginalCacheHitGivesTheProcessorTheData() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        let processor = ItemRecordingProcessor()
+        let cache = manager.cache
+
+        stub(url, errorCode: NSURLErrorNotConnectedToInternet)
+
+        // Store the unprocessed original only, then drop the memory copy so the disk is the source.
+        cache.store(testImage, original: testImageData, forKey: url.cacheKey, toDisk: true) { _ in
+            cache.clearMemoryCache()
+            XCTAssertTrue(cache.imageCachedType(forKey: url.cacheKey).cached)
+            self.manager.retrieveImage(with: url, options: [.processor(processor)]) { result in
+                XCTAssertNotNil(result.value?.image)
+                XCTAssertEqual(processor.dataCount, 1, "the processor should receive the stored bytes")
+                XCTAssertEqual(processor.imageCount, 0, "the original should not be decoded first")
+                XCTAssertNil(cache.retrieveImageInMemoryCache(forKey: url.cacheKey))
+                exp.fulfill()
+            }
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testConcurrentOriginalCacheHitsProcessTheOriginalOnce() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        let processor = ItemRecordingProcessor()
+        let cache = manager.cache
+        let requestCount = 10
+
+        stub(url, errorCode: NSURLErrorNotConnectedToInternet)
+
+        cache.store(testImage, original: testImageData, forKey: url.cacheKey, toDisk: true) { _ in
+            cache.clearMemoryCache()
+
+            let group = DispatchGroup()
+            let delivered = LockIsolated(0)
+
+            for _ in 0 ..< requestCount {
+                group.enter()
+                self.manager.retrieveImage(with: url, options: [.processor(processor)]) { result in
+                    if result.value?.image != nil {
+                        delivered.withValue { $0 += 1 }
+                    }
+                    group.leave()
+                }
+            }
+
+            group.notify(queue: .main) {
+                XCTAssertEqual(delivered.value, requestCount, "every request should be answered")
+                XCTAssertEqual(processor.runCount, 1, "the original should be processed once for the group")
+                exp.fulfill()
+            }
+        }
+        waitForExpectations(timeout: 5, handler: nil)
+    }
+
+    func testOriginalCacheHitDeserializesWhenTheSerializerDoesNotDeclareDecodableData() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        let processor = ItemRecordingProcessor()
+        let serializer = RecordingCacheSerializer()
+        let cache = manager.cache
+
+        stub(url, data: testImageData)
+
+        cache.store(
+            testImage,
+            original: testImageData,
+            forKey: url.cacheKey,
+            cacheSerializer: serializer,
+            toDisk: true
+        ) { _ in
+            cache.clearMemoryCache()
+            let options: KingfisherOptionsInfo = [.processor(processor), .cacheSerializer(serializer)]
+            self.manager.retrieveImage(with: url, options: options) { result in
+                XCTAssertNotNil(result.value?.image)
+                XCTAssertGreaterThan(serializer.imageCallCount, 0, "the serializer should still be used")
+                XCTAssertEqual(processor.dataCount, 0, "raw bytes should not be given to the processor")
+                XCTAssertEqual(processor.imageCount, 1)
+                exp.fulfill()
+            }
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testProcessingIdentityIsTotalForNonFiniteScale() {
+        let options = KingfisherParsedOptionsInfo([.scaleFactor(CGFloat.nan)])
+        let identity = OriginalProcessingIdentity(cache: manager.cache, key: "key", options: options)
+
+        XCTAssertEqual(identity, identity)
+
+        var table: [OriginalProcessingIdentity: Int] = [:]
+        table[identity] = 1
+        XCTAssertEqual(table[identity], 1)
+    }
+
+    func testProducesDecodableImageDataDefaults() {
+        XCTAssertTrue(DefaultCacheSerializer.default.producesDecodableImageData)
+        XCTAssertTrue(FormatIndicatedCacheSerializer.png.producesDecodableImageData)
+        XCTAssertFalse(RecordingCacheSerializer().producesDecodableImageData)
+    }
+}
+
+extension KingfisherManagerTests {
+
+    func testDelimiterBearingIdentitiesAreNotShared() {
+        let exp = expectation(description: #function)
+        let cache = manager.cache
+
+        // `a|b` with processor `c`, and `a` with processor `b|c`, are different requests.
+        let firstProvider = SimpleImageDataProvider(cacheKey: "a|b") { .success(testImageData) }
+        let secondProvider = SimpleImageDataProvider(cacheKey: "a") { .success(testImageData) }
+        let firstProcessor = ItemRecordingProcessor(identifier: "c")
+        let secondProcessor = ItemRecordingProcessor(identifier: "b|c")
+
+        cache.store(testImage, original: testImageData, forKey: "a|b", toDisk: true) { _ in
+            cache.store(testImage, original: testImageData, forKey: "a", toDisk: true) { _ in
+                cache.clearMemoryCache()
+
+                let group = DispatchGroup()
+                let delivered = LockIsolated(0)
+
+                group.enter()
+                _ = self.manager.retrieveImage(
+                    with: .provider(firstProvider), options: [.processor(firstProcessor)]
+                ) { result in
+                    XCTAssertNotNil(result.value?.image)
+                    delivered.withValue { $0 += 1 }
+                    group.leave()
+                }
+
+                group.enter()
+                _ = self.manager.retrieveImage(
+                    with: .provider(secondProvider), options: [.processor(secondProcessor)]
+                ) { result in
+                    XCTAssertNotNil(result.value?.image)
+                    delivered.withValue { $0 += 1 }
+                    group.leave()
+                }
+
+                group.notify(queue: .main) {
+                    XCTAssertEqual(delivered.value, 2)
+                    XCTAssertEqual(firstProcessor.runCount, 1)
+                    XCTAssertEqual(secondProcessor.runCount, 1)
+                    exp.fulfill()
+                }
+            }
+        }
+        waitForExpectations(timeout: 5, handler: nil)
+    }
+
+    func testDifferingAnimatedImageCreatingOptionsAreNotShared() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        let cache = manager.cache
+
+        stub(url, data: testImageGIFData)
+
+        let gifImage = KingfisherWrapper<KFCrossPlatformImage>.animatedImage(data: testImageGIFData, options: .init())!
+        cache.store(gifImage, original: testImageGIFData, forKey: url.cacheKey, toDisk: true) { _ in
+            cache.clearMemoryCache()
+            // The requests below must reach the original cache hit rather than downloading.
+            XCTAssertTrue(cache.imageCachedType(forKey: url.cacheKey).cached)
+
+            let group = DispatchGroup()
+            let onlyFirstFrame = LockIsolated([String: Bool]())
+
+            group.enter()
+            self.manager.retrieveImage(
+                with: url, options: [.processor(SimpleProcessor()), .onlyLoadFirstFrame]
+            ) { result in
+                onlyFirstFrame.withValue { $0["first"] = result.value?.image.creatingOptions?.onlyFirstFrame }
+                group.leave()
+            }
+
+            group.enter()
+            self.manager.retrieveImage(with: url, options: [.processor(SimpleProcessor())]) { result in
+                onlyFirstFrame.withValue { $0["all"] = result.value?.image.creatingOptions?.onlyFirstFrame }
+                group.leave()
+            }
+
+            group.notify(queue: .main) {
+                XCTAssertEqual(onlyFirstFrame.value["first"], true)
+                XCTAssertEqual(onlyFirstFrame.value["all"], false)
+                exp.fulfill()
+            }
+        }
+        waitForExpectations(timeout: 5, handler: nil)
+    }
+
+    func testBackgroundDecodeIsAppliedPerRequest() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        let processor = ItemRecordingProcessor()
+        let cache = manager.cache
+
+        stub(url, data: testImageData)
+
+        cache.store(testImage, original: testImageData, forKey: url.cacheKey, toDisk: true) { _ in
+            cache.clearMemoryCache()
+
+            let group = DispatchGroup()
+            let delivered = LockIsolated(0)
+
+            group.enter()
+            self.manager.retrieveImage(
+                with: url, options: [.processor(processor), .backgroundDecode]
+            ) { result in
+                XCTAssertNotNil(result.value?.image)
+                XCTAssertFalse(result.value?.image === processor.processedImage)
+                delivered.withValue { $0 += 1 }
+                group.leave()
+            }
+
+            group.enter()
+            self.manager.retrieveImage(with: url, options: [.processor(processor)]) { result in
+                XCTAssertNotNil(result.value?.image)
+                XCTAssertTrue(result.value?.image === processor.processedImage)
+                delivered.withValue { $0 += 1 }
+                group.leave()
+            }
+
+            group.notify(queue: .main) {
+                XCTAssertEqual(delivered.value, 2)
+                XCTAssertEqual(processor.runCount, 1, "background decoding should not split the shared work")
+                exp.fulfill()
+            }
+        }
+        waitForExpectations(timeout: 5, handler: nil)
+    }
+
+    func testSerializerFallbackIsAppliedPerRequest() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        let cache = manager.cache
+        let processor = ImageOnlyProcessor()
+        let firstSerializer = RecordingCacheSerializer(declaresDecodableData: true)
+        let secondSerializer = RecordingCacheSerializer(declaresDecodableData: true)
+
+        stub(url, data: testImageData)
+
+        cache.store(testImage, original: testImageData, forKey: url.cacheKey, toDisk: true) { _ in
+            cache.clearMemoryCache()
+
+            let group = DispatchGroup()
+
+            group.enter()
+            self.manager.retrieveImage(
+                with: url, options: [.processor(processor), .cacheSerializer(firstSerializer)]
+            ) { result in
+                XCTAssertNotNil(result.value?.image)
+                group.leave()
+            }
+
+            group.enter()
+            self.manager.retrieveImage(
+                with: url, options: [.processor(processor), .cacheSerializer(secondSerializer)]
+            ) { result in
+                XCTAssertNotNil(result.value?.image)
+                group.leave()
+            }
+
+            group.notify(queue: .main) {
+                // The processor rejects data, so each request deserializes with the serializer it passed.
+                XCTAssertGreaterThan(firstSerializer.imageCallCount, 0)
+                XCTAssertGreaterThan(secondSerializer.imageCallCount, 0)
+                exp.fulfill()
+            }
+        }
+        waitForExpectations(timeout: 5, handler: nil)
+    }
+}
+
+/// Accepts an image, and rejects data.
+final class ImageOnlyProcessor: ImageProcessor, @unchecked Sendable {
+
+    let identifier = "com.onevcat.Kingfisher.test.ImageOnlyProcessor"
+
+    func process(item: ImageProcessItem, options: KingfisherParsedOptionsInfo) -> KFCrossPlatformImage? {
+        switch item {
+        case .image(let image): return image
+        case .data: return nil
+        }
+    }
+}
+
+extension KingfisherManagerTests {
+    func testOriginalCacheHitUsesCacheSubclassOverride() throws {
+        let url = testURLs[0]
+        let originalCache = OverridingImageCache(name: UUID().uuidString)
+        defer { clearCaches([originalCache]) }
+        try originalCache.diskStorage.store(value: testImageGIFData, forKey: url.cacheKey)
+
+        let done = expectation(description: "Cache override used")
+        manager.retrieveImage(with: url, options: [.originalCache(originalCache), .onlyFromCache]) { result in
+            XCTAssertTrue(result.value?.image === testImage)
+            XCTAssertEqual(originalCache.retrievalCount.value, 1)
+            done.fulfill()
+        }
+        wait(for: [done], timeout: 3)
+    }
+
+    func testSynchronousOriginalCacheHitDoesNotWaitForAnotherProcessingQueue() throws {
+        let url = testURLs[0]
+        let processor = ItemRecordingProcessor()
+        try manager.cache.diskStorage.store(value: testImageData, forKey: url.cacheKey)
+        stub(url, errorCode: NSURLErrorNotConnectedToInternet)
+
+        let scheduled = expectation(description: "First request queued")
+        let queue = DeferredProcessingQueue(scheduled: scheduled)
+        let firstDone = expectation(description: "First request completed")
+        manager.retrieveImage(with: url, options: [
+            .processor(processor), .processingQueue(.operationQueue(queue)), .cacheMemoryOnly
+        ]) { result in
+            XCTAssertNotNil(result.value?.image)
+            firstDone.fulfill()
+        }
+        wait(for: [scheduled], timeout: 3)
+
+        let completed = LockIsolated(false)
+        manager.retrieveImage(with: url, options: [
+            .processor(processor), .loadDiskFileSynchronously, .processingQueue(.untouch),
+            .callbackQueue(.untouch), .cacheMemoryOnly
+        ]) { result in
+            XCTAssertNotNil(result.value?.image)
+            completed.setValue(true)
+        }
+        XCTAssertTrue(completed.value, "The synchronous request must finish before the other queue resumes")
+        queue.run()
+        wait(for: [firstDone], timeout: 3)
+        XCTAssertEqual(processor.dataCount, 2, "Independent requests must still process the original bytes")
+        XCTAssertEqual(processor.imageCount, 0)
+    }
+}
+
+private final class DeferredProcessingQueue: CallbackOperationQueue, @unchecked Sendable {
+    var underlyingQueue: DispatchQueue? { nil }
+    let scheduled: XCTestExpectation
+    private let operation = LockIsolated<(@Sendable () -> Void)?>(nil)
+
+    init(scheduled: XCTestExpectation) { self.scheduled = scheduled }
+
+    func addOperation(_ block: @escaping @Sendable () -> Void) {
+        operation.setValue(block)
+        scheduled.fulfill()
+    }
+
+    func run() {
+        let block = operation.value
+        operation.setValue(nil)
+        block?()
+    }
+}
+
+private final class OverridingImageCache: ImageCache, @unchecked Sendable {
+    let retrievalCount = LockIsolated(0)
+
+    override func retrieveImage(
+        forKey key: String,
+        options: KingfisherParsedOptionsInfo,
+        callbackQueue: CallbackQueue = .mainCurrentOrAsync,
+        completionHandler: (@Sendable (Result<ImageCacheResult, KingfisherError>) -> Void)?)
+    {
+        retrievalCount.withValue { $0 += 1 }
+        callbackQueue.execute { completionHandler?(.success(.disk(testImage))) }
+    }
+}
+
+extension KingfisherManagerTests {
+    func testDownloaderReturningTaskBackedDownloadTask() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        let downloader = TaskBackedImageDownloader(name: "test.manager.task-backed", holding: [])
+
+        let task = manager.retrieveImage(with: url, options: [.downloader(downloader)]) { result in
+            XCTAssertNotNil(result.value?.image)
+            XCTAssertEqual(result.value?.cacheType, CacheType.none)
+            exp.fulfill()
+        }
+
+        XCTAssertEqual(task?.isInitialized, true)
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testCancellingTaskBackedDownloadTaskCancelsWork() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        let downloader = TaskBackedImageDownloader(name: "test.manager.task-backed", holding: [url])
+
+        let task = manager.retrieveImage(with: url, options: [.downloader(downloader)]) { result in
+            XCTAssertNil(result.value)
+            XCTAssertTrue(downloader.workCancelled.value)
+            exp.fulfill()
+        }
+
+        XCTAssertNotNil(task)
+        task?.cancel()
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testCancellingTaskBackedDownloadTaskSkipsAlternativeSources() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        let alternativeURL = testURLs[1]
+        let downloader = TaskBackedImageDownloader(name: "test.manager.task-backed", holding: [url])
+
+        let task = manager.retrieveImage(
+            with: .network(url),
+            options: [.downloader(downloader), .alternativeSources([.network(alternativeURL)])]
+        ) { result in
+            guard case .requestError(reason: .asyncTaskContextCancelled)? = result.error else {
+                XCTFail("expected .asyncTaskContextCancelled, got: \(result)")
+                exp.fulfill()
+                return
+            }
+            XCTAssertTrue(result.error?.isTaskCancelled ?? false)
+            XCTAssertEqual(downloader.requestedURLs.value, [url])
+            exp.fulfill()
+        }
+
+        task?.cancel()
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testTaskBackedDownloaderReportsProgress() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        let downloader = TaskBackedImageDownloader(
+            name: "test.manager.task-backed", holding: [], reportingProgress: [(10, 40), (40, 40)])
+        let reported = LockIsolated<[[Int64]]>([])
+
+        manager.retrieveImage(
+            with: url,
+            options: [.downloader(downloader)],
+            progressBlock: { receivedSize, totalSize in
+                XCTAssertTrue(Thread.isMainThread)
+                reported.withValue { $0.append([receivedSize, totalSize]) }
+            }
+        ) { result in
+            XCTAssertNotNil(result.value?.image)
+            XCTAssertEqual(reported.value, [[10, 40], [40, 40]])
+            exp.fulfill()
+        }
+
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    func testTaskBackedDownloaderProgressWithUnknownTotalSizeIsNotReported() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        let downloader = TaskBackedImageDownloader(
+            name: "test.manager.task-backed", holding: [], reportingProgress: [(10, -1), (20, 40)])
+        let reported = LockIsolated<[[Int64]]>([])
+
+        manager.retrieveImage(
+            with: url,
+            options: [.downloader(downloader)],
+            progressBlock: { receivedSize, totalSize in
+                reported.withValue { $0.append([receivedSize, totalSize]) }
+            }
+        ) { result in
+            XCTAssertNotNil(result.value?.image)
+            XCTAssertEqual(reported.value, [[20, 40]])
+            exp.fulfill()
+        }
+
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    @MainActor func testTaskBackedDownloaderProgressSkipsReplacedImageViewTask() {
+        let replacedCompleted = expectation(description: "replaced task completed")
+        let currentCompleted = expectation(description: "current task completed")
+        let imageView = KFCrossPlatformImageView()
+        let downloader = TaskBackedImageDownloader(
+            name: "test.manager.task-backed", holding: [], reportingProgress: [(40, 40)])
+        let replacedReported = LockIsolated<[[Int64]]>([])
+        let currentReported = LockIsolated<[[Int64]]>([])
+
+        imageView.kf.setImage(
+            with: testURLs[0],
+            options: [.downloader(downloader), .forceRefresh],
+            progressBlock: { receivedSize, totalSize in
+                replacedReported.withValue { $0.append([receivedSize, totalSize]) }
+            }
+        ) { _ in
+            replacedCompleted.fulfill()
+        }
+        // Replaces the first task before its progress, which is only applied on the main queue, can run.
+        imageView.kf.setImage(
+            with: testURLs[1],
+            options: [.downloader(downloader), .forceRefresh],
+            progressBlock: { receivedSize, totalSize in
+                currentReported.withValue { $0.append([receivedSize, totalSize]) }
+            }
+        ) { result in
+            XCTAssertNotNil(result.value?.image)
+            currentCompleted.fulfill()
+        }
+
+        waitForExpectations(timeout: 3, handler: nil)
+        XCTAssertEqual(replacedReported.value, [])
+        XCTAssertEqual(currentReported.value, [[40, 40]])
+    }
+}
+
+private final class TaskBackedImageDownloader: ImageDownloader, @unchecked Sendable {
+    let workCancelled = LockIsolated(false)
+    let requestedURLs = LockIsolated<[URL]>([])
+    private let heldURLs: Set<URL>
+    private let progress: [(receivedSize: Int64, totalSize: Int64)]
+
+    /// Downloads of `heldURLs` wait until cancelled; any other URL succeeds immediately.
+    /// Every download reports `progress` through the options before it completes.
+    init(name: String, holding heldURLs: Set<URL>, reportingProgress progress: [(Int64, Int64)] = []) {
+        self.heldURLs = heldURLs
+        self.progress = progress
+        super.init(name: name)
+    }
+
+    override func downloadImage(
+        with url: URL,
+        options: KingfisherParsedOptionsInfo,
+        completionHandler: (@Sendable (Result<ImageLoadingResult, KingfisherError>) -> Void)? = nil
+    ) -> DownloadTask {
+        requestedURLs.withValue { $0.append(url) }
+        let waitsForCancellation = heldURLs.contains(url)
+        let workCancelled = self.workCancelled
+        let callbackQueue = options.callbackQueue
+        let progress = self.progress
+        let work = Task {
+            if waitsForCancellation {
+                try? await Task.sleep(nanoseconds: 10 * NSEC_PER_SEC)
+            }
+            for (receivedSize, totalSize) in progress {
+                options.reportDownloadProgress(receivedSize: receivedSize, totalSize: totalSize)
+            }
+            let result: Result<ImageLoadingResult, KingfisherError>
+            if Task.isCancelled {
+                workCancelled.setValue(true)
+                result = .failure(.requestError(reason: .asyncTaskContextCancelled))
+            } else {
+                result = .success(ImageLoadingResult(image: testImage, url: url, originalData: testImageData))
+            }
+            callbackQueue.execute { completionHandler?(result) }
+        }
+        return DownloadTask(cancelling: work)
+    }
+}

@@ -1,0 +1,353 @@
+//
+//  UIButtonExtensionTests.swift
+//  Kingfisher
+//
+//  Created by Wei Wang on 15/4/17.
+//
+//  Copyright (c) 2019 Wei Wang <onevcat@gmail.com>
+//
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in
+//  all copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+//  THE SOFTWARE.
+
+#if canImport(AppKit) && !targetEnvironment(macCatalyst)
+import AppKit
+import XCTest
+@testable import Kingfisher
+
+class NSButtonExtensionTests: XCTestCase, @unchecked Sendable {
+
+    var button: NSButton!
+
+    override class func setUp() {
+        super.setUp()
+        LSNocilla.sharedInstance().start()
+    }
+
+    override class func tearDown() {
+        LSNocilla.sharedInstance().stop()
+        super.tearDown()
+    }
+
+    override func setUp() {
+        super.setUp()
+        
+        button = NSButton()
+        KingfisherManager.shared.downloader = ImageDownloader(name: "testDownloader")
+        KingfisherManager.shared.defaultOptions = [.waitForCache]
+        
+        cleanDefaultCache()
+    }
+
+    override func tearDown() {
+        // Put teardown code here. This method is called after the invocation of each test method in the class.
+        clearStubs(afterCancelling: KingfisherManager.shared.downloader)
+        button = nil
+        cleanDefaultCache()
+        KingfisherManager.shared.defaultOptions = .empty
+        super.tearDown()
+    }
+
+    @MainActor
+    func testDownloadAndSetImage() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData, length: 123)
+        
+        var progressBlockIsCalled = false
+
+        button.kf.setImage(with: url, progressBlock: { _, _ in progressBlockIsCalled = true }) {
+            result in
+            XCTAssertTrue(progressBlockIsCalled)
+            
+            let image = result.value?.image
+            XCTAssertNotNil(image)
+            XCTAssertTrue(image!.renderEqual(to: testImage))
+            XCTAssertTrue(self.button.image!.renderEqual(to: testImage))
+            XCTAssertEqual(result.value!.cacheType, .none)
+            
+            exp.fulfill()
+        }
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    @MainActor
+    func testDownloadAndSetAlternateImage() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        stub(url, data: testImageData, length: 123)
+
+        var progressBlockIsCalled = false
+        button.kf.setAlternateImage(with: url, progressBlock: { _, _ in progressBlockIsCalled = true }) {
+            result in
+            XCTAssertTrue(progressBlockIsCalled)
+            
+            let image = result.value?.image
+            XCTAssertNotNil(image)
+            XCTAssertTrue(image!.renderEqual(to: testImage))
+            XCTAssertTrue(self.button.alternateImage!.renderEqual(to: testImage))
+            XCTAssertEqual(result.value!.cacheType, .none)
+            
+            exp.fulfill()
+
+        }
+        waitForExpectations(timeout: 5, handler: nil)
+    }
+    
+    @MainActor
+    func testButtonNotRetainedByInFlightImageDownload() {
+        let completion = expectation(description: #function)
+        let url = testURLs[0]
+        let stub = delayedStub(url, data: testImageData, length: 123)
+
+        weak var weakButton: NSButton?
+        autoreleasepool {
+            let button = NSButton()
+            weakButton = button
+            button.kf.setImage(with: url, completionHandler: { result in
+                XCTAssertNotNil(result.value)
+                XCTAssertTrue(Thread.isMainThread)
+                completion.fulfill()
+            })
+        }
+
+        XCTAssertNil(weakButton, "A button should be released while its image download is still in flight.")
+
+        _ = stub.go()
+        waitForExpectations(timeout: 3, handler: nil)
+        XCTAssertTrue(KingfisherManager.shared.cache.imageCachedType(forKey: url.cacheKey).cached)
+    }
+
+    @MainActor
+    func testButtonNotRetainedByInFlightAlternateImageDownload() {
+        let completion = expectation(description: #function)
+        let url = testURLs[0]
+        let stub = delayedStub(url, data: testImageData, length: 123)
+
+        weak var weakButton: NSButton?
+        autoreleasepool {
+            let button = NSButton()
+            weakButton = button
+            button.kf.setAlternateImage(with: url, completionHandler: { result in
+                XCTAssertNotNil(result.value)
+                XCTAssertTrue(Thread.isMainThread)
+                completion.fulfill()
+            })
+        }
+
+        XCTAssertNil(weakButton, "A button should be released while its alternate image download is still in flight.")
+
+        _ = stub.go()
+        waitForExpectations(timeout: 3, handler: nil)
+        XCTAssertTrue(KingfisherManager.shared.cache.imageCachedType(forKey: url.cacheKey).cached)
+    }
+
+    @MainActor
+    func testCancelImageTask() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        let stub = delayedStub(url, data: testImageData)
+        
+        button.kf.setImage(with: url, completionHandler: { result in
+            XCTAssertNotNil(result.error)
+            XCTAssertTrue(result.error!.isTaskCancelled)
+            delay(0.1) { exp.fulfill() }
+        })
+        
+        self.button.kf.cancelImageDownloadTask()
+        _ = stub.go()
+
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+
+    @MainActor
+    func testCancelAlternateImageTask() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        let stub = delayedStub(url, data: testImageData)
+        
+        button.kf.setAlternateImage(with: url, completionHandler: { result in
+            XCTAssertNotNil(result.error)
+            XCTAssertTrue(result.error!.isTaskCancelled)
+            delay(0.1) { exp.fulfill() }
+        })
+        
+        self.button.kf.cancelAlternateImageDownloadTask()
+        _ = stub.go()
+        
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    @MainActor
+    func testSettingNilURL() {
+        let exp = expectation(description: #function)
+        let url: URL? = nil
+        button.kf.setAlternateImage(with: url, progressBlock: { _, _ in XCTFail() }) {
+            result in
+            XCTAssertNil(result.value)
+            XCTAssertNotNil(result.error)
+            
+            guard case .imageSettingError(reason: .emptySource) = result.error! else {
+                XCTFail()
+                fatalError()
+            }
+            exp.fulfill()
+        }
+        
+        waitForExpectations(timeout: 3, handler: nil)
+    }
+    
+    @MainActor
+    func testSettingNonWorkingImageWithFailureImage() {
+        let expectation = self.expectation(description: "wait for downloading image")
+        let url = testURLs[0]
+        stub(url, errorCode: 404)
+        
+        button.kf.setImage(with: url, options: [.onFailureImage(testImage)], completionHandler: { result in
+            XCTAssertNil(result.value)
+            expectation.fulfill()
+        })
+        
+        XCTAssertNil(button.image)
+        waitForExpectations(timeout: 5, handler: nil)
+        XCTAssertEqual(testImage, button.image)
+    }
+    
+    @MainActor
+    func testSettingNonWorkingAlternateImageWithFailureImage() {
+        let expectation = self.expectation(description: "wait for downloading image")
+        let url = testURLs[0]
+        stub(url, errorCode: 404)
+        
+        button.kf.setAlternateImage(with: url, options: [.onFailureImage(testImage)], completionHandler:  { result in
+            XCTAssertNil(result.value)
+            expectation.fulfill()
+        })
+        
+        XCTAssertNil(button.alternateImage)
+        waitForExpectations(timeout: 5, handler: nil)
+        XCTAssertEqual(testImage, button.alternateImage)
+    }
+
+    @MainActor
+    func testCancelImageTaskCancelsDiskCacheRetrieval() {
+        let exp = expectation(description: #function)
+        let url = testURLs[0]
+        let coordinator = CoordinatingCacheSerializer()
+        let cache = KingfisherManager.shared.cache
+
+        let storeExp = expectation(description: "store")
+        cache.store(testImage, original: testImageData, forKey: url.cacheKey, toDisk: true) { _ in
+            storeExp.fulfill()
+        }
+        wait(for: [storeExp], timeout: 3)
+        cache.clearMemoryCache()
+
+        button.kf.setImage(
+            with: url,
+            options: [.cacheSerializer(coordinator)],
+            completionHandler: { _ in
+            exp.fulfill()
+        })
+
+        DispatchQueue.global().async {
+            coordinator.waitUntilFirstCallEntered()
+
+            DispatchQueue.main.async {
+                self.button.kf.cancelImageDownloadTask()
+                coordinator.allowFirstCallToProceed()
+            }
+        }
+
+        waitForExpectations(timeout: 5, handler: nil)
+        XCTAssertNil(
+            cache.retrieveImageInMemoryCache(forKey: url.cacheKey),
+            "cancelImageDownloadTask() must prevent disk cache result from being promoted to memory"
+        )
+    }
+
+    @MainActor
+    func testSupersededDiskCachedAlternateImageDoesNotPromoteToMemory() {
+        let exp = expectation(description: #function)
+        let url1 = testURLs[0]
+        let url2 = testURLs[1]
+        let coordinator = CoordinatingCacheSerializer()
+        let cache = KingfisherManager.shared.cache
+        let group = DispatchGroup()
+
+        group.enter()
+        cache.store(testImage, original: testImageData, forKey: url1.cacheKey, toDisk: true) { _ in
+            group.leave()
+        }
+        group.enter()
+        cache.store(testImage, original: testImageData, forKey: url2.cacheKey, toDisk: true) { _ in
+            group.leave()
+        }
+
+        group.notify(queue: .main) {
+            cache.clearMemoryCache()
+
+            let completionGroup = DispatchGroup()
+
+            completionGroup.enter()
+            self.button.kf.setAlternateImage(
+                with: url1,
+                options: [.cacheSerializer(coordinator)],
+                completionHandler: { result in
+                XCTAssertNotNil(result.error)
+                if case .imageSettingError(reason: .notCurrentSourceTask) = result.error! {
+                } else {
+                    XCTFail("First setAlternateImage should receive .notCurrentSourceTask, got: \(result.error!)")
+                }
+                completionGroup.leave()
+            })
+
+            DispatchQueue.global().async {
+                coordinator.waitUntilFirstCallEntered()
+
+                DispatchQueue.main.async {
+                    completionGroup.enter()
+                    self.button.kf.setAlternateImage(
+                        with: url2,
+                        options: [.cacheSerializer(coordinator)],
+                        completionHandler: { result in
+                        XCTAssertNotNil(result.value?.image)
+                        completionGroup.leave()
+                    })
+
+                    coordinator.allowFirstCallToProceed()
+                }
+            }
+
+            completionGroup.notify(queue: .main) {
+                XCTAssertNil(
+                    cache.retrieveImageInMemoryCache(forKey: url1.cacheKey),
+                    "Superseded alternate image task must not promote to memory cache"
+                )
+                XCTAssertNotNil(
+                    cache.retrieveImageInMemoryCache(forKey: url2.cacheKey),
+                    "Current alternate image task should promote to memory cache"
+                )
+                exp.fulfill()
+            }
+        }
+
+        waitForExpectations(timeout: 5, handler: nil)
+    }
+
+}
+#endif

@@ -1,0 +1,33 @@
+// Trimmed copy of DevApp/proto/sinch/push/v1beta1/resources.proto.
+//
+// Only the two enums used by SdkService.Subscribe are kept (Platform and
+// BackgroundServiceState). Field numbers are irrelevant for enums; the enum
+// numbers are copied verbatim from upstream.
+//
+// Upstream: DevApp/proto/sinch/push/v1beta1/resources.proto
+
+syntax = "proto3";
+
+package sinch.push.v1beta1.resources;
+
+option go_package = "github.com/sinch/delivery-service/gen/sinch/push/v1beta1;resources";
+
+enum Platform {
+    PLATFORM_UNSPECIFIED = 0;
+    WEB = 1;
+    IOS_SANDBOX = 2;
+    IOS = 3;
+    ANDROID = 4;
+    ANDROID_V1 = 5;
+}
+
+// Android/iOS SDK background delivery capability, reported by the SDK in the
+// WebSocket Hello and in SdkService.Subscribe.
+enum BackgroundServiceState {
+    BACKGROUND_SERVICE_STATE_UNSPECIFIED = 0;
+    UNSUPPORTED = 1;          // iOS: no background socket
+    DISABLED = 2;             // Android: background service turned off in config
+    ENABLED_RUNNING = 3;      // Android: service enabled and running
+    ENABLED_NOT_RUNNING = 4;  // Android: enabled but not running (killed, permission denied)
+    RELAY_DISABLED = 5;       // relay turned off in the SDK: no socket, no background service
+}

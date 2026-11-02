@@ -1,4 +1,5 @@
 import UIKit
+@_spi(SinchChat) import SinchPushSDK
 
 public protocol SinchChat {
      var inbox: SinchInbox { get }
@@ -74,9 +75,9 @@ final class DefaultSinchChat: SinchChat, @unchecked Sendable {
     
     var advanced: SinchChatAdvanced = .init()
     
-    internal var authDataSource: AuthDataSource? {
+    internal var tokenProvider: ChatTokenProvider? {
         didSet {
-            _inbox.authDataSource = authDataSource
+            _inbox.tokenProvider = tokenProvider
         }
     }
     internal var region: Region? {
@@ -104,11 +105,11 @@ final class DefaultSinchChat: SinchChat, @unchecked Sendable {
             return SinchSDKChatAvailability.currentlyRunning
         }
 
-        guard let authDataSource = authDataSource, region != nil else {
+        guard let tokenProvider = tokenProvider, region != nil else {
             return SinchSDKChatAvailability.uninitialized
         }
 
-        guard authDataSource.isLoggedIn == true else {
+        guard tokenProvider.isLoggedIn == true else {
             return SinchSDKChatAvailability.authorizationNeeded
         }
 
@@ -122,7 +123,7 @@ final class DefaultSinchChat: SinchChat, @unchecked Sendable {
         let capturedLocConfig = localizationConfig
         let capturedOptions = options
         return try MainActor.assumeIsolated {
-            guard self.isChatAvailable() == .available, let authDataSource = self.authDataSource, let region = self.region else {
+            guard self.isChatAvailable() == .available, let tokenProvider = self.tokenProvider, let region = self.region else {
                 throw SinchChatSDKError.unavailable
             }
 
@@ -140,14 +141,14 @@ final class DefaultSinchChat: SinchChat, @unchecked Sendable {
 
             let messageDataSource = DefaultMessageDataSource(
                 apiClient: self.apiClient!,
-                authDataSource: authDataSource,
+                tokenProvider: tokenProvider,
                 topicModel: topicModel,
                 metadata: capturedOptions?.metadata ?? [],
                 shouldInitializeConversation: capturedOptions?.shouldInitializeConversation ?? false,
                 sendDocumentAsText: capturedOptions?.sendDocumentAsTextMessage ?? false)
 
             let rootCordinator = DefaultRootCoordinator(messageDataSource: messageDataSource,
-                                                        authDataSource: authDataSource,
+                                                        tokenProvider: tokenProvider,
                                                         pushPermissionHandler: self.pushPermissionHandler)
 
             self.rootCordinator = rootCordinator
@@ -161,7 +162,8 @@ final class DefaultSinchChat: SinchChat, @unchecked Sendable {
 
     func initilize() {
         _inbox.initilize()
-        SinchChatSDK.shared.pushNotificationHandler.registerAddressee(chatNotificationHandler)
+        // Push owns APNs; chat handles its own payloads as a registered addressee.
+        SinchPushSDK.shared.register(addressee: chatNotificationHandler)
         chatNotificationHandler.delegate = self
     }
 }

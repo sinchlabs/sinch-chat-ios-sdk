@@ -1,5 +1,5 @@
 import XCTest
-import GRPC
+import GRPCCore
 import Logging
 
 @testable import SinchChatSDK

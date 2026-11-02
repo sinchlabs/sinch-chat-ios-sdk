@@ -1,0 +1,66 @@
+/*
+ * Copyright 2023, gRPC Authors All rights reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/// A type into which values can be written indefinitely.
+@available(gRPCSwift 2.0, *)
+public protocol RPCWriterProtocol<Element>: Sendable {
+  /// The type of value written.
+  associatedtype Element: Sendable
+
+  /// Writes a single element.
+  ///
+  /// This function suspends until the implementation accepts the element. Implementers can use
+  /// this to exert backpressure on callers.
+  ///
+  /// - Parameter element: The element to write.
+  func write(_ element: Element) async throws
+
+  /// Writes a sequence of elements.
+  ///
+  /// This function suspends until the implementation accepts the elements. Implementers can use
+  /// this to exert backpressure on callers.
+  ///
+  /// - Parameter elements: The elements to write.
+  func write(contentsOf elements: some Sequence<Element>) async throws
+}
+
+@available(gRPCSwift 2.0, *)
+extension RPCWriterProtocol {
+  /// Writes an asynchronous sequence of values into the sink.
+  ///
+  /// - Parameter elements: The elements to write.
+  public func write<Elements: AsyncSequence>(
+    contentsOf elements: Elements
+  ) async throws where Elements.Element == Element {
+    for try await element in elements {
+      try await self.write(element)
+    }
+  }
+}
+
+/// A type into which values can be written until it is finished.
+@available(gRPCSwift 2.0, *)
+public protocol ClosableRPCWriterProtocol<Element>: RPCWriterProtocol {
+  /// Tells the writer to reject any further writes.
+  ///
+  /// After a caller calls ``finish()``, any further write should throw an error.
+  func finish() async
+
+  /// Tells the writer to reject any further writes because an error occurred.
+  ///
+  /// After a caller calls ``finish(throwing:)``, any further write should throw an error.
+  func finish(throwing error: any Error) async
+}

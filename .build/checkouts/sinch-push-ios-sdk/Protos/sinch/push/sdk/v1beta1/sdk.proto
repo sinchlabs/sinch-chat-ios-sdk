@@ -1,0 +1,62 @@
+// Trimmed copy of DevApp/proto/sinch/push/sdk/v1beta1/sdk.proto (Sinch push SDK v1beta1).
+//
+// Only Subscribe / Unsubscribe / ReportEvents are kept; the upstream file also
+// declares GetPublicKey / JoinGroups / LeaveGroups / GetGroups, which the spike
+// does not call. Field numbers and types are copied verbatim from upstream, so
+// the wire format is identical.
+//
+// Upstream: DevApp/proto/sinch/push/sdk/v1beta1/sdk.proto
+
+syntax = "proto3";
+
+package sinch.push.sdk.v1beta1;
+
+import "sinch/push/events/v1beta1/events.proto";
+import "sinch/push/v1beta1/resources.proto";
+
+message SubscribeRequest {
+  // Legacy: config ulID, NOT full name
+  optional string config = 1;
+  optional string token = 2;
+
+  // Renamed versions
+  optional string config_id = 3;
+  optional string device_token = 4;
+
+  // Device info for relay routing. All optional; legacy SDKs omit them.
+
+  // Stable installation UUID shared with WebSocket Hello.
+  optional string installation_id = 5;
+  optional sinch.push.v1beta1.resources.Platform platform = 6;
+  optional string os_version = 7;
+  optional string sdk_version = 8;
+  // iOS bundle ID or Android application ID.
+  optional string bundle_id = 9;
+  optional sinch.push.v1beta1.resources.BackgroundServiceState background_service = 10;
+}
+
+message SubscribeResponse {
+  // This is optional to not add a breaking change
+  optional string subscriber_id = 1;
+}
+
+message UnsubscribeRequest {
+  // Legacy: config ulID, NOT full name
+  optional string config = 1;
+  optional string token = 2;
+
+  // Renamed versions
+  optional string config_id = 3;
+  optional string device_token = 4;
+}
+
+message ReportedEvent {
+  string message_id = 1;
+  string subscriber_id = 2;
+  optional string group_name = 3;
+  sinch.push.events.v1beta1.PushEventType event_type = 4;
+}
+
+message ReportEventsRequest {
+  repeated ReportedEvent events = 1;
+}

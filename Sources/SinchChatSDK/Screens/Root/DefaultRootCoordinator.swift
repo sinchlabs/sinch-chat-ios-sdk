@@ -29,15 +29,15 @@ final class DefaultRootCoordinator: RootCoordinator {
     private var messageDataSource: MessageDataSource
 
     private let pushPermissionHandler: PushNofiticationPermissionHandler
-    private let authDataSource: AuthDataSource
+    private let tokenProvider: ChatTokenProvider
     lazy var locationManager = CLLocationManager()
 
     init(messageDataSource: MessageDataSource,
-         authDataSource: AuthDataSource,
+         tokenProvider: ChatTokenProvider,
          pushPermissionHandler: PushNofiticationPermissionHandler) {
         
         self.messageDataSource = messageDataSource
-        self.authDataSource = authDataSource
+        self.tokenProvider = tokenProvider
         self.pushPermissionHandler = pushPermissionHandler
     }
     

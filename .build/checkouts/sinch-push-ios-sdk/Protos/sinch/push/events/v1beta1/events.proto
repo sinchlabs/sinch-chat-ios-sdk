@@ -1,0 +1,48 @@
+// Trimmed copy of DevApp/proto/sinch/push/events/v1beta1/events.proto.
+//
+// Only the PushEventType enum is kept: the upstream file also declares the
+// event query services and their messages, which the push SDK spike does not
+// use. The enum numbers are copied verbatim from upstream.
+//
+// Upstream: DevApp/proto/sinch/push/events/v1beta1/events.proto
+
+syntax = "proto3";
+
+package sinch.push.events.v1beta1;
+
+enum PushEventType {
+    UNSPECIFIED = 0;
+
+    // Dispatched: 100-199
+    DISPATCHED = 100;
+
+    // Dispatch failures: 200-299
+    INTERNAL_ERROR = 200;
+    MISSING_REGISTRATIONS = 201;
+    UNAUTHORIZED_REGISTRATION = 202;
+    MESSAGE_RECEIVED_INTERNAL_ERROR = 203;
+    MISMATCH_SENDER_ID = 204;
+    QUOTA_EXCEEDED = 205;
+    INVALID_REGISTRATION = 206;
+    INVALID_PACKAGE_NAME = 207;
+    INVALID_APNS_CREDENTIAL = 208;
+    INVALID_PARAMETERS = 209;
+    PAYLOAD_TOO_LARGE = 210;
+    AUTHENTICATION_ERROR = 211;
+    INVALID_TTL = 212;
+
+    // Delivered: 300-399
+    DELIVERED = 300;
+    // Device reported DISPLAYED over the relay (settles the message like DELIVERED)
+    RELAY_DISPLAYED = 301;
+    // Device reported DISMISSED over the relay
+    RELAY_DISMISSED = 302;
+
+    // Delivery failures: 400-499
+    DELIVERY_FAILED = 400;
+
+    // Relay: 500-599
+    RELAY_ACK_TIMEOUT = 500;
+    RELAY_NOT_CONNECTED = 501;
+    FALLBACK_SENT = 502;
+}

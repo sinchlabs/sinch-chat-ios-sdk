@@ -3,14 +3,14 @@ import UIKit
 extension SinchChatSDK: SinchPluginAvailablePluginMethods {
     
     public func getAuthorizationToken() -> AuthModel? {
-        _chat.authDataSource?.currentAuthorization
+        _chat.tokenProvider?.currentAuthorization
     }
     
     // If AuthModel is nil then we will use current AuthModel.
     public func sendMessage(_ message: MessageType, authModel: AuthModel?, chatOptions: SinchChatOptions?, completion: @escaping @Sendable (Result<String, Error>) -> Void) {
                 
-        guard let client = apiClient ?? Default2APIClient(region: config?.region ?? .EU1),
-              let authDataSource = authDataSource else {
+        guard let client = apiClient ?? Default2APIClient(region: region ?? .EU1),
+              let tokenProvider = tokenProvider else {
             completion(.failure(SinchChatSDKError.unavailable))
             return
         }
@@ -22,7 +22,7 @@ extension SinchChatSDK: SinchPluginAvailablePluginMethods {
         
         let messageDataSource = DefaultMessageDataSource(
             apiClient: client,
-            authDataSource: authDataSource,
+            tokenProvider: tokenProvider,
             topicModel: topicModel,
             metadata: chatOptions?.metadata ?? [],
             shouldInitializeConversation: chatOptions?.shouldInitializeConversation ?? false,

@@ -16,24 +16,24 @@ final class DefaultInboxRootCoordinator: InboxRootCoordinator {
     var inboxDataSource: InboxDataSource
 
     private let pushPermissionHandler: PushNofiticationPermissionHandler
-    private let authDataSource: AuthDataSource
+    private let tokenProvider: ChatTokenProvider
 
     init(uiConfiguration: SinchSDKConfig.UIConfig,
          localizationConfiguration: SinchSDKConfig.LocalizationConfig,
-         authDataSource: AuthDataSource,
+         tokenProvider: ChatTokenProvider,
          pushPermissionHandler: PushNofiticationPermissionHandler,
          inboxDataSource: InboxDataSource) {
         
         self.uiConfiguration = uiConfiguration
         self.localizationConfiguration = localizationConfiguration
         self.inboxDataSource = inboxDataSource
-        self.authDataSource = authDataSource
+        self.tokenProvider = tokenProvider
         self.pushPermissionHandler = pushPermissionHandler
     }
     
     func getRootViewController(apiClient: APIClient, options: GetChatViewControllerOptions? = nil) -> InboxViewController {
         
-        let inboxViewModel = DefaultInboxViewModel(pushPermissionHandler: pushPermissionHandler, apiClient: apiClient, authDataSource: authDataSource)
+        let inboxViewModel = DefaultInboxViewModel(pushPermissionHandler: pushPermissionHandler, apiClient: apiClient, tokenProvider: tokenProvider)
         let inboxView = InboxView(uiConfiguration: uiConfiguration, localizationConfiguration: localizationConfiguration)
         
         let inboxViewController = InboxViewController(viewModel: inboxViewModel, view: inboxView)

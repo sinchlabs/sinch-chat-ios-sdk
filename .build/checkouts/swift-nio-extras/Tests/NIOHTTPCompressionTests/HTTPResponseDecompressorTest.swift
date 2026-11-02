@@ -1,0 +1,540 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the SwiftNIO open source project
+//
+// Copyright (c) 2017-2021 Apple Inc. and the SwiftNIO project authors
+// Licensed under Apache License v2.0
+//
+// See LICENSE.txt for license information
+// See CONTRIBUTORS.txt for the list of SwiftNIO project authors
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//===----------------------------------------------------------------------===//
+
+import CNIOExtrasZlib
+import NIOEmbedded
+import XCTest
+
+@testable import NIOCore
+@testable import NIOHTTP1
+@testable import NIOHTTPCompression
+
+class HTTPResponseDecompressorTest: XCTestCase {
+    func testDecompressionNoLimit() throws {
+        let channel = EmbeddedChannel()
+        try channel.pipeline.syncOperations.addHandler(NIOHTTPResponseDecompressor(limit: .none))
+
+        let headers = HTTPHeaders([("Content-Encoding", "deflate"), ("Content-Length", "13")])
+        try channel.writeInbound(
+            HTTPClientResponsePart.head(.init(version: .init(major: 1, minor: 1), status: .ok, headers: headers))
+        )
+
+        let body = ByteBuffer.of(bytes: [120, 156, 75, 76, 28, 5, 200, 0, 0, 248, 66, 103, 17])
+        XCTAssertNoThrow(try channel.writeInbound(HTTPClientResponsePart.body(body)))
+    }
+
+    func testDecompressionLimitSizeWithContentLenghtHeaderSucceeds() {
+        let channel = EmbeddedChannel()
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(NIOHTTPResponseDecompressor(limit: .size(272))))
+
+        let headers = HTTPHeaders([("Content-Encoding", "deflate"), ("Content-Length", "13")])
+
+        XCTAssertNoThrow(
+            try channel.writeInbound(
+                HTTPClientResponsePart.head(.init(version: .init(major: 1, minor: 1), status: .ok, headers: headers))
+            )
+        )
+
+        // this compressed payload is 272 bytes long uncompressed
+        let body = ByteBuffer.of(bytes: [120, 156, 75, 76, 28, 5, 200, 0, 0, 248, 66, 103, 17])
+        XCTAssertNoThrow(try channel.writeInbound(HTTPClientResponsePart.body(body)))
+    }
+
+    func testDecompressionLimitSizeWithContentLenghtHeaderFails() {
+        let channel = EmbeddedChannel()
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(NIOHTTPResponseDecompressor(limit: .size(271))))
+
+        let headers = HTTPHeaders([("Content-Encoding", "deflate"), ("Content-Length", "13")])
+
+        XCTAssertNoThrow(
+            try channel.writeInbound(
+                HTTPClientResponsePart.head(.init(version: .init(major: 1, minor: 1), status: .ok, headers: headers))
+            )
+        )
+
+        // this compressed payload is 272 bytes long uncompressed
+        let body = ByteBuffer.of(bytes: [120, 156, 75, 76, 28, 5, 200, 0, 0, 248, 66, 103, 17])
+        XCTAssertThrowsError(try channel.writeInbound(HTTPClientResponsePart.body(body))) { error in
+            XCTAssertEqual(error as? NIOHTTPDecompression.DecompressionError, .limit)
+        }
+    }
+
+    func testDecompressionLimitSizeWithoutContentLenghtHeaderSucceeds() {
+        let channel = EmbeddedChannel()
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(NIOHTTPResponseDecompressor(limit: .size(272))))
+
+        let headers = HTTPHeaders([("Content-Encoding", "deflate")])
+
+        XCTAssertNoThrow(
+            try channel.writeInbound(
+                HTTPClientResponsePart.head(.init(version: .init(major: 1, minor: 1), status: .ok, headers: headers))
+            )
+        )
+
+        // this compressed payload is 272 bytes long uncompressed
+        let body = ByteBuffer.of(bytes: [120, 156, 75, 76, 28, 5, 200, 0, 0, 248, 66, 103, 17])
+        XCTAssertNoThrow(try channel.writeInbound(HTTPClientResponsePart.body(body)))
+    }
+
+    func testDecompressionLimitSizeWithoutContentLenghtHeaderFails() {
+        let channel = EmbeddedChannel()
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(NIOHTTPResponseDecompressor(limit: .size(271))))
+
+        let headers = HTTPHeaders([("Content-Encoding", "deflate")])
+
+        XCTAssertNoThrow(
+            try channel.writeInbound(
+                HTTPClientResponsePart.head(.init(version: .init(major: 1, minor: 1), status: .ok, headers: headers))
+            )
+        )
+
+        // this compressed payload is 272 bytes long uncompressed
+        let body = ByteBuffer.of(bytes: [120, 156, 75, 76, 28, 5, 200, 0, 0, 248, 66, 103, 17])
+        XCTAssertThrowsError(try channel.writeInbound(HTTPClientResponsePart.body(body))) { error in
+            XCTAssertEqual(error as? NIOHTTPDecompression.DecompressionError, .limit)
+        }
+    }
+
+    func testDecompressionLimitRatioWithContentLenghtHeaderSucceeds() {
+        let channel = EmbeddedChannel()
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(NIOHTTPResponseDecompressor(limit: .ratio(21))))
+
+        let headers = HTTPHeaders([("Content-Encoding", "deflate"), ("Content-Length", "13")])
+
+        XCTAssertNoThrow(
+            try channel.writeInbound(
+                HTTPClientResponsePart.head(.init(version: .init(major: 1, minor: 1), status: .ok, headers: headers))
+            )
+        )
+
+        // this compressed payload is 272 bytes long uncompressed
+        let body = ByteBuffer.of(bytes: [120, 156, 75, 76, 28, 5, 200, 0, 0, 248, 66, 103, 17])
+        XCTAssertNoThrow(try channel.writeInbound(HTTPClientResponsePart.body(body)))
+    }
+
+    func testDecompressionLimitRatioWithContentLenghtHeaderFails() {
+        let channel = EmbeddedChannel()
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(NIOHTTPResponseDecompressor(limit: .ratio(20))))
+
+        let headers = HTTPHeaders([("Content-Encoding", "deflate"), ("Content-Length", "13")])
+
+        XCTAssertNoThrow(
+            try channel.writeInbound(
+                HTTPClientResponsePart.head(.init(version: .init(major: 1, minor: 1), status: .ok, headers: headers))
+            )
+        )
+
+        // this compressed payload is 272 bytes long uncompressed
+        let body = ByteBuffer.of(bytes: [120, 156, 75, 76, 28, 5, 200, 0, 0, 248, 66, 103, 17])
+        XCTAssertThrowsError(try channel.writeInbound(HTTPClientResponsePart.body(body))) { error in
+            XCTAssertEqual(error as? NIOHTTPDecompression.DecompressionError, .limit)
+        }
+    }
+
+    func testDecompressionLimitRatioWithoutContentLenghtHeaderSucceeds() {
+        let channel = EmbeddedChannel()
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(NIOHTTPResponseDecompressor(limit: .ratio(21))))
+
+        let headers = HTTPHeaders([("Content-Encoding", "deflate")])
+
+        XCTAssertNoThrow(
+            try channel.writeInbound(
+                HTTPClientResponsePart.head(.init(version: .init(major: 1, minor: 1), status: .ok, headers: headers))
+            )
+        )
+
+        // this compressed payload is 272 bytes long uncompressed
+        let body = ByteBuffer.of(bytes: [120, 156, 75, 76, 28, 5, 200, 0, 0, 248, 66, 103, 17])
+        XCTAssertNoThrow(try channel.writeInbound(HTTPClientResponsePart.body(body)))
+    }
+
+    func testDecompressionLimitRatioWithoutContentLenghtHeaderFails() {
+        let channel = EmbeddedChannel()
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(NIOHTTPResponseDecompressor(limit: .ratio(20))))
+
+        let headers = HTTPHeaders([("Content-Encoding", "deflate")])
+
+        XCTAssertNoThrow(
+            try channel.writeInbound(
+                HTTPClientResponsePart.head(.init(version: .init(major: 1, minor: 1), status: .ok, headers: headers))
+            )
+        )
+
+        // this compressed payload is 272 bytes long uncompressed
+        let body = ByteBuffer.of(bytes: [120, 156, 75, 76, 28, 5, 200, 0, 0, 248, 66, 103, 17])
+        XCTAssertThrowsError(try channel.writeInbound(HTTPClientResponsePart.body(body))) { error in
+            XCTAssertEqual(error as? NIOHTTPDecompression.DecompressionError, .limit)
+        }
+    }
+
+    func testDecompressionMultipleWriteWithLimit() {
+        let channel = EmbeddedChannel()
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(NIOHTTPResponseDecompressor(limit: .size(272))))
+
+        let headers = HTTPHeaders([("Content-Encoding", "deflate")])
+        // this compressed payload is 272 bytes long uncompressed
+        let body = ByteBuffer.of(bytes: [120, 156, 75, 76, 28, 5, 200, 0, 0, 248, 66, 103, 17])
+
+        for i in 0..<3 {
+            XCTAssertNoThrow(
+                try channel.writeInbound(
+                    HTTPClientResponsePart.head(
+                        .init(version: .init(major: 1, minor: 1), status: .ok, headers: headers)
+                    )
+                ),
+                "\(i)"
+            )
+            XCTAssertNoThrow(try channel.writeInbound(HTTPClientResponsePart.body(body)), "\(i)")
+            XCTAssertNoThrow(try channel.writeInbound(HTTPClientResponsePart.end(nil)), "\(i)")
+        }
+    }
+
+    func testDecompression() {
+        let channel = EmbeddedChannel()
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(NIOHTTPResponseDecompressor(limit: .none)))
+
+        var body = ""
+        for _ in 1...1000 {
+            body +=
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+        }
+        let algorithms: [(actual: String, announced: String)?] = [
+            nil,
+            (actual: "gzip", announced: "gzip"),
+            (actual: "deflate", announced: "deflate"),
+            (actual: "gzip", announced: "deflate"),
+            (actual: "deflate", announced: "gzip"),
+        ]
+
+        for algorithm in algorithms {
+            let compressed: ByteBuffer
+            var headers = HTTPHeaders()
+            if let algorithm = algorithm {
+                headers.add(name: "Content-Encoding", value: algorithm.announced)
+                compressed = compress(ByteBuffer.of(string: body), algorithm.actual)
+            } else {
+                compressed = ByteBuffer.of(string: body)
+            }
+            headers.add(name: "Content-Length", value: "\(compressed.readableBytes)")
+
+            XCTAssertNoThrow(
+                try channel.writeInbound(
+                    HTTPClientResponsePart.head(
+                        .init(version: .init(major: 1, minor: 1), status: .ok, headers: headers)
+                    )
+                )
+            )
+            XCTAssertNoThrow(try channel.writeInbound(HTTPClientResponsePart.body(compressed)))
+            XCTAssertNoThrow(try channel.writeInbound(HTTPClientResponsePart.end(nil)))
+
+            var head: HTTPClientResponsePart?
+            XCTAssertNoThrow(head = try channel.readInbound(as: HTTPClientResponsePart.self))
+            XCTAssertEqual(
+                head,
+                HTTPClientResponsePart.head(.init(version: .init(major: 1, minor: 1), status: .ok, headers: headers))
+            )
+
+            // the response is chunked
+            var next: HTTPClientResponsePart?
+            XCTAssertNoThrow(next = try channel.readInbound(as: HTTPClientResponsePart.self))
+            var buffer = ByteBuffer.of(bytes: [])
+            while let part = next {
+                switch part {
+                case .head:
+                    XCTFail("Unexpected head http part")
+                case .body(var input):
+                    buffer.writeBuffer(&input)
+                case .end:
+                    break
+                }
+                XCTAssertNoThrow(next = try channel.readInbound(as: HTTPClientResponsePart.self))
+            }
+            XCTAssertEqual(buffer, ByteBuffer.of(string: body))
+        }
+    }
+
+    func testDecompressionWithoutContentLength() {
+        let channel = EmbeddedChannel()
+        XCTAssertNoThrow(try channel.pipeline.syncOperations.addHandler(NIOHTTPResponseDecompressor(limit: .none)))
+
+        var body = ""
+        for _ in 1...1000 {
+            body +=
+                "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
+        }
+
+        let algorithms: [(actual: String, announced: String)?] = [
+            nil,
+            (actual: "gzip", announced: "gzip"),
+            (actual: "deflate", announced: "deflate"),
+            (actual: "gzip", announced: "deflate"),
+            (actual: "deflate", announced: "gzip"),
+        ]
+
+        for algorithm in algorithms {
+            let compressed: ByteBuffer
+            var headers = HTTPHeaders()
+            if let algorithm = algorithm {
+                headers.add(name: "Content-Encoding", value: algorithm.announced)
+                compressed = compress(ByteBuffer.of(string: body), algorithm.actual)
+            } else {
+                compressed = ByteBuffer.of(string: body)
+            }
+
+            XCTAssertNoThrow(
+                try channel.writeInbound(
+                    HTTPClientResponsePart.head(
+                        .init(version: .init(major: 1, minor: 1), status: .ok, headers: headers)
+                    )
+                )
+            )
+            XCTAssertNoThrow(try channel.writeInbound(HTTPClientResponsePart.body(compressed)))
+            XCTAssertNoThrow(try channel.writeInbound(HTTPClientResponsePart.end(nil)))
+
+            var head: HTTPClientResponsePart?
+            XCTAssertNoThrow(head = try channel.readInbound(as: HTTPClientResponsePart.self))
+            XCTAssertEqual(
+                head,
+                HTTPClientResponsePart.head(.init(version: .init(major: 1, minor: 1), status: .ok, headers: headers))
+            )
+
+            // the response is chunked
+            var next: HTTPClientResponsePart?
+            XCTAssertNoThrow(next = try channel.readInbound(as: HTTPClientResponsePart.self))
+            var buffer = ByteBuffer.of(bytes: [])
+            while let part = next {
+                switch part {
+                case .head:
+                    XCTFail("Unexpected head http part")
+                case .body(var input):
+                    buffer.writeBuffer(&input)
+                case .end:
+                    break
+                }
+                XCTAssertNoThrow(next = try channel.readInbound(as: HTTPClientResponsePart.self))
+            }
+
+            XCTAssertEqual(buffer, ByteBuffer.of(string: body))
+        }
+
+        XCTAssertNoThrow(try channel.writeInbound(HTTPClientResponsePart.end(nil)))
+    }
+
+    func testDecompressionTrailingData() throws {
+        // Valid compressed data with some trailing garbage
+        let compressed = ByteBuffer(bytes: [120, 156, 99, 0, 0, 0, 1, 0, 1] + [1, 2, 3])
+
+        let channel = EmbeddedChannel()
+        try channel.pipeline.syncOperations.addHandler(NIOHTTPResponseDecompressor(limit: .none))
+        let headers = HTTPHeaders([("Content-Encoding", "deflate"), ("Content-Length", "\(compressed.readableBytes)")])
+        try channel.writeInbound(
+            HTTPClientResponsePart.head(.init(version: .init(major: 1, minor: 1), status: .ok, headers: headers))
+        )
+
+        XCTAssertThrowsError(try channel.writeInbound(HTTPClientResponsePart.body(compressed)))
+    }
+
+    func testDecompressionTruncatedInput() throws {
+        // Truncated compressed data
+        let compressed = ByteBuffer(bytes: [120, 156, 99, 0])
+
+        let channel = EmbeddedChannel()
+        try channel.pipeline.syncOperations.addHandler(NIOHTTPResponseDecompressor(limit: .none))
+        let headers = HTTPHeaders([("Content-Encoding", "deflate"), ("Content-Length", "\(compressed.readableBytes)")])
+        try channel.writeInbound(
+            HTTPClientResponsePart.head(.init(version: .init(major: 1, minor: 1), status: .ok, headers: headers))
+        )
+
+        XCTAssertNoThrow(try channel.writeInbound(HTTPClientResponsePart.body(compressed)))
+        XCTAssertThrowsError(try channel.writeInbound(HTTPClientResponsePart.end(nil)))
+    }
+
+    func testReentrantChannelReadDuringForwardIsSafe() throws {
+        let channel = EmbeddedChannel()
+        let recorder = Recorder<HTTPClientResponsePart>()
+
+        let reinjected = HTTPClientResponsePart.head(.init(version: .http1_1, status: .ok))
+        try channel.pipeline.syncOperations.addHandler(NIOHTTPResponseDecompressor(limit: .none))
+        try channel.pipeline.syncOperations.addHandler(
+            ReinjectOnce<HTTPClientResponsePart>(on: .read) { reinjected }
+        )
+        try channel.pipeline.syncOperations.addHandler(recorder)
+
+        var head = HTTPResponseHead(version: .http1_1, status: .ok)
+        head.headers.add(name: "Content-Encoding", value: "gzip")
+
+        XCTAssertNoThrow(try channel.writeInbound(HTTPClientResponsePart.head(head)))
+        XCTAssertEqual(recorder.reads.count, 2)
+        XCTAssertNoThrow(try channel.finish())
+    }
+
+    func testReentrantChannelReadDuringErrorCaughtIsSafe() throws {
+        let channel = EmbeddedChannel()
+        let recorder = Recorder<HTTPClientResponsePart>()
+
+        let reinjected = HTTPClientResponsePart.head(.init(version: .http1_1, status: .ok))
+        try channel.pipeline.syncOperations.addHandler(NIOHTTPResponseDecompressor(limit: .none))
+        try channel.pipeline.syncOperations.addHandler(
+            ReinjectOnce<HTTPClientResponsePart>(on: .error) { reinjected }
+        )
+        try channel.pipeline.syncOperations.addHandler(recorder)
+
+        var head = HTTPResponseHead(version: .http1_1, status: .ok)
+        head.headers.add(name: "Content-Encoding", value: "deflate")
+        XCTAssertNoThrow(try channel.writeInbound(HTTPClientResponsePart.head(head)))
+
+        // invalid deflate payload
+        var badBody = channel.allocator.buffer(capacity: 4)
+        badBody.writeBytes([0xff, 0xff, 0xff, 0xff])
+        _ = try? channel.writeInbound(HTTPClientResponsePart.body(badBody))
+
+        XCTAssertFalse(recorder.errors.isEmpty)
+        XCTAssertTrue(recorder.reads.contains { if case .head = $0 { return true } else { return false } })
+        _ = try? channel.finish()
+    }
+
+    private final class Recorder<Part>: ChannelInboundHandler {
+        typealias InboundIn = Part
+
+        private(set) var reads: [Part] = []
+        private(set) var errors: [Error] = []
+
+        func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+            self.reads.append(Self.unwrapInboundIn(data))
+            context.fireChannelRead(data)
+        }
+
+        func errorCaught(context: ChannelHandlerContext, error: Error) {
+            self.errors.append(error)
+            context.fireErrorCaught(error)
+        }
+    }
+
+    private final class ReinjectOnce<Part: Sendable>: ChannelInboundHandler {
+        typealias InboundIn = Part
+
+        enum Trigger {
+            case read
+            case error
+        }
+
+        private let trigger: Trigger
+        private let reinject: () -> Part
+        private var fired = false
+
+        init(on trigger: Trigger, reinject: @escaping () -> Part) {
+            self.trigger = trigger
+            self.reinject = reinject
+        }
+
+        func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+            if self.trigger == .read, !self.fired {
+                self.fired = true
+                context.channel.pipeline.fireChannelRead(self.reinject())
+            }
+            context.fireChannelRead(data)
+        }
+
+        func errorCaught(context: ChannelHandlerContext, error: Error) {
+            if self.trigger == .error, !self.fired {
+                self.fired = true
+                context.channel.pipeline.fireChannelRead(self.reinject())
+            }
+            context.fireErrorCaught(error)
+        }
+    }
+
+    private func compress(_ body: ByteBuffer, _ algorithm: String) -> ByteBuffer {
+        var stream = cnioextras_z_stream()
+
+        stream.zalloc = nil
+        stream.zfree = nil
+        stream.opaque = nil
+
+        var buffer = ByteBufferAllocator().buffer(capacity: 1000)
+
+        let windowBits: Int32
+        switch algorithm {
+        case "deflate":
+            windowBits = 15
+        case "gzip":
+            windowBits = 16 + 15
+        default:
+            XCTFail("Unsupported algorithm: \(algorithm)")
+            return buffer
+        }
+
+        let rc = CNIOExtrasZlib_deflateInit2(
+            &stream,
+            CNIOEXTRAS_Z_DEFAULT_COMPRESSION,
+            CNIOEXTRAS_Z_DEFLATED,
+            windowBits,
+            8,
+            CNIOEXTRAS_Z_DEFAULT_STRATEGY
+        )
+        XCTAssertEqual(CNIOEXTRAS_Z_OK, rc)
+
+        defer {
+            stream.avail_in = 0
+            stream.next_in = nil
+            stream.avail_out = 0
+            stream.next_out = nil
+        }
+
+        var body = body
+
+        body.readWithUnsafeMutableReadableBytes { dataPtr in
+            let typedPtr = dataPtr.baseAddress!.assumingMemoryBound(to: UInt8.self)
+            let typedDataPtr = UnsafeMutableBufferPointer(
+                start: typedPtr,
+                count: dataPtr.count
+            )
+
+            stream.avail_in = UInt32(typedDataPtr.count)
+            stream.next_in = typedDataPtr.baseAddress!
+
+            buffer.writeWithUnsafeMutableBytes(minimumWritableBytes: 0) { outputPtr in
+                let typedOutputPtr = UnsafeMutableBufferPointer(
+                    start: outputPtr.baseAddress!.assumingMemoryBound(to: UInt8.self),
+                    count: outputPtr.count
+                )
+                stream.avail_out = UInt32(typedOutputPtr.count)
+                stream.next_out = typedOutputPtr.baseAddress!
+                let rc = cnioextras_z_deflate(&stream, CNIOEXTRAS_Z_FINISH)
+                XCTAssertTrue(rc == CNIOEXTRAS_Z_OK || rc == CNIOEXTRAS_Z_STREAM_END)
+                return typedOutputPtr.count - Int(stream.avail_out)
+            }
+
+            return typedDataPtr.count - Int(stream.avail_in)
+        }
+
+        cnioextras_z_deflateEnd(&stream)
+
+        return buffer
+    }
+}
+
+extension ByteBuffer {
+    fileprivate static func of(string: String) -> ByteBuffer {
+        var buffer = ByteBufferAllocator().buffer(capacity: string.count)
+        buffer.writeString(string)
+        return buffer
+    }
+
+    fileprivate static func of(bytes: [UInt8]) -> ByteBuffer {
+        var buffer = ByteBufferAllocator().buffer(capacity: bytes.count)
+        buffer.writeBytes(bytes)
+        return buffer
+    }
+}
