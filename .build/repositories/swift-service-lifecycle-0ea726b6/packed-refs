@@ -2,7 +2,7 @@
 4755d7fc1e6110233cac0fd81e02b1e0ec27e41f refs/heads/availability-fix
 255fa53624b8f75d7f1af29cbc356db5b11c7984 refs/heads/gh-pages
 6627ca5a8821dbd7296ce5c8d1687c1cfd482b98 refs/heads/jo/ucrt-windows-support
-c55297914e26ce3085b73ca88c521ef99136f6ad refs/heads/main
+65771b62e716c4518f745c43873ea496d3ddece1 refs/heads/main
 738020f11a45e06f7a84da9e6108005c878e5f7b refs/heads/preamble-service
 c7e308f34b893d0adf9ee3a0dbef413595577808 refs/heads/repeated-task-cancellation
 dea7187445e24daacb67f06e210ef1ed6e505bf4 refs/heads/tomerd-patch-1
@@ -140,12 +140,17 @@ b3380ad49ae185f5764e0f2d8bf083bbbdc8e52a refs/pull/243/head
 f4afc5c811a9e6f627f4521951c3f73dbf803866 refs/pull/250/head
 5a7d101f178c7fdaf9d8137feb1a388786dd25cc refs/pull/252/head
 928e61c5d29d814fb0b5ab25bc78da26bfd3bef8 refs/pull/253/head
-cb15478e842ff39e25f89a6342bd1fb2ea5b7dc9 refs/pull/253/merge
+b356034403024faa5bd49366aaf997f247ed4668 refs/pull/253/merge
 720daec463cc1109f40cdafebb17cce73358f7ef refs/pull/254/head
 cdd656c1037c94ec44c5dbc2051bcfba7b52c5d9 refs/pull/255/head
 189a404521e24a0b61b440082fe79965685dc4a8 refs/pull/257/head
 a60e59d0de1abed3ce9979f601724372c2938af3 refs/pull/258/head
 d15f482db0c453a1c86e773c1c85135399d95777 refs/pull/260/head
+d8727a08eb6eba99f9aec55f1f7fee480caef711 refs/pull/261/head
+74714d16d8ee318c5a32a5d554f8441c235180fd refs/pull/262/head
+912e412e9a4095c67965bec4d1ca535cac987478 refs/pull/263/head
+b3745bf37c91cec8af411218839e63eba10f88ab refs/pull/264/head
+253709f51842c141a8948c41a372a6b0fb6a80d5 refs/pull/265/head
 28fcb4fbdb6e38b312adaa2408545dd60d91da01 refs/pull/27/head
 91c584560b83e160e92c9fda110515bbe28ce104 refs/pull/28/head
 cdcec50bf3a9788c5f6365eb8d3446cbe3846231 refs/pull/3/head
@@ -230,6 +235,8 @@ fafab8f7adf3e55e2f6d8c4ca0ffcd15a3a197c0 refs/tags/2.0.0-alpha.1
 89888196dd79c61c50bca9a103d8114f32e1e598 refs/tags/2.10.1
 9829955b385e5bb88128b73f1b8389e9b9c3191a refs/tags/2.11.0
 7f9326b0326ff86e3646295ea6e891f68c471c5e refs/tags/2.12.0
+c55297914e26ce3085b73ca88c521ef99136f6ad refs/tags/2.12.1
+a18ee16b8039866fd919bdb4e8e906882d4ecc75 refs/tags/2.13.0
 b71a961c120a8747debc6ae76319b8471fc24923 refs/tags/2.2.0
 d673fdc912f09ad83f34dd00ef823d2d80fbd3a7 refs/tags/2.3.0
 55f45e39dd23c6cad82d4d529e22961cb5e493aa refs/tags/2.4.0

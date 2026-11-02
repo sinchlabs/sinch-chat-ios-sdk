@@ -29,7 +29,7 @@ itself; do not add it separately.
 
 ### CocoaPods
 
-SinchChatSDK 2.0.0 is a **binary** pod (`vendored_frameworks`) published in our own spec
+SinchChatSDK 2.0.0 and later are a **binary** pod (`vendored_frameworks`) published in our own spec
 repo, not on trunk. Add both sources:
 
 ```ruby
@@ -82,6 +82,20 @@ SinchChatSDK.shared.initialize(.init(pushNotificationMode: .sandbox))
 3. Set the user identity before opening chat or inbox UI:
 
 ```swift
+try await SinchChatSDK.shared.setIdentity(
+    config: .init(
+        clientID: "your-client-id",
+        projectID: "your-project-id",
+        configID: "your-config-id",
+        region: .EU1
+    ),
+    identity: .anonymous
+)
+```
+
+The completion-handler form is still available, and does the same thing:
+
+```swift
 SinchChatSDK.shared.setIdentity(
     with: .init(
         clientID: "your-client-id",
@@ -97,15 +111,20 @@ SinchChatSDK.shared.setIdentity(
 
 ## UIKit Integration
 
-Create chat UI:
+Create chat UI (chat UI is created synchronously and must run on the main actor, so an async flow awaits the
+identity first and then opens it):
 
 ```swift
-let chatViewController = try SinchChatSDK.shared.chat.getChatViewController(
-    uiConfig: .defaultValue,
-    localizationConfig: .defaultValue,
-    options: GetChatViewControllerOptions(metadata: [], shouldInitializeConversation: true)
-)
-navigationController.pushViewController(chatViewController, animated: true)
+Task { @MainActor in
+    try await SinchChatSDK.shared.setIdentity(config: config, identity: .anonymous)
+
+    let chatViewController = try SinchChatSDK.shared.chat.getChatViewController(
+        uiConfig: .defaultValue,
+        localizationConfig: .defaultValue,
+        options: GetChatViewControllerOptions(metadata: [], shouldInitializeConversation: true)
+    )
+    navigationController.pushViewController(chatViewController, animated: true)
+}
 ```
 
 Create inbox UI:
@@ -118,6 +137,115 @@ let inboxViewController = try SinchChatSDK.shared.chat.inbox.getInboxViewControl
 )
 navigationController.pushViewController(inboxViewController, animated: true)
 ```
+
+## Async/await
+
+Every completion-handler call has an `async` counterpart, added in 2.1.0 and fully additive: both forms
+call the same code, so a call site can migrate one call at a time. The async forms are `async throws`
+where the completion form reports an error.
+
+### Identity
+
+```swift
+// Sets the identity and returns when it is stored.
+try await SinchChatSDK.shared.setIdentity(
+    config: config,
+    identity: .selfSignedWithAppSecret(userId: userID, appSecret: appSecret)
+)
+
+// Logs the user out and removes the token.
+try await SinchChatSDK.shared.removeIdentity()
+```
+
+`setIdentity(config:identity:)` is a typed-throws function: `catch` receives a `SinchSDKIdentityError`, so the
+failure can be handled exhaustively. The chat side effects are the same as in the completion form — the token
+provider, the chat channel of the identity's region, the `didSetIdentity` plugin event and a fresh chat session.
+The `config:` label differs from the completion form's `with:` on purpose: overloading on `async` alone would
+capture 2.0.0 calls written inside an `async` function and start requiring `try await`.
+
+### Inbox
+
+```swift
+let chats = await SinchChatSDK.shared.chat.inbox.getInboxChats(options: nil)
+
+for chat in chats {
+    print(chat.name, chat.text)
+}
+```
+
+As in the completion form, a failure (for example "not logged in") is reported as an empty array.
+
+### Events
+
+The two public Combine subjects have `AsyncStream` accessors. Each access subscribes afresh — nothing is
+replayed — and the subscription is cancelled when the consumer stops iterating, on `break`, on task
+cancellation or when the stream is released:
+
+```swift
+for await event in SinchChatSDK.shared.events {
+    switch event {
+    case .didSetIdentity(let auth): print("signed in", auth)
+    case .didRemoveIdentity: print("signed out")
+    default: break
+    }
+}
+
+for await update in SinchChatSDK.shared.chat.inbox.events {
+    if case .chatUpdated(let chat) = update {
+        print("conversation updated:", chat.name)
+    }
+}
+```
+
+Both streams buffer up to 64 pending events and drop the oldest when a consumer does not drain them.
+
+### Plugins
+
+The methods a chat plugin receives have async forms too:
+
+```swift
+let payload = try await methods.sendMessage(.text("Hi"), authModel: nil, chatOptions: nil)
+await methods.presentViewController(viewController, true)
+```
+
+### Push
+
+`SinchChatSDK.shared.push` is the push facade, so the push SDK's async APIs — notification permissions, the
+relay streams and the in-app events — are available on the same object:
+
+```swift
+let push = SinchChatSDK.shared.push
+
+// Asks the system and returns the answer; the completion and Combine forms are unchanged.
+let status = await push.requestNotificationPermission()
+
+// The current permission, without asking.
+let current = await push.notificationPermissionStatus()
+
+// The relay state: the current one first, then every change.
+for await state in push.socketStates {
+    print("relay:", state)
+}
+
+// Relay messages, each once and in order.
+for await message in push.socketMessages {
+    print("push:", message)
+}
+
+// In-app alert lifecycle events, next to `inAppMessages.delegate`.
+for await event in SinchPushSDK.shared.inAppMessages.events {
+    switch event {
+    case .presented(let message): print("in-app:", message)
+    case .actionTapped(let action, let message): print("action:", action, message)
+    case .dismissed(let message): print("dismissed:", message)
+    }
+}
+```
+
+The async permission methods are named apart from `askNotificationPermission()` and `checkPushPermission()` on
+purpose: those already have a no-argument Combine overload, so a same-name `async` one would make
+`push.askNotificationPermission().sink` ambiguous. Each `for await` loop is one subscriber and is cancelled when
+the loop exits.
 
 ## SwiftUI Integration
 
@@ -298,6 +426,10 @@ README. The old `SinchChatSDK.shared.push` API keeps working in both cases.
 
 ## Migration Notes
 
+- **2.1.0** adds `async` forms next to every completion-handler call; nothing was removed or renamed. The new
+  forms carry distinct labels or names (`setIdentity(config:identity:)`, `requestNotificationPermission()`), so
+  every 2.0.0 spelling keeps resolving to the same function — including a `setIdentity(with:identity:)` call with
+  no completion handler written inside an `async` function.
 - Existing UIKit integrations should continue using `getChatViewController` and `getInboxViewController`.
 - SwiftUI apps should prefer `SinchChatView`, `SinchInboxView`, and `SinchChatSDKState` for first-stage support.
 - A future SDK release may provide native SwiftUI chat/inbox views; the current SwiftUI API wraps UIKit internally.
@@ -311,8 +443,8 @@ HMAC-SHA512 digest internally — your app secret never has to leave the
 caller and is not persisted:
 
 ```swift
-SinchChatSDK.shared.setIdentity(
-    with: config,
+try await SinchChatSDK.shared.setIdentity(
+    config: config,
     identity: .selfSignedWithAppSecret(
         userId: userID,
         appSecret: appSecret

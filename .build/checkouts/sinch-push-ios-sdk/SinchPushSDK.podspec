@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'SinchPushSDK'
-  s.version          = '1.0.0'
+  s.version          = '1.1.0'
   s.summary          = 'Sinch push SDK for iOS: APNs, the push relay, delivery reports and in-app message alerts'
   s.description      = <<-DESC
     A standalone push SDK: identity and access token, APNs subscriptions, the

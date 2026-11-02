@@ -54,6 +54,18 @@ public final class SinchChatSDK: @unchecked Sendable {
 
     private let pushPermissionHandler = DefaultPushPermissionHandler()
 
+    /// The push `setIdentity` call `SinchChatSDK.setIdentity` forwards to. Tests replace it to run without the push
+    /// SDK; the chat side effects of a success still run.
+    var pushSetIdentity: @Sendable (SinchSDKConfig.AppConfig, SinchSDKIdentity,
+                                    @escaping @Sendable (Result<Void, SinchSDKIdentityError>) -> Void) -> Void = {
+        SinchPushSDK.shared.setIdentity(with: $0, identity: $1, completion: $2)
+    }
+
+    /// The push `removeIdentity` call `SinchChatSDK.removeIdentity` forwards to. Tests replace it.
+    var pushRemoveIdentity: @Sendable (@escaping @Sendable (Result<Void, Error>) -> Void) -> Void = {
+        SinchPushSDK.shared.removeIdentity($0)
+    }
+
     /// Initialization of SinchSDK
     /// - Parameters:
     ///   - Parameter options: Run sdk with options f.e: using sandbox push notification environment.
@@ -83,7 +95,7 @@ public final class SinchChatSDK: @unchecked Sendable {
     ///   - completion: Callback with result of user authorization.
     public func setIdentity(with config: SinchSDKConfig.AppConfig, identity: SinchSDKIdentity,
                             completion: (@Sendable (Result<Void, SinchSDKIdentityError>) -> Void)? = nil) {
-        SinchPushSDK.shared.setIdentity(with: config, identity: identity) { [weak self] result in
+        pushSetIdentity(config, identity) { [weak self] result in
             guard case .success = result else {
                 completion?(result)
                 return
@@ -92,21 +104,7 @@ public final class SinchChatSDK: @unchecked Sendable {
                 completion?(result)
                 return
             }
-            self.config = config
-            let provider = SinchPushSDK.shared.tokenProvider
-            self.tokenProvider = provider
-            if let region = provider.currentRegion {
-                // A new identity can point at another region: replace the chat channel, as `setIdentity` always did.
-                self.region = region
-                if let client = Default2APIClient(region: region) {
-                    self.apiClient = client
-                }
-            }
-            if let token = provider.currentAuthorization {
-                Self.shared.eventListenerSubject.send(.didSetIdentity(token))
-            }
-            self.reinitializeChat()
-
+            self.apply(config)
             completion?(.success(()))
         }
     }
@@ -114,12 +112,31 @@ public final class SinchChatSDK: @unchecked Sendable {
     /// Removes identity of the user.
     /// This method is logging out user. It removes token and other user data from the app.
     public func removeIdentity(_ completion: (@Sendable (Result<Void, Error>) -> Void)?) {
-        SinchPushSDK.shared.removeIdentity { result in
+        pushRemoveIdentity { result in
             if case .success = result {
                 SinchChatSDK.shared.eventListenerSubject.send(.didRemoveIdentity)
             }
             completion?(result)
         }
+    }
+
+    /// The chat side effects of a successful `setIdentity`: the config, the identity of the push SDK, the chat
+    /// channel of its region, the identity event and a fresh chat session.
+    private func apply(_ config: SinchSDKConfig.AppConfig) {
+        self.config = config
+        let provider = SinchPushSDK.shared.tokenProvider
+        self.tokenProvider = provider
+        if let region = provider.currentRegion {
+            // A new identity can point at another region: replace the chat channel, as `setIdentity` always did.
+            self.region = region
+            if let client = Default2APIClient(region: region) {
+                self.apiClient = client
+            }
+        }
+        if let token = provider.currentAuthorization {
+            Self.shared.eventListenerSubject.send(.didSetIdentity(token))
+        }
+        reinitializeChat()
     }
 
     private func reinitializeChat() {
@@ -128,7 +145,7 @@ public final class SinchChatSDK: @unchecked Sendable {
 
     /// The version chat reports in the metadata of its RPCs. Push reports its own.
     static var version: String {
-        "2.0.0"
+        "2.1.0"
     }
 }
 

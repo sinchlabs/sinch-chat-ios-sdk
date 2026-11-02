@@ -14,7 +14,7 @@ let package = Package.init(
     ],
     dependencies: [
         // Local during development.
-        .package(url: "https://github.com/sinchlabs/sinch-push-ios-sdk.git", from: "1.0.0"),
+        .package(url: "https://github.com/sinchlabs/sinch-push-ios-sdk.git", from: "1.1.0"),
         .package(url: "https://github.com/grpc/grpc-swift-2.git", from: "2.4.0"),
         .package(url: "https://github.com/grpc/grpc-swift-protobuf.git", from: "2.4.0"),
         .package(url: "https://github.com/grpc/grpc-swift-nio-transport.git", from: "2.4.0"),

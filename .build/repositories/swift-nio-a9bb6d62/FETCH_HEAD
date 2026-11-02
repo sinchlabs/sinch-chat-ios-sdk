@@ -2560,7 +2560,7 @@ bd5462b2ec0a7fa7e79f8eff30c583fe5b7d57f5	not-for-merge	'refs/pull/3761/head' of 
 18a5041c08b576a5dc63993bab949eeb51ae3986	not-for-merge	'refs/pull/3762/head' of https://github.com/apple/swift-nio
 15941a5aababdf20e75f676264901cfdded3c0c2	not-for-merge	'refs/pull/3763/head' of https://github.com/apple/swift-nio
 3160aa4b2a6d50712945088f464b314fe75b00ea	not-for-merge	'refs/pull/3765/head' of https://github.com/apple/swift-nio
-7fce07b23f1925e7a916d7863765c814ea104139	not-for-merge	'refs/pull/3765/merge' of https://github.com/apple/swift-nio
+fafcd34120428353c3d7c4a328a5316ccbf52b1e	not-for-merge	'refs/pull/3765/merge' of https://github.com/apple/swift-nio
 582dc052618c7f51d8b2e707978561657712470a	not-for-merge	'refs/pull/3766/head' of https://github.com/apple/swift-nio
 078198aaae79ce8a812897d85b773091ba25d88d	not-for-merge	'refs/pull/3766/merge' of https://github.com/apple/swift-nio
 20056788c9e608fc2a5d6125db4071d3c7e86cfa	not-for-merge	'refs/pull/3767/head' of https://github.com/apple/swift-nio

@@ -3,6 +3,50 @@
 SDK changes that affect host developers. The newest section is synced to the public mirror
 ([sinch-chat-ios-sdk](https://github.com/sinchlabs/sinch-chat-ios-sdk)) at release time.
 
+## 2.1.0
+
+A Swift-concurrency surface for chat, and it is **purely additive**: every existing declaration, signature and
+verification path is unchanged, and each new call bridges the completion-handler API it shipped with. Both forms
+call the same code, so a call site can migrate one call at a time.
+
+### Added
+
+- **`SinchChatSDK.setIdentity(config:identity:) async throws(SinchSDKIdentityError)`** — awaits the completion form,
+  including its chat side effects (the token provider, the chat channel of the identity's region, the
+  `didSetIdentity` plugin event and a fresh chat session). Typed throws, so `catch` receives a
+  `SinchSDKIdentityError`. The `config:` label differs from the completion form's `with:` so the two can never
+  be confused at a call site.
+- **`SinchChatSDK.removeIdentity() async throws`** — awaits the completion form and its `didRemoveIdentity` event.
+- **`SinchInbox.getInboxChats(options:) async -> [InboxChat]`** — awaits the completion form. As there, a failure is
+  reported as an empty array.
+- **`SinchPluginAvailablePluginMethods.sendMessage(_:authModel:chatOptions:) async throws -> String`** and
+  **`presentViewController(_:_:) async`** — the async forms of the methods a chat plugin receives.
+- **`SinchChatSDK.events: AsyncStream<SinchPluginEvent>`** and
+  **`SinchInbox.events: AsyncStream<SinchInboxEvent>`** — the public `eventListenerSubject` and
+  `chatInboxEventListenerSubject` as async sequences. Each access subscribes afresh (nothing is replayed), buffers up
+  to 64 events, and cancels its subscription when the consumer stops iterating — on `break`, on task cancellation or
+  when the stream is released.
+- **Conformances**: `SinchInboxEvent` and `SinchChatOptions` are now `Sendable`, and `SinchPluginEvent` is
+  `@unchecked Sendable` (its only non-`Sendable` payload is `any ChatViewProtocol`, a main-actor-isolated
+  `UIViewController`). Both are additive; existing conformers and switches are unaffected.
+
+### Changed
+
+- **Version**: `SinchChatSDK.version` reports `2.1.0`; the podspec is `2.1.0`. The `SinchPushSDK` dependency stays
+  `~> 1.0`.
+
+### Notes
+
+- Every async form is named or labelled apart from the completion form it bridges, so no 2.0.0 spelling changes
+  meaning: a completion-less `SinchChatSDK.shared.setIdentity(with:identity:)` inside an `async` function still
+  resolves to the completion form (the async one is `setIdentity(config:identity:)`), and `removeIdentity(nil)`
+  still selects the completion form (`removeIdentity() async` is the only call with no argument).
+- The push SDK's async APIs are reachable through `SinchChatSDK.shared.push`:
+  `requestNotificationPermission()`, `notificationPermissionStatus()`, `socketStates`, `socketMessages`, and
+  `SinchPushSDK.shared.inAppMessages.events`.
+- The completion handlers are guarded against a second invocation: a doubled completion is ignored instead of
+  trapping the process on a checked continuation.
+
 ## 2.0.0
 
 Push moves into [SinchPushSDK](https://github.com/sinchlabs/sinch-push-ios-sdk), a

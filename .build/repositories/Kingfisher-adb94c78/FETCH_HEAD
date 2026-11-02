@@ -10,11 +10,12 @@ a8315fc16a339c0a0c1e7abc9c3e5f91dee2321a	not-for-merge	branch 'fix/attempt-1870'
 085198f607538e3a6a3a68e3b520d3c21a60c1a3	not-for-merge	branch 'fix/stack-based-image' of https://github.com/onevcat/Kingfisher
 06f75b4dffb963dbb9cc3f8419d20cbe33a457da	not-for-merge	branch 'fix/swift-6-test-warning-cleanup' of https://github.com/onevcat/Kingfisher
 f012224344f09421588a28e9f6259968e3574f8b	not-for-merge	branch 'fix/xcode-13' of https://github.com/onevcat/Kingfisher
-7406a99571034568b6ca4ba875c01842607e03d9	not-for-merge	branch 'master' of https://github.com/onevcat/Kingfisher
+770465258c652c73fdef447c10004765c440e993	not-for-merge	branch 'master' of https://github.com/onevcat/Kingfisher
 62b5fcca4757599d1c876488799f4d7e146cede9	not-for-merge	branch 'nuomi1-feature/PHPickerResultImageDataProvider' of https://github.com/onevcat/Kingfisher
 c207ca871e602111d83693cfc2688cf2a55f506c	not-for-merge	branch 'relay/fix-447-onevcat-kingfisher-demo-progressive-jpeg-1852652c' of https://github.com/onevcat/Kingfisher
 d06df9adf50ed8cde5786d935836a5f445f780ba	not-for-merge	branch 'release/version6' of https://github.com/onevcat/Kingfisher
 b0cb6224bccde99780598f0e40cb02fe864749fe	not-for-merge	branch 'revert-2347-avoid-unneeded-recreation' of https://github.com/onevcat/Kingfisher
+1d84d5d131104a6a555abca7c50d7814c51f1074	not-for-merge	branch 'takeover/pr-2605-progressive-demo-reload' of https://github.com/onevcat/Kingfisher
 d0494dd78f7adf2d3526fdf3267176553020c041	not-for-merge	branch 'version6-xcode13' of https://github.com/onevcat/Kingfisher
 3040fa1774338bce536083bf965a8ca5bb7e1a06	not-for-merge	branch 'xcode-15' of https://github.com/onevcat/Kingfisher
 6125d9cdd0233c40a503ff6de0acda686d7598b0	not-for-merge	'refs/pull/1/head' of https://github.com/onevcat/Kingfisher
@@ -730,14 +731,15 @@ ca4747da4c31e70ac72f23da247eabcf95e6b57b	not-for-merge	'refs/pull/2598/head' of 
 ad08ed53a9b62f160439b1d700222877280e639c	not-for-merge	'refs/pull/26/head' of https://github.com/onevcat/Kingfisher
 8f933796742eefa443380232cc27e18a0017cca7	not-for-merge	'refs/pull/260/head' of https://github.com/onevcat/Kingfisher
 ebde8e749c05a991aa7b86b80edafaf1252dc495	not-for-merge	'refs/pull/2601/head' of https://github.com/onevcat/Kingfisher
-5634ae02319e4929e239dbde8bd01b38a1b12a24	not-for-merge	'refs/pull/2601/merge' of https://github.com/onevcat/Kingfisher
 e7de3e576aaac10105d322a8963842bca9b26129	not-for-merge	'refs/pull/2602/head' of https://github.com/onevcat/Kingfisher
 37cceb9806c1c2120ee43062277f9f84b88fb3e6	not-for-merge	'refs/pull/2603/head' of https://github.com/onevcat/Kingfisher
-ef1cb1d9832689bf8d3783134639ba1281f4a2dc	not-for-merge	'refs/pull/2603/merge' of https://github.com/onevcat/Kingfisher
+6fd048e2f5cfb24f9851b11414e5585f0871d677	not-for-merge	'refs/pull/2603/merge' of https://github.com/onevcat/Kingfisher
 b9b49b1fc0aa13ebe3eb814258d6d4e04dfe4945	not-for-merge	'refs/pull/2605/head' of https://github.com/onevcat/Kingfisher
 9230353ed2314b99f38c63f94d1876caeb9ad426	not-for-merge	'refs/pull/2605/merge' of https://github.com/onevcat/Kingfisher
 c207ca871e602111d83693cfc2688cf2a55f506c	not-for-merge	'refs/pull/2606/head' of https://github.com/onevcat/Kingfisher
-9297f630c9091cde7adaf9dae919a70012adc32e	not-for-merge	'refs/pull/2606/merge' of https://github.com/onevcat/Kingfisher
+e1d6a7043e0d56fae11229e7c9bc053fa601b194	not-for-merge	'refs/pull/2607/head' of https://github.com/onevcat/Kingfisher
+1d84d5d131104a6a555abca7c50d7814c51f1074	not-for-merge	'refs/pull/2608/head' of https://github.com/onevcat/Kingfisher
+3fe4b7c708fecdb1c8911fc40ee2f93e33aa05f0	not-for-merge	'refs/pull/2608/merge' of https://github.com/onevcat/Kingfisher
 fd38434b6c5004815d81c44a376bfc6f547b5821	not-for-merge	'refs/pull/263/head' of https://github.com/onevcat/Kingfisher
 8055442be87df53e8037e1535d3e44eb8fb87db1	not-for-merge	'refs/pull/265/head' of https://github.com/onevcat/Kingfisher
 e0ee50151aa63c104b5876960c98c060b58f86b9	not-for-merge	'refs/pull/266/head' of https://github.com/onevcat/Kingfisher

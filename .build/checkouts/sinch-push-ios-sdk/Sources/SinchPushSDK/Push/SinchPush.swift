@@ -332,7 +332,7 @@ final class DefaultSinchPush: SinchPush {
     }
 }
 
-public enum SinchSDKNotificationStatus {
+public enum SinchSDKNotificationStatus: Sendable, Equatable {
     /// Notification permission is already granted.
     case granted
     /// Notification permiossion was previously asked but now is denied, user must change it in settings.

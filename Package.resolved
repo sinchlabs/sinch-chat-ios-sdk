@@ -1,5 +1,5 @@
 {
-  "originHash" : "101c41fcd08a83e43270d8d71f532166be22f2c631790a6273695bc9557bbf18",
+  "originHash" : "6122ee82ff306a4bd474ccf5237b6dce0114e172a12b9e7edfc542221fc40b47",
   "pins" : [
     {
       "identity" : "grpc-swift-2",
@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/sinchlabs/sinch-push-ios-sdk.git",
       "state" : {
-        "revision" : "426f602fee0b25cc5a3437411813537d009f0a11",
-        "version" : "1.0.0"
+        "revision" : "6c18e6dc64562539915eebed7f9e7c1a7810604b",
+        "version" : "1.1.0"
       }
     },
     {

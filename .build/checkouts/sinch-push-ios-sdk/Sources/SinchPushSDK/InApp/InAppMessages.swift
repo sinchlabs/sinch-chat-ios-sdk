@@ -20,6 +20,23 @@ public final class InAppMessages {
         set { controller.delegate = newValue }
     }
 
+    /// In-app lifecycle events as an `AsyncSequence`, emitted alongside ``delegate``.
+    ///
+    /// Each access is an independent consumer and is removed when its stream
+    /// terminates. Use it instead of the delegate when a `for await` loop fits the
+    /// app better; both can be used at the same time.
+    ///
+    /// ```swift
+    /// for await event in SinchPushSDK.shared.inAppMessages.events {
+    ///     switch event {
+    ///     case .presented(let message): break
+    ///     case .actionTapped(let action, let message): break
+    ///     case .dismissed(let message): break
+    ///     }
+    /// }
+    /// ```
+    public var events: AsyncStream<InAppMessageEvent> { controller.events }
+
     /// Colours, fonts, images and strings for the alerts the SDK renders.
     public var theme: InAppMessageTheme {
         get { controller.theme }

@@ -55,7 +55,7 @@ public final class SinchPushSDK: @unchecked Sendable {
     /// gets it so both SDKs report the same family of version strings.
     public nonisolated(unsafe) private(set) static var version = baseVersion + "-dev"
 
-    private static let baseVersion = "1.0.0"
+    private static let baseVersion = "1.1.0"
 
     /// The dedupe set shared by the socket and the APNs handlers.
     let seenMessageRegistry: SeenMessageRegistry
@@ -73,6 +73,17 @@ public final class SinchPushSDK: @unchecked Sendable {
     var isApplicationInBackground: @MainActor @Sendable () -> Bool = { UIApplication.shared.applicationState == .background }
     /// Builds the push API client the delivery reports go through. `nil` means no reports.
     var deliveryReportClientFactory: (Region) -> PushAPIClient? = { DefaultPushAPIClient(region: $0) }
+    /// Builds the chat token repository of ``setIdentity(with:identity:)``. Tests inject a fake.
+    var authRepositoryFactory: @Sendable (SinchSDKConfig.AppConfig, StandardMetadata) -> AuthRepository = {
+        DefaultAuthRepository(config: $0, metadata: $1)
+    }
+    /// Builds the push repository the Subscribe and Unsubscribe paths use. Tests inject a fake.
+    var pushRepositoryFactory: @Sendable (Region, AuthDataSource, StandardMetadata) -> PushRepository = {
+        DefaultPushRepository(region: $0, authDataSource: $1, metadata: $2)
+    }
+    /// Builds the relay manager on first use. Tests inject one over fake dependencies, so no live
+    /// notification centre or WebSocket is needed; the production wiring is `nil`.
+    var pushSocketManagerFactory: (@MainActor () -> PushSocketManager)?
     /// The storage the token of a stored config is read from, for the delivery reports of a background launch.
     var deliveryReportAuthStorage: (SinchSDKConfig.AppConfig) -> AuthStorage = { KeychainAuthStorage(config: $0) }
     /// The config `setIdentity` last succeeded with, for the delivery reports of a background launch.
@@ -91,7 +102,7 @@ public final class SinchPushSDK: @unchecked Sendable {
     @MainActor var pushSocketManager: PushSocketManager {
         if let existing = _pushSocketManager { return existing }
         installInAppPresenterIfNeeded()
-        let new = PushSocketManager(
+        let new = pushSocketManagerFactory?() ?? PushSocketManager(
             dependencies: .live(registry: seenMessageRegistry, store: socketStateStore,
                                 relaySwitch: relaySettings.effectiveSwitch, scheduler: socketScheduler),
             settings: relaySettings,
@@ -212,7 +223,7 @@ public final class SinchPushSDK: @unchecked Sendable {
             counter.withLock { $0 } == identityChange
         }
         authDataSource = DefaultAuthDataSource(
-            authRepository: DefaultAuthRepository(config: config, metadata: metadata),
+            authRepository: authRepositoryFactory(config, metadata),
             authStorage: MirroringAuthStorage(base: keychainStorage, mirror: mirror, isCurrent: identityStillCurrent)
         )
 
@@ -270,9 +281,8 @@ public final class SinchPushSDK: @unchecked Sendable {
         let currentAuthDataSource = authDataSource
         let tempPushNottifications = DefaultPushNotificationHandler(subscribesOnRepositoryChange: false)
         tempPushNottifications.authDataSource = authDataSource
-        tempPushNottifications.pushRepository = DefaultPushRepository(region: config?.region ?? .EU1,
-                                                                      authDataSource: authDataSource,
-                                                                      metadata: metadata)
+        tempPushNottifications.pushRepository = pushRepositoryFactory(config?.region ?? .EU1,
+                                                                      authDataSource, metadata)
         tempPushNottifications.unsubscribe { result in
             switch result {
             case .success:
@@ -381,9 +391,7 @@ public final class SinchPushSDK: @unchecked Sendable {
             return
         }
         Logger.verbose("--------- SET PUSH REPOSITORY")
-        pushNotificationHandler.pushRepository = DefaultPushRepository(region: config.region,
-                                                                      authDataSource: authDataSource,
-                                                                      metadata: metadata)
+        pushNotificationHandler.pushRepository = pushRepositoryFactory(config.region, authDataSource, metadata)
     }
 
     private func startPushRelay(config: SinchSDKConfig.AppConfig, auth: AuthModel, identityChange: Int) {

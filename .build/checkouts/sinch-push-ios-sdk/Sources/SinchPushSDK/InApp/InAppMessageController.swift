@@ -24,6 +24,12 @@ public final class InAppMessageController: Sendable {
     /// Alerts waiting to be shown, oldest first. The head is the one on screen.
     public private(set) var queue: [InAppMessage] = []
 
+    /// Emits lifecycle events alongside ``delegate``. Internal; `InAppMessages.events` is the public door.
+    let eventStream = InAppEventMulticaster()
+
+    /// A new stream of in-app lifecycle events. Each call is an independent consumer.
+    var events: AsyncStream<InAppMessageEvent> { eventStream.makeStream() }
+
     /// Gap between the end of one alert and the next one.
     var presentationGap: TimeInterval = 0.5
 
@@ -61,6 +67,7 @@ public final class InAppMessageController: Sendable {
         guard delegate?.shouldPresent(message) ?? true else { return false }
 
         queue.append(message)
+        eventStream.send(.presented(message))
 
         if queue.count == 1 {
             showNextMessage()
@@ -82,6 +89,7 @@ public final class InAppMessageController: Sendable {
 
         isPresenting = false
         delegate?.didDismiss(message)
+        eventStream.send(.dismissed(message))
 
         guard !queue.isEmpty else { return }
 
@@ -102,7 +110,10 @@ public final class InAppMessageController: Sendable {
             presented.dismiss(animated: false)
         }
 
-        remaining.forEach { delegate?.didDismiss($0) }
+        remaining.forEach {
+            delegate?.didDismiss($0)
+            eventStream.send(.dismissed($0))
+        }
     }
 
     // MARK: - Presentation
@@ -154,6 +165,7 @@ extension InAppMessageController: InAppMessageViewControllerDelegate {
         in message: InAppMessage
     ) {
         delegate?.didTapAction(action, in: message)
+        eventStream.send(.actionTapped(action, in: message))
     }
 
     func inAppMessageViewControllerDidClose(_ controller: InAppMessageViewController) {

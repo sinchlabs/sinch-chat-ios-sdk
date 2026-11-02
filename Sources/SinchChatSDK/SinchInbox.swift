@@ -94,7 +94,7 @@ public extension SinchInbox {
 public enum SinchInboxSDKError: Error {
     case unavailable
 }
-public enum SinchInboxEvent {
+public enum SinchInboxEvent: Sendable {
     case chatUpdated(InboxChat)
     case subcriptionFailed
 }

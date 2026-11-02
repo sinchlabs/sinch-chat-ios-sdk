@@ -119,11 +119,11 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
             options: .init(environment: .prod,                    // .sandbox in development
                            appGroup: "group.com.example.app"))    // see the extension below
 
-        SinchPushSDK.shared.setIdentity(.anonymous) { result in
-            switch result {
-            case .success:
-                break // the device token, if known already, is subscribed now
-            case .failure(let error):
+        Task {
+            do {
+                // Awaits the token; the device token, if known already, is subscribed then.
+                try await SinchPushSDK.shared.setIdentity(to: .anonymous)
+            } catch {
                 print("setIdentity failed: \(error)")
             }
         }
@@ -174,13 +174,20 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
 
 Notes:
 
-- `initialize(config:options:)` may also be called without a config; `setIdentity(with:identity:completion:)`
+- `setIdentity(config:identity:)` and `setIdentity(to:)` are the async forms; the
+  completion-handler `setIdentity(with:identity:completion:)` and
+  `setIdentity(_:completion:)` still work, and so does the Combine and completion API
+  everywhere else in this README. The async names carry a different label on purpose:
+  the completion already has a default, so a same-label `async` overload would capture
+  existing calls written inside an `async` function and require `try await`.
+- `initialize(config:options:)` may also be called without a config; `setIdentity(config:identity:)`
   then carries it. Passing it here makes the locale and the relay settings ready before the first identity.
 - `.off` as the environment registers for no remote notifications and subscribes no device.
-- For a signed user call `setIdentity(.selfSignedWithAppSecret(userId:appSecret:))`; the SDK computes the
+- For a signed user call `setIdentity(to: .selfSignedWithAppSecret(userId:appSecret:))`; the SDK computes the
   HMAC-SHA512 digest itself and never persists the secret. `selfSigned(userId:secret:)` with a precomputed
   digest is still accepted.
-- `removeIdentity(_:)` unsubscribes the device, deletes the token and stops the relay.
+- `removeIdentity()` unsubscribes the device, deletes the token and stops the relay. The
+  completion form `removeIdentity(_:)` is unchanged.
 - Reading `SinchPushSDK.shared.push` the first time creates the push pipeline; it is safe from any app
   delegate callback.
 
@@ -198,21 +205,30 @@ Notes:
 ## Permissions
 
 ```swift
-SinchPushSDK.shared.push.askNotificationPermission { status in
-    switch status {
-    case .granted:       break
-    case .denied:        break // the user has to change it in Settings
-    case .notDetermined: break
-    }
+let status = await SinchPushSDK.shared.push.requestNotificationPermission()
+switch status {
+case .granted:       break
+case .denied:        break // the user has to change it in Settings
+case .notDetermined: break
 }
 
+let current = await SinchPushSDK.shared.push.notificationPermissionStatus()
+```
+
+The async methods are named apart from the Combine ones on purpose: a same-name
+`async` overload of the no-argument `askNotificationPermission()` would make
+`push.askNotificationPermission().sink` ambiguous in an async context. Both APIs are
+available:
+
+```swift
+// Completion handler, unchanged:
 SinchPushSDK.shared.push.checkPushPermission { status in
     // the current state, without asking
 }
-```
 
-Combine variants are available: `askNotificationPermission()` and `checkPushPermission()`
-return `AnyPublisher<SinchSDKNotificationStatus, Never>`.
+// Combine, unchanged:
+let publisher = SinchPushSDK.shared.push.askNotificationPermission() // AnyPublisher<SinchSDKNotificationStatus, Never>
+```
 
 ## Notification Service Extension and App Group
 
@@ -252,6 +268,17 @@ and after termination pushes arrive through APNs. Nothing is delivered twice.
 ```swift
 let push = SinchPushSDK.shared.push
 
+// Swift concurrency: the current state first, then every change.
+for await state in push.socketStates {
+    print(state.status)
+}
+
+// Each relay message once, in order.
+for await received in push.socketMessages {
+    push.reportStatus(messageId: received.id, status: .displayed)
+}
+
+// The same data through the Combine publishers, unchanged:
 push.socketState                 // status, relayEnabled, disabledReason, lastError, reconnectAttempts
 push.socketStatePublisher        // every change, on the main thread, replays the current value
 push.socketMessagePublisher      // every relay message once, on the main thread
@@ -259,8 +286,12 @@ push.installationId              // this installation's id, nil while the Keycha
 
 push.setRelayEnabled(false)      // persisted runtime switch; the identity and subscription stay
 push.isRelayEnabled
-push.reportStatus(messageId: message.id, status: .displayed)   // or .dismissed
+push.reportStatus(messageId: "message-id", status: .displayed)   // or .dismissed
 ```
+
+`socketStates` and `socketMessages` each start a fresh subscription when read and cancel
+it when the stream terminates (when the `for await` loop leaves), so leaving a loop does
+not leak a publisher.
 
 The relay starts after `setIdentity` succeeds when the region has a relay URL, and
 stops on `removeIdentity`. Relay messages are posted as local notifications, so the
@@ -286,7 +317,29 @@ theme.buttonTitleColor = .white
 SinchPushSDK.shared.inAppMessages.theme = theme
 ```
 
-`InAppMessageDelegate` observes the alerts and can take rendering over:
+`InAppMessageDelegate` observes the alerts and can take rendering over. The async
+`events` stream delivers the same lifecycle without a delegate:
+
+```swift
+for await event in SinchPushSDK.shared.inAppMessages.events {
+    switch event {
+    case .presented(let message):
+        break
+    case .actionTapped(let action, let message):
+        if case .text(let postbackData) = action {
+            sendPostback(postbackData)
+        }
+    case .dismissed(let message):
+        break
+    }
+}
+```
+
+Each access to `events` is an independent consumer; the stream removes itself when
+its `for await` loop ends. Multiple consumers, and a delegate alongside them, all get
+every event.
+
+The delegate API is unchanged:
 
 ```swift
 import SinchPushSDK

@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'SinchPushSDKNotificationExtension'
-  s.version          = '1.0.0'
+  s.version          = '1.1.0'
   s.summary          = 'Sinch push Notification Service Extension: Foundation and UserNotifications only'
   s.description      = <<-DESC
     The Notification Service Extension part of SinchPushSDK. Add this pod to the

@@ -1,6 +1,6 @@
 # Push relay (foreground delivery)
 
-Release notes: [`CHANGELOG.md`](../CHANGELOG.md) (`## 2.0.0`).
+Release notes: [`CHANGELOG.md`](../CHANGELOG.md) (`## 2.1.0`).
 
 The relay is part of [SinchPushSDK](https://github.com/sinchlabs/sinch-push-ios-sdk), a standalone package that
 `SinchChatSDK` depends on and re-exports. Every `SinchChatSDK.shared.push` call below is also available as
