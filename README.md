@@ -34,7 +34,7 @@ repo, not on trunk. Add both sources:
 
 ```ruby
 source 'https://github.com/sinchlabs/sinch-ios-specs.git'
-source 'https://cdn.cocoapods.org/'   # SwiftProtobuf, and SinchPushSDK's dependency
+source 'https://cdn.cocoapods.org/'   # trunk, for the app's other pods
 
 platform :ios, '18.0'
 use_frameworks!
@@ -48,27 +48,17 @@ target 'NotificationService' do
   pod 'SinchPushSDKNotificationExtension'
 end
 
-# Trunk's SwiftProtobuf declares iOS 11.0 and Xcode refuses deployment targets below
-# 15.0. The prebuilt chat binary links SinchPushSDK and SwiftProtobuf dynamically, so
-# both must be built with library evolution as well.
-post_install do |installer|
-  installer.pods_project.targets.each do |target|
-    target.build_configurations.each do |config|
-      deployment_target = (config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] || '0').to_f
-      if deployment_target > 0 && deployment_target < 15.0
-        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0'
-      end
-      if %w[SwiftProtobuf SinchPushSDK SinchPushSDKNotificationExtension].include?(target.name)
-        config.build_settings['BUILD_LIBRARY_FOR_DISTRIBUTION'] = 'YES'
-      end
-    end
-  end
-end
 ```
 
 The binary links gRPC Swift 2 and Kingfisher statically inside the framework. It links
 `SinchPushSDK` and `SwiftProtobuf` dynamically, so the app ships exactly one protobuf
 runtime and the chat SDK, the push pod and the app all share it.
+
+Protobuf comes from `SinchSwiftProtobuf`, Apple's swift-protobuf 1.39.0 sources
+repackaged for iOS 16 with library evolution. The module is still `SwiftProtobuf`, and
+no `post_install` hook is needed (you can delete the one from 2.1.0 and earlier). Do not
+add trunk's `SwiftProtobuf` pod to the same app: both pods provide the `SwiftProtobuf`
+module, and `pod install` fails.
 
 ## Setup
 
@@ -405,8 +395,8 @@ What changes is how the SDK is installed:
 
 - **Swift Package Manager**: only the version. The URL and both product names
   (`SinchChatSDK`, `SinchChatSDKNotificationExtension`) are unchanged.
-- **CocoaPods**: 2.0.0 is not on trunk. Add the spec repo and the `post_install` hook,
-  then bump the version (see [Installation](#cocoapods)):
+- **CocoaPods**: 2.0.0 is not on trunk. Add the spec repo, then bump the version
+  (see [Installation](#cocoapods)):
 
   ```ruby
   source 'https://github.com/sinchlabs/sinch-ios-specs.git'
@@ -414,8 +404,8 @@ What changes is how the SDK is installed:
   ```
 
   Keep `use_frameworks!`. The app now installs three pods: `SinchChatSDK` (binary),
-  `SinchPushSDK` (source) and `SwiftProtobuf` (dynamic); `SinchChatSDK` declares them,
-  so the Podfile only needs `pod 'SinchChatSDK'`.
+  `SinchPushSDK` (source) and `SinchSwiftProtobuf` (dynamic, since 2.1.1);
+  `SinchChatSDK` declares them, so the Podfile only needs `pod 'SinchChatSDK'`.
 - **Notification Service Extension**: move the extension target from the old
   `SinchChatSDK` extension sub-target to the `SinchPushSDKNotificationExtension` pod
   (CocoaPods) or product (SPM). The API (`SinchPushNotificationExtension.didReceive(_:appGroup:)`)

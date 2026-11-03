@@ -3,6 +3,21 @@
 SDK changes that affect host developers. The newest section is synced to the public mirror
 ([sinch-chat-ios-sdk](https://github.com/sinchlabs/sinch-chat-ios-sdk)) at release time.
 
+## 2.1.1
+
+Packaging only: the code and the prebuilt binary are identical to 2.1.0. For Swift
+Package Manager this release is the same as 2.1.0, so no update is needed.
+
+### Changed
+
+- **CocoaPods: protobuf comes from `SinchSwiftProtobuf`.** Trunk's `SwiftProtobuf` pod
+  declares iOS 11.0, which Xcode 27 refuses to build. `SinchSwiftProtobuf` 1.39.0 is
+  Apple's swift-protobuf 1.39.0 sources, built for iOS 16 with library evolution and
+  still named `SwiftProtobuf`. The `post_install` hook from the README is no longer
+  needed. Do not add trunk's `SwiftProtobuf` pod to the same app.
+- The pod requires `SinchPushSDK` 1.1.1 or later, the first push pod built on
+  `SinchSwiftProtobuf`.
+
 ## 2.1.0
 
 A Swift-concurrency surface for chat, and it is **purely additive**: every existing declaration, signature and

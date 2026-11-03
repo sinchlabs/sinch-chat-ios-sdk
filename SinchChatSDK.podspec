@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'SinchChatSDK'
-  s.version          = '2.1.0'
+  s.version          = '2.1.1'
   s.summary          = 'Sinch Chat SDK which supports In App Chat and Push Notifications'
   s.homepage         = 'https://github.com/sinchlabs/sinch-chat-ios-sdk'
   s.license          = { :type => 'MIT', :file => 'LICENSE.md' }
@@ -16,9 +16,11 @@ Pod::Spec.new do |s|
   s.vendored_frameworks = 'SinchChatSDK.xcframework'
   # The push SDK is a source pod, not part of the binary. It brings its own
   # SinchPushSDKNotificationExtension pod; this pod depends on the core module only.
-  s.dependency 'SinchPushSDK', '~> 1.0'
+  s.dependency 'SinchPushSDK', '~> 1.1', '>= 1.1.1'
   # Linked dynamically by the binary, so the app must ship the same runtime.
-  s.dependency 'SwiftProtobuf', '~> 1.38'
+  # apple/swift-protobuf 1.39.0 repackaged for iOS 16 with library evolution, module
+  # name SwiftProtobuf. Trunk's SwiftProtobuf pod declares iOS 11, which Xcode 27 refuses.
+  s.dependency 'SinchSwiftProtobuf', '1.39.0'
   s.preserve_paths   = 'LICENSE.md'
   # Notification Service Extension target: do NOT add `pod 'SinchChatSDK'` there, and
   # do not add this pod's binary. Add the extension pod directly:
