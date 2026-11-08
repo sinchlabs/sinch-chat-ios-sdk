@@ -19,7 +19,13 @@ final class MessageCollectionView: UICollectionView {
 
     public override init(frame: CGRect, collectionViewLayout layout: UICollectionViewLayout) {
         super.init(frame: frame, collectionViewLayout: layout)
-
+        // Row widths and heights depend on the size classes and on Dynamic Type. They can change on this view alone
+        // (`traitOverrides`, a split view collapsing) without any resize, so the layout cannot rely on bounds changes.
+        registerForTraitChanges([UITraitHorizontalSizeClass.self,
+                                 UITraitVerticalSizeClass.self,
+                                 UITraitPreferredContentSizeCategory.self]) { (view: MessageCollectionView, _) in
+            (view.collectionViewLayout as? ChatFlowLayout)?.invalidateForEnvironmentChange()
+        }
     }
     
     required public init?(coder aDecoder: NSCoder) {

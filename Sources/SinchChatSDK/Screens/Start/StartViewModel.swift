@@ -54,6 +54,9 @@ protocol StartViewModel: MessageDataSourceDelegate {
     func loadHistory()
     func onLoad()
     func onDisappear()
+    /// Releases the chat for good when the adaptive inbox replaces it; later lifecycle calls are ignored.
+    func tearDownForReplacement()
+    var isTornDown: Bool { get }
     func onWillEnterForeground()
     func onDidEnterBackground()
     func onInternetLost()
@@ -170,6 +173,8 @@ final class DefaultStartViewModel: StartViewModel {
     deinit {
         timer?.invalidate()
         timer = nil
+        // A screen that goes away still holding the flag gives it back; a no-op when it does not hold it.
+        SinchChatSDK.shared._chat.releaseChat(owner: chatOwner)
     }
     // MARK: - Private methods
     
@@ -211,12 +216,26 @@ final class DefaultStartViewModel: StartViewModel {
 
         error = nil
         isMessageSent = false
-        SinchChatSDK.shared._chat.state = .idle
+        setChatState(.idle)
     }
-    
+
+    /// Identifies this chat screen as a holder of the "chat is running" flag, as a headless conversation has its own
+    /// token. `.running` takes the flag with it (the screen never asked before, and wins over a headless conversation).
+    /// `.idle` gives it back only while this screen still holds it (or nobody's token does): a screen that lost the flag
+    /// to another chat must not wipe that chat's claim.
+    private let chatOwner = UUID()
+
+    private func setChatState(_ state: SinchChatState) {
+        let chat = SinchChatSDK.shared._chat
+        switch state {
+        case .running: chat.takeChat(owner: chatOwner)
+        case .idle: chat.releaseChatFromScreen(owner: chatOwner)
+        }
+    }
+
     private func setRunningState() {
-        
-        SinchChatSDK.shared._chat.state = .running
+        guard !isTornDown else { return }
+        setChatState(.running)
         loadHistory()
         subscribeForMessages()
         
@@ -476,10 +495,21 @@ final class DefaultStartViewModel: StartViewModel {
     }
     
     func onDisappear() {
+        // A torn-down chat already released the flag; releasing again here could clear the next chat's claim.
+        guard !isTornDown else { return }
         setIdleState()
+    }
+
+    private(set) var isTornDown = false
+
+    func tearDownForReplacement() {
+        guard !isTornDown else { return }
+        setIdleState()
+        isTornDown = true
     }
     
     func onInternetOn() {
+        guard !isTornDown else { return }
         if !messagesArrays.isEmpty {
             messagesArrays = []
             self.delegate?.didReceiveHistoryFirstMessages([])
@@ -492,15 +522,17 @@ final class DefaultStartViewModel: StartViewModel {
     }
 
     func onInternetLost() {
+        guard !isTornDown else { return }
         dataSource.cancelSubscription()
         clearOutgoingMappings()
         error = nil
         isMessageSent = false
-        SinchChatSDK.shared._chat.state = .idle
+        setChatState(.idle)
     }
-    
+
     func onWillEnterForeground() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: {
+            guard !self.isTornDown else { return }
             self.dataSource.startChannel()
             self.setRunningState()
             
@@ -508,6 +540,7 @@ final class DefaultStartViewModel: StartViewModel {
     }
     
     func onDidEnterBackground() {
+        guard !isTornDown else { return }
         setIdleState()
         dataSource.closeChannel()
         

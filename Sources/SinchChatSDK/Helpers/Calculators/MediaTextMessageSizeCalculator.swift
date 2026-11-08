@@ -1,13 +1,12 @@
 import UIKit
 
 final class MediaTextMessageSizeCalculator: TextMessageSizeCalculator {
-    public var maxWidth = 300.0
     public var mediaHeight = 187.0
     
     override func messageContainerMaxWidth(for message: Message) -> CGFloat {
         let maxCalculatedWidth = super.messageContainerMaxWidth(for: message)
          
-        return  min(maxCalculatedWidth, maxWidth)
+        return min(maxCalculatedWidth, richContentMaxWidth)
     }
     override func messageLabelSize(for message: Message) -> CGSize {
         let maxWidth = messageContainerMaxWidth(for: message)

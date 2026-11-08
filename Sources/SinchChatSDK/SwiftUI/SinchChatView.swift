@@ -29,7 +29,7 @@ public struct SinchChatView: UIViewControllerRepresentable {
                 localizationConfig: localizationConfig,
                 options: options
             )
-            return UINavigationController(rootViewController: viewController)
+            return Self.navigationController(for: viewController)
         } catch {
             onError?(error)
             return UINavigationController(rootViewController: UIViewController())
@@ -37,6 +37,14 @@ public struct SinchChatView: UIViewControllerRepresentable {
     }
 
     public func updateUIViewController(_ uiViewController: UINavigationController, context: Context) {}
+
+    /// Wraps the chat in a navigation controller unless it already is one (no double wrapping).
+    static func navigationController(for viewController: UIViewController) -> UINavigationController {
+        if let navigationController = viewController as? UINavigationController {
+            return navigationController
+        }
+        return UINavigationController(rootViewController: viewController)
+    }
 }
 
 #endif

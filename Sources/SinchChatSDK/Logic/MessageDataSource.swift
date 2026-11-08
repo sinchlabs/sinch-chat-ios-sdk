@@ -19,6 +19,26 @@ enum MessageDataSourceError: Error, Sendable {
     case noInternetConnection
 }
 
+extension MessageDataSourceError {
+    /// Whether a failed `sendMessage` may still have reached the server: the call was dispatched and then ended by a
+    /// timeout, a cancellation or a lost connection, so no answer says whether the server took the message. Errors
+    /// thrown before the network (not logged in, a message that cannot be encoded, no connection) and an explicit
+    /// rejection by the server (invalid argument, permission denied, ...) mean it did not.
+    var mayHaveReachedServer: Bool {
+        switch self {
+        case .unknown(let inner):
+            if inner is CancellationError { return true }
+            guard let rpc = inner as? RPCError else { return true }
+            switch rpc.code {
+            case .cancelled, .deadlineExceeded, .unavailable, .unknown, .internalError: return true
+            default: return false
+            }
+        default:
+            return false
+        }
+    }
+}
+
 protocol MessageDataSource: AnyObject, Sendable {
     var delegate: MessageDataSourceDelegate? { get set }
 
@@ -54,6 +74,35 @@ protocol MessageDataSource: AnyObject, Sendable {
     func cancelCalls()
     func isSubscribed() -> Bool
     func isFirstPage() -> Bool
+
+    /// Fetches the page that follows `token` (`nil` for the first page) without reading or writing the paging state
+    /// shared with ``getMessageHistory()``. The headless conversation owns its token, so an in-flight page cannot
+    /// overwrite the token of a reload that started after it.
+    /// - Throws: ``MessageDataSourceError/noMoreMessages`` when `token` is empty (there is no further page).
+    func getMessageHistoryPage(after token: String?) async throws -> MessageHistoryPage
+}
+
+/// One page of history and the token of the page after it. An empty token means this was the last page.
+struct MessageHistoryPage: Sendable {
+    var messages: [Message]
+    var nextPageToken: String
+}
+
+extension MessageDataSource {
+    /// For conformers without token paging: pages through ``getMessageHistory()`` and never reports the end by itself
+    /// (`noMoreMessages` is thrown instead).
+    func getMessageHistoryPage(after token: String?) async throws -> MessageHistoryPage {
+        MessageHistoryPage(messages: try await getMessageHistory(), nextPageToken: "more")
+    }
+}
+
+/// Carries the next page token out of the `@Sendable` callback of `fetchHistory`.
+private final class TokenBox: @unchecked Sendable {
+    private let lock = Mutex<String>("")
+    var value: String {
+        get { lock.withLock { $0 } }
+        set { lock.withLock { $0 = newValue } }
+    }
 }
 
 private struct MessageState: Sendable {
@@ -116,7 +165,22 @@ final class DefaultMessageDataSource: MessageDataSource, @unchecked Sendable {
             throw MessageDataSourceError.noMoreMessages
         }
         let token = state.withLock { $0.nextPageToken }
+        return try await fetchHistory(token: token) { [self] next in
+            state.withLock { $0.nextPageToken = next }
+        }
+    }
 
+    func getMessageHistoryPage(after token: String?) async throws -> MessageHistoryPage {
+        if token?.isEmpty == true {
+            throw MessageDataSourceError.noMoreMessages
+        }
+        let next = TokenBox()
+        let messages = try await fetchHistory(token: token) { next.value = $0 }
+        return MessageHistoryPage(messages: messages, nextPageToken: next.value)
+    }
+
+    /// `recordToken` receives the next page token as soon as the response arrives, before the entries are processed.
+    private func fetchHistory(token: String?, recordToken: @Sendable (String) -> Void) async throws -> [Message] {
         var request = Sinch_Chat_Sdk_V1alpha2_GetHistoryRequest()
         request.pageSize = self.pageSize
         if let token {
@@ -144,11 +208,8 @@ final class DefaultMessageDataSource: MessageDataSource, @unchecked Sendable {
 
             // On first entry if there is no history, send a conversation_start
             // message to bootstrap the conversation.
-            let wasFirstEntry = state.withLock { state -> Bool in
-                let first = state.nextPageToken == nil
-                state.nextPageToken = response.nextPageToken
-                return first
-            }
+            let wasFirstEntry = token == nil
+            recordToken(response.nextPageToken)
 
             if shouldInitializeConversation, wasFirstEntry, response.entries.isEmpty {
                 do {
@@ -337,12 +398,16 @@ final class DefaultMessageDataSource: MessageDataSource, @unchecked Sendable {
             state.subscriptionTask = task
             return task
         }
-        if inner == nil {
+        guard let inner else {
             continuation.finish()
             return
         }
-        await inner?.value
-        state.withLock { $0.subscriptionTask = nil }
+        await inner.value
+        // Clear the slot only while it still holds this run: a newer subscription may have replaced it after
+        // `cancelSubscription()`, and wiping its handle would allow a second server stream next to it.
+        state.withLock { state in
+            if state.subscriptionTask == inner { state.subscriptionTask = nil }
+        }
     }
 
     private func executeMessagesStream(

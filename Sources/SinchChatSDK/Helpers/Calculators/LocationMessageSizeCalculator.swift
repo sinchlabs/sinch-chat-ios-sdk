@@ -3,10 +3,9 @@ import UIKit
 class LocationMessageSizeCalculator: MessageSizeCalculator {
     
     public var messageLabelInsets = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
-    public var messageLabelFont = UIFont.preferredFont(forTextStyle: .body)
+    public lazy var messageLabelFont = preferredFont(.body)
     public var buttonInsets = UIEdgeInsets(top: 0, left: 8, bottom: 8, right: 8)
     public var mapHeight = 187.0
-    public var maxWidth = 300.0
     
     override init(layout: ChatFlowLayout? = nil) {
         super.init(layout: layout)
@@ -16,7 +15,7 @@ class LocationMessageSizeCalculator: MessageSizeCalculator {
     override func messageContainerMaxWidth(for message: Message) -> CGFloat {
         let maxCalculatedWidth = super.messageContainerMaxWidth(for: message)
          
-        return  min(maxCalculatedWidth, maxWidth)
+        return min(maxCalculatedWidth, richContentMaxWidth)
     }
     
     func messageLabelSize(for message: Message) -> CGSize {

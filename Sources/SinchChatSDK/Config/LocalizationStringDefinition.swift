@@ -66,6 +66,8 @@ public extension SinchSDKConfig {
         public var inboxStatusText = NSLocalizedString("inbox_status", bundle: Bundle.staticBundle, comment: "")
         public var inboxStatusOpenText = NSLocalizedString("inbox_status_open", bundle: Bundle.staticBundle, comment: "")
         public var inboxStatusClosedText = NSLocalizedString("inbox_status_closed", bundle: Bundle.staticBundle, comment: "")
+        /// Shown beside the inbox list on regular width while no conversation is selected.
+        public var inboxEmptyDetailText = NSLocalizedString("inbox_empty_detail", bundle: Bundle.staticBundle, comment: "")
             
         // MARK: - InAppMessaging
         

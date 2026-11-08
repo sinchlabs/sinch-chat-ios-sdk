@@ -1,7 +1,0 @@
-syntax = "proto3";
-
-import "Dependency/Dependency.proto";
-
-message AccessLevelOnImport {
-  Dependency dependency = 1;
-}

@@ -1,9 +1,0 @@
-__pycache__
-*.pyc
-.DS_Store
-.*.sw?
-/.build
-/.swiftpm
-xcuserdata/
-/*.xcodeproj
-.docc-build

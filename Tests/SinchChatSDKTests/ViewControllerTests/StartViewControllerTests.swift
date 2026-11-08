@@ -35,6 +35,12 @@ final class StartViewModelStub: StartViewModel, @unchecked Sendable {
     func onDisappear() {
         
     }
+
+    var isTornDown = false
+
+    func tearDownForReplacement() {
+        isTornDown = true
+    }
     
     func onWillEnterForeground() {
         

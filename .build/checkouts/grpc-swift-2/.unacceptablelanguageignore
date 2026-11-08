@@ -1,3 +1,0 @@
-**/*.pb.swift
-**/*.grpc.swift
-dev/protos/upstream/**/*.proto

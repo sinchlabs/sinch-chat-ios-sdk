@@ -7,6 +7,12 @@ public protocol SinchInbox {
     var chatInboxEventListenerSubject: PassthroughSubject<SinchInboxEvent, Never> { get }
 
     /// Creating Inbox UI. This method may throw
+    ///
+    /// The SDK's implementation returns the adaptive inbox (`SinchInboxLayout.automatic`): a sidebar with the chat
+    /// beside it on regular width, a list that pushes the chat on compact width. When the returned controller is
+    /// pushed on a `UINavigationController`, the host's navigation bar is hidden while the inbox is visible, because
+    /// the inbox draws its own bars. Use `getInboxViewController(uiConfig:localizationConfig:options:layout:)` with
+    /// `.stack` for the previous behaviour. See `Documentation/SinchInbox.md`.
     /// - Parameters:
 
     ///   - uiConfig: Optionally ui changes might be provided with different settings.
@@ -89,6 +95,34 @@ public extension SinchInbox {
                                 options: GetChatViewControllerOptions? = nil) throws -> SinchChatViewController {
         try getInboxViewController(uiConfig: uiConfig, localizationConfig: localizationConfig, options: options)
     }
+
+    /// Creating Inbox UI with an explicit layout. This method may throw
+    /// - Parameters:
+    ///   - uiConfig: Optionally ui changes might be provided with different settings.
+    ///   - localizationConfig: Optionally localization might be provided with different text translation.
+    ///   - options: Optionally custom chat options.
+    ///   - layout: `.automatic` shows a sidebar with the selected chat beside it on regular width and a pushed
+    ///     list on compact width. The returned controller can be pushed, presented (with or without a navigation
+    ///     controller) or embedded. `.stack` returns the plain list that pushes the chat; it must be placed in a
+    ///     `UINavigationController` by the caller.
+    ///
+    ///     `layout` is only honoured by the SDK's own implementation (`SinchChatSDK.shared.chat.inbox`). A custom
+    ///     type conforming to `SinchInbox` (a test double, a wrapper) ignores it: this overload then calls its
+    ///     `getInboxViewController(uiConfig:localizationConfig:options:)`, which decides the layout itself.
+    /// - Returns: UIViewController which contains inbox UI.
+    /// - Throws: SinchInboxSDKError enum with specific error.
+    func getInboxViewController(uiConfig: SinchSDKConfig.UIConfig? = nil,
+                                localizationConfig: SinchSDKConfig.LocalizationConfig? = nil,
+                                options: GetChatViewControllerOptions? = nil,
+                                layout: SinchInboxLayout) throws -> SinchChatViewController {
+        guard let defaultInbox = self as? DefaultSinchInbox else {
+            return try getInboxViewController(uiConfig: uiConfig, localizationConfig: localizationConfig, options: options)
+        }
+        return try defaultInbox.makeInboxViewController(uiConfig: uiConfig,
+                                                        localizationConfig: localizationConfig,
+                                                        options: options,
+                                                        layout: layout)
+    }
 }
 
 public enum SinchInboxSDKError: Error {
@@ -120,6 +154,13 @@ final class DefaultSinchInbox: SinchInbox, @unchecked Sendable {
     public func getInboxViewController(uiConfig: SinchSDKConfig.UIConfig? = nil,
                                        localizationConfig: SinchSDKConfig.LocalizationConfig? = nil,
                                        options: GetChatViewControllerOptions? = nil) throws -> SinchChatViewController {
+        try makeInboxViewController(uiConfig: uiConfig, localizationConfig: localizationConfig, options: options, layout: .automatic)
+    }
+
+    func makeInboxViewController(uiConfig: SinchSDKConfig.UIConfig?,
+                                 localizationConfig: SinchSDKConfig.LocalizationConfig?,
+                                 options: GetChatViewControllerOptions?,
+                                 layout: SinchInboxLayout) throws -> SinchChatViewController {
         let capturedUIConfig = uiConfig
         let capturedLocConfig = localizationConfig
         let capturedOptions = options
@@ -147,7 +188,12 @@ final class DefaultSinchInbox: SinchInbox, @unchecked Sendable {
             self.rootCoordinator =  rootCordinator
             let inboxViewController =  rootCordinator.getRootViewController(apiClient: client, options: capturedOptions)
 
-            return inboxViewController
+            switch layout {
+            case .stack:
+                return inboxViewController
+            case .automatic:
+                return rootCordinator.getAdaptiveRootViewController(inbox: inboxViewController)
+            }
         }
     }
 

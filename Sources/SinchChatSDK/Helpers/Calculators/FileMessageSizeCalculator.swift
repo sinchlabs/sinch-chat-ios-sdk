@@ -6,8 +6,8 @@ class FileMessageSizeCalculator: MessageSizeCalculator {
     public var backgroundViewInsets = UIEdgeInsets(top: 8, left: 8, bottom: 5, right: 8)
     public var mediaViewInsets = UIEdgeInsets(top: 8, left: 8, bottom: 0, right: 18)
     public var titleLabelInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
-    public var messageLabelFont = UIFont.preferredFont(forTextStyle: .body)
-    public var titleLabelFont = UIFont.preferredFont(forTextStyle: .body)
+    public lazy var messageLabelFont = preferredFont(.body)
+    public lazy var titleLabelFont = preferredFont(.body)
 
     override init(layout: ChatFlowLayout? = nil) {
         super.init(layout: layout)
@@ -27,7 +27,7 @@ class FileMessageSizeCalculator: MessageSizeCalculator {
         messageContainerSize.height = messageLabelInsets.top + messageLabelInsets.top +
                                       titleLabelFont.lineHeight + messageLabelFont.lineHeight + messageLabelInsets.bottom +
                                       dateLabelInsets.top + dateLabelSize.height +  dateLabelInsets.bottom
-        let width = messageContainerMaxWidth(for: message) > 280.0 ? CGFloat(280.0) : messageContainerMaxWidth(for: message)
+        let width = min(messageContainerMaxWidth(for: message), metrics.fileBubbleMaxWidth)
         
         messageContainerSize.width = max(width, (dateLabelSize.width + dateLabelInsets.left + dateLabelInsets.right))
         

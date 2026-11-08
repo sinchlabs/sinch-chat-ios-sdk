@@ -3,7 +3,7 @@ import UIKit
 class EventMessageSizeCalculator: MessageSizeCalculator {
     
     public var messageLabelInsets = UIEdgeInsets(top: 2, left: 10, bottom: 2, right: 10)
-    public var messageLabelFont = UIFont.preferredFont(forTextStyle: .caption2)
+    public lazy var messageLabelFont = preferredFont(.caption2)
     public var eventMessagePadding = UIEdgeInsets(top: 15, left: 24, bottom: 20, right: 24)
     
     override func messageContainerPadding(for message: Message) -> UIEdgeInsets {

@@ -3,28 +3,22 @@ import UIKit
 class CardMessageSizeCalculator: MessageSizeCalculator {
     
     public var messageLabelInsets = UIEdgeInsets(top: 8, left: 8, bottom: 0, right: 8)
-    public var messageLabelFont = UIFont.preferredFont(forTextStyle: .body)
+    public lazy var messageLabelFont = preferredFont(.body)
     public var titleLabelInsets = UIEdgeInsets(top: 8, left: 8, bottom: 0, right: 8)
-    public var titleLabelFont = UIFont.preferredFont(forTextStyle: .body)
+    public lazy var titleLabelFont = preferredFont(.body, bold: true)
     public var buttonInsets = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
-    public var maxWidth = 300.0
     public var mediaHeight = 187.0
 
     override init(layout: ChatFlowLayout? = nil) {
         super.init(layout: layout)
         dateLabelInsets = UIEdgeInsets(top: 0, left: 8, bottom: 8, right: 8)
         dateLabelTextInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
-        if let boldDescriptor = UIFontDescriptor.preferredFontDescriptor(withTextStyle: .body).withSymbolicTraits(.traitBold) {
-            
-            titleLabelFont = UIFont(descriptor: boldDescriptor,
-                                    size: 0.0)
-        }
     }
     
     override func messageContainerMaxWidth(for message: Message) -> CGFloat {
         let calculatedMaxWidth = super.messageContainerMaxWidth(for: message)
         
-        return  min(calculatedMaxWidth, maxWidth)
+        return min(calculatedMaxWidth, richContentMaxWidth)
     }
     func titleLabelSize(for message: Message) -> CGSize {
         let maxWidth = messageContainerMaxWidth(for: message)

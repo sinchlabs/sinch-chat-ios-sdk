@@ -39,6 +39,21 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
         }
     }
     private var isScrolledToBottom = false
+    /// The scene whose foreground / background notifications this controller listens to (nil: app-wide notifications).
+    private(set) weak var observedScene: UIWindowScene?
+    private(set) var hasLifecycleObservers = false
+    /// Window the view was in at the last `addObservers()` call, and how often the observers were set up. Both only
+    /// exist so tests can prove the scoped registration happens once the window is known.
+    private(set) var windowAtLastObserverSetup: UIWindow?
+    private(set) var observerSetupCount = 0
+    /// End frame (screen coordinates) of the last keyboard change this controller acted on.
+    var lastKeyboardEndFrameInScreen: CGRect?
+    /// True from presenting the document picker until its dismissal has been handled once.
+    var isDocumentPickerPresented = false
+    /// True while the leading bar button item is the close / back button this controller installed.
+    var ownsLeadingBarButton = false
+    /// What `isRootOfExpandedSplitDetail` was when the leading button was last decided.
+    var lastEvaluatedAsSplitRoot: Bool?
     private var isFirstLayout: Bool = true
     
     internal var isMessagesControllerBeingDismissed: Bool = false
@@ -116,6 +131,7 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
 
         addObservers()
         addNoInternetObservers()
+        registerForEnvironmentChanges()
         
         mainView.messageComposeView.isSendingMessagesEnabled = SinchChatSDK.shared.chat.advanced._isSendingMessagesEnabled
         SinchChatSDK.shared.chat.advanced.enableSendingMessagesHandler = { [weak self] in
@@ -134,19 +150,30 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
             addKeyboardObservers()
         }
         
-        if isModal {
-            addCloseButton()
-        } else {
-            addBackButton()
+        updateLeadingBarButton()
+    }
+
+    override func viewIsAppearing(_ animated: Bool) {
+        super.viewIsAppearing(animated)
+        // `view.window` is only reliable from here on (in `viewWillAppear` it can still be nil), so this is where
+        // the lifecycle observers narrow down to this window's scene.
+        addObservers()
+    }
+
+    override func didMove(toParent parent: UIViewController?) {
+        super.didMove(toParent: parent)
+        // A split view collapsing or expanding re-parents this controller.
+        if parent != nil {
+            updateLeadingBarButton()
         }
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         isMessagesControllerBeingDismissed = false
-        
+        refreshComposeBarAfterTransition()
     }
-    
+
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         isMessagesControllerBeingDismissed = true
@@ -162,6 +189,9 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
     }
     
     override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        pushLayoutEnvironmentToComposeView()
+        reevaluateLeadingBarButtonIfContextChanged()
         // Used to prevent animation of the contentInset after viewDidAppear
         if isFirstLayout {
             defer { isFirstLayout = false }
@@ -172,13 +202,64 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
     
     override func viewSafeAreaInsetsDidChange() {
         super.viewSafeAreaInsetsDidChange()
-        messageCollectionViewBottomInset = requiredInitialScrollViewBottomInset()
+        messageCollectionViewBottomInset = currentBottomInset()
     }
+
+    // MARK: - Adaptive layout
+
+    /// Size classes and Dynamic Type drive the layout. Window resizes (Split View, Stage Manager) and fold / unfold
+    /// arrive as bounds changes and are picked up by `ChatFlowLayout` and in `viewWillTransition`.
+    private func registerForEnvironmentChanges() {
+        registerForTraitChanges([UITraitHorizontalSizeClass.self,
+                                 UITraitVerticalSizeClass.self,
+                                 UITraitPreferredContentSizeCategory.self]) { (self: Self, previous: UITraitCollection) in
+            self.environmentDidChange(from: previous)
+        }
+    }
+
+    func environmentDidChange(from previous: UITraitCollection?) {
+        pushLayoutEnvironmentToComposeView()
+        mainView.messageComposeView.invalidateIntrinsicContentSize()
+        mainView.collectionView.chatCollectionViewFlowLayout.invalidateForEnvironmentChange()
+        // Folding or expanding a split view flips the size class while this screen is up.
+        if view.window != nil {
+            updateLeadingBarButton()
+            // `isCollapsed` flips right after the size class does, so decide once more when the dust has settled.
+            Task { @MainActor [weak self] in
+                self?.reevaluateLeadingBarButtonIfContextChanged()
+            }
+        }
+    }
+
+    override func viewWillTransition(to size: CGSize, with coordinator: any UIViewControllerTransitionCoordinator) {
+        super.viewWillTransition(to: size, with: coordinator)
+        let wasScrolledToBottom = isScrolledToBottom
+        coordinator.animate(alongsideTransition: { [weak self] _ in
+            guard let self else { return }
+            self.mainView.collectionView.chatCollectionViewFlowLayout.invalidateForEnvironmentChange()
+            self.mainView.messageComposeView.invalidateIntrinsicContentSize()
+            self.mainView.collectionView.layoutIfNeeded()
+            if wasScrolledToBottom {
+                // Keep the newest message in view while the width, and with it every row height, changes.
+                self.mainView.collectionView.scrollToLastItem(at: .bottom, animated: false)
+            }
+        }, completion: { [weak self] _ in
+            self?.restoreBottomInsetAfterTransition()
+        })
+    }
+
+    /// Set by `tearDownForReplacement()`; read in `deinit`, so it lives on the controller, not the view model.
+    // Written on main only; deinit has exclusive access, so the unchecked read there is safe.
+    nonisolated(unsafe) var isTornDownForReplacement = false
 
     deinit {
         NotificationCenter.default.removeObserver(self, name: UIApplication.willEnterForegroundNotification, object: nil)
         NotificationCenter.default.removeObserver(self, name: UIApplication.didEnterBackgroundNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: UIScene.willEnterForegroundNotification, object: nil)
+        NotificationCenter.default.removeObserver(self, name: UIScene.didEnterBackgroundNotification, object: nil)
         let viewModel = self.viewModel
+        // A chat replaced in the adaptive inbox already released the flag and posted `didCloseChat`.
+        let wasTornDown = isTornDownForReplacement
         Task { @MainActor in
             let isStartedFromInbox = viewModel.isStartedFromInbox
             viewModel.onDisappear()
@@ -186,7 +267,9 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
                 viewModel.closeChannel()
             }
         }
-        SinchChatSDK.shared.eventListenerSubject.send(.didCloseChat)
+        if !wasTornDown {
+            SinchChatSDK.shared.eventListenerSubject.send(.didCloseChat)
+        }
         clearAllFiles()
         monitor.cancel()
     }
@@ -199,15 +282,42 @@ class StartViewController: SinchViewController<StartViewModel, StartView >, Sinc
         mainView.messageComposeView
     }
     
+    /// Listens to this window's scene only, so a second window or scene going to the background does not
+    /// pause this chat. Apps without scenes keep the app-wide notifications.
     func addObservers() {
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(appWillEnterForeground),
-                                               name: UIApplication.willEnterForegroundNotification,
-                                               object: nil)
-        NotificationCenter.default.addObserver(self,
-                                               selector: #selector(appDidEnterBackground),
-                                               name: UIApplication.didEnterBackgroundNotification,
-                                               object: nil)
+        // Apps without scenes have no scene notifications; before the view is in a window the app-wide ones are
+        // the placeholder, and `viewWillAppear` swaps them for the scoped ones.
+        windowAtLastObserverSetup = view.window
+        observerSetupCount += 1
+        let hasScenes = !UIApplication.shared.connectedScenes.isEmpty
+        let target: UIWindowScene? = hasScenes ? view.window?.windowScene : nil
+        if hasLifecycleObservers && observedScene === target { return }
+
+        removeLifecycleObservers()
+        let center = NotificationCenter.default
+        if let target {
+            center.addObserver(self, selector: #selector(appWillEnterForeground),
+                               name: UIScene.willEnterForegroundNotification, object: target)
+            center.addObserver(self, selector: #selector(appDidEnterBackground),
+                               name: UIScene.didEnterBackgroundNotification, object: target)
+        } else {
+            center.addObserver(self, selector: #selector(appWillEnterForeground),
+                               name: UIApplication.willEnterForegroundNotification, object: nil)
+            center.addObserver(self, selector: #selector(appDidEnterBackground),
+                               name: UIApplication.didEnterBackgroundNotification, object: nil)
+        }
+        observedScene = target
+        hasLifecycleObservers = true
+    }
+
+    private func removeLifecycleObservers() {
+        let center = NotificationCenter.default
+        center.removeObserver(self, name: UIApplication.willEnterForegroundNotification, object: nil)
+        center.removeObserver(self, name: UIApplication.didEnterBackgroundNotification, object: nil)
+        center.removeObserver(self, name: UIScene.willEnterForegroundNotification, object: nil)
+        center.removeObserver(self, name: UIScene.didEnterBackgroundNotification, object: nil)
+        hasLifecycleObservers = false
+        observedScene = nil
     }
     
     @objc func appDidEnterBackground() {
@@ -504,10 +614,18 @@ extension StartViewController: ComposeViewDelegate {
             }
         }
     }
-    func chooseAction() {
+    func chooseAction(from sender: UIView) {
+        // Build (and so anchor) the sheet first: resigning the first responder takes the compose bar off screen.
+        let sheet = makeActionSheet(anchoredTo: sender)
         resignFirstResponderView()
+        present(sheet, animated: true, completion: nil)
+    }
 
+    /// The "+" menu (location, document). Anchored to the tapped control so it is a popover on regular width.
+    func makeActionSheet(anchoredTo sender: UIView) -> UIAlertController {
         let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        let anchor = popoverAnchor(for: sender)
+        PopoverPresentation.anchor(alert, to: anchor)
 
         if !SinchChatSDK.shared.disabledFeatures.contains(.sendLocationSharingMessage) {
             
@@ -529,27 +647,7 @@ extension StartViewController: ComposeViewDelegate {
         if !SinchChatSDK.shared.disabledFeatures.contains(.sendDocuments) {
             
             let action  = UIAlertAction(title: mainView.localizationConfiguration.menuDocument, style: .default, handler: { _ in
-
-                let docsTypes = [         "com.adobe.pdf",
-                                          "com.compuserve.gif",
-                                          "com.microsoft.word.doc",
-                                          "com.microsoft.excel.xls",
-                                          "com.microsoft.powerpoint.​ppt",
-                                          "org.openxmlformats.wordprocessingml.document",
-                                          "com.microsoft.powerpoint.​ppt",
-                                          "org.openxmlformats.presentationml.presentation",
-                                          "org.openxmlformats.spreadsheetml.sheet",
-                                         
-                  ]
-                
-         //   https://stackoverflow.com/questions/37296929/implement-document-picker-in-swift-ios?rq=4
-                    let documentPicker = UIDocumentPickerViewController(documentTypes: docsTypes, in: UIDocumentPickerMode.import)
-                    documentPicker.delegate = self
-                    documentPicker.modalPresentationStyle = .fullScreen
-                self.present(documentPicker, animated: true) {
-                    self.removeKeyboardObservers()
-                    
-                }
+                self.presentDocumentPicker(anchor: anchor)
             })
             
             action.setupActionWithImage(mainView.uiConfig.fileDocumentMenuImage,
@@ -561,20 +659,23 @@ extension StartViewController: ComposeViewDelegate {
         alert.addAction(UIAlertAction(title: mainView.localizationConfiguration.menuCancel, style: .cancel, handler: { _ in
             debugPrint("User click cancel button")
         }))
-        
-      self.present(alert, animated: true, completion: nil)
-        
+
+        return alert
     }
-    
-    func choosePhoto() {
+
+    func choosePhoto(from sender: UIView) {
+        let sheet = makePhotoSourceSheet(anchoredTo: sender)
         resignFirstResponderView()
-        showChoiceBetweenGalleryAndCamera()
+        present(sheet, animated: true, completion: nil)
     }
-    
-    private func showChoiceBetweenGalleryAndCamera() {
+
+    /// Camera or gallery. Anchored to the tapped control so it is a popover on regular width.
+    func makePhotoSourceSheet(anchoredTo sender: UIView) -> UIAlertController {
 
         let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
-        
+        let anchor = popoverAnchor(for: sender)
+        PopoverPresentation.anchor(alert, to: anchor)
+
         if !SinchChatSDK.shared.disabledFeatures.contains(.sendImageFromCamera) || !SinchChatSDK.shared.disabledFeatures.contains(.sendVideoMessageFromCamera) {
             
             let cameraAction  = UIAlertAction(title: mainView.localizationConfiguration.menuCamera, style: .default, handler: { _ in
@@ -612,8 +713,8 @@ extension StartViewController: ComposeViewDelegate {
         if !SinchChatSDK.shared.disabledFeatures.contains(.sendImageMessageFromGallery) || !SinchChatSDK.shared.disabledFeatures.contains(.sendVideoMessageFromGallery) {
             
             let cameraAction  = UIAlertAction(title: mainView.localizationConfiguration.menuImageGallery, style: .default, handler: { _ in
-                
-                self.imagePickerHelper.pickPhotoFromGallery()
+
+                self.imagePickerHelper.pickPhotoFromGallery(anchor: anchor)
             })
             
             cameraAction.setupActionWithImage(mainView.uiConfig.galleryMenuImage,
@@ -625,8 +726,8 @@ extension StartViewController: ComposeViewDelegate {
         alert.addAction(UIAlertAction(title: mainView.localizationConfiguration.menuCancel, style: .cancel, handler: { _ in
             debugPrint("User click cancel button")
         }))
-        
-        self.present(alert, animated: true, completion: nil)
+
+        return alert
     }
 
 }
@@ -1351,9 +1452,10 @@ extension StartViewController: MessageCellDelegate {
             ChoicesHelper.callNumber(phoneNumber: message.phoneNumber)
         case .locationMessage(let message):
             let locationActionHandler = LocationActionHandler(mainView.localizationConfiguration)
-            DispatchQueue.main.async {
-                locationActionHandler.handleOpenLocationAction(self, title: message.text, latitude: message.latitude, longitude: message.longitude)
-            }
+            // Point the popover at the tapped bubble; a bare `view` has no rect and is not a valid anchor on iPad.
+            // Presented right away: a hop to the next run loop could find the cell reused for another message.
+            let source: UIView = (cell as? MessageContentCell)?.messageContainerView ?? cell
+            locationActionHandler.handleOpenLocationAction(self, source: source, title: message.text, latitude: message.latitude, longitude: message.longitude)
         }
     }
 }
@@ -1439,14 +1541,11 @@ extension StartViewController: UIDocumentPickerDelegate {
         }
 
         controller.dismiss(animated: false) {
-            self.addKeyboardObservers()
-            self.becomeFirstResponder()
-
+            self.finishDocumentPicker()
         }
     }
     func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-        self.addKeyboardObservers()
-        self.becomeFirstResponder()
+        finishDocumentPicker()
     }
 }
 extension StartViewController: QLPreviewControllerDataSource, QLPreviewControllerDelegate {

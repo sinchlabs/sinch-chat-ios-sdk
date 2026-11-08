@@ -35,9 +35,50 @@ final class ChatFlowLayout: UICollectionViewFlowLayout {
         }
         return chatDataSource
     }
+    /// Breakpoints for the current collection view size and size classes. Derived in `prepare()`.
+    private(set) var metrics = ChatLayoutMetrics(containerWidth: 0, horizontalSizeClass: .unspecified, verticalSizeClass: .unspecified)
+
+    /// Width of the message column. On regular width the column is capped and centred through
+    /// `sectionInset`, so every cell, including the typing indicator, lives inside it while the
+    /// collection view (and its background) still fills the whole screen.
     public var itemWidth: CGFloat {
         guard let collectionView = collectionView else { return 0 }
-        return collectionView.frame.width - sectionInset.left - sectionInset.right
+        return collectionView.bounds.width - sectionInset.left - sectionInset.right
+    }
+
+    /// Recomputes `metrics` and the centring insets from the collection view. Returns true when they changed.
+    @discardableResult
+    func updateMetrics() -> Bool {
+        guard let collectionView = collectionView else { return false }
+        let newMetrics = ChatLayoutMetrics(containerWidth: collectionView.bounds.width,
+                                           traitCollection: collectionView.traitCollection)
+        let inset = newMetrics.columnSideInset
+        let newInsets = UIEdgeInsets(top: sectionInset.top, left: inset, bottom: sectionInset.bottom, right: inset)
+        let changed = newMetrics != metrics || newInsets != sectionInset
+        metrics = newMetrics
+        if newInsets != sectionInset {
+            sectionInset = newInsets
+        }
+        return changed
+    }
+
+    /// The Dynamic Type category the size calculators (and their cached fonts) were built for.
+    private var calculatorContentSizeCategory: UIContentSizeCategory?
+
+    override func prepare() {
+        refreshCalculatorsForContentSizeCategory()
+        updateMetrics()
+        super.prepare()
+    }
+
+    /// Calculators resolve their fonts against the collection view's trait collection. Rebuilding them here, at the
+    /// layout pass, means the category is already propagated to the collection view, whichever view in the chain
+    /// carried the `traitOverrides` or the system change.
+    private func refreshCalculatorsForContentSizeCategory() {
+        guard let category = collectionView?.traitCollection.preferredContentSizeCategory,
+              category != calculatorContentSizeCategory else { return }
+        calculatorContentSizeCategory = category
+        resetSizeCalculators()
     }
 
     var isTypingIndicatorViewHidden: Bool = true
@@ -154,10 +195,33 @@ final class ChatFlowLayout: UICollectionViewFlowLayout {
         return flowLayoutContext
     }
 
-    @objc private func handleOrientationChange(_ notification: Notification) {
-        invalidateLayout()
+    /// Drops everything derived from the environment and relays out. Called on size class, window size
+    /// and Dynamic Type changes (rotation, Split View, Stage Manager resize, fold / unfold).
+    func invalidateForEnvironmentChange() {
+        // Dynamic Type needs no flag here: `prepare()` notices a new category and rebuilds the calculators.
+        let context = UICollectionViewFlowLayoutInvalidationContext()
+        context.invalidateFlowLayoutDelegateMetrics = true
+        context.invalidateFlowLayoutAttributes = true
+        invalidateLayout(with: context)
     }
-    
+
+    private func resetSizeCalculators() {
+        textMessageSizeCalculator = TextMessageSizeCalculator(layout: self)
+        imageMessageSizeCalculator = ImageMessageSizeCalculator(layout: self)
+        fileMessageSizeCalculator = FileMessageSizeCalculator(layout: self)
+        eventMessageSizeCalculator = EventMessageSizeCalculator(layout: self)
+        dateMessageSizeCalculator = DateMessageSizeCalculator(layout: self)
+        typingCellSizeCalculator = TypeIndicatorCellSizeCalculator(layout: self)
+        mediaTextCellSizeCalculator = MediaTextMessageSizeCalculator(layout: self)
+        locationCellSizeCalculator = LocationMessageSizeCalculator(layout: self)
+        voiceMessageCellSizeCalculator = VoiceMessageSizeCalculator(layout: self)
+        choicesCellSizeCalculator = ChoiceMessageSizeCalculator(layout: self)
+        cardCellSizeCalculator = CardMessageSizeCalculator(layout: self)
+        carouselCellSizeCalculator = CarouselMessageSizeCalculator(layout: self)
+        unsupportedCellSizeCalculator = UnsupportedMessageSizeCalculator(layout: self)
+        typingIndicatorSizeCalculator = TypeIndicatorCellSizeCalculator(layout: self)
+    }
+
     // MARK: - Typing indicator
     
     func typingIndicatorViewSize() -> CGSize {

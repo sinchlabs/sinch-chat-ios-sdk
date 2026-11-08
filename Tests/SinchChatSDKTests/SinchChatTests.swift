@@ -31,12 +31,12 @@ final class SinchChatTests: XCTestCase {
     }
 
     func testSetStateChannel() {
-        sinchChat.state = .running
+        sinchChat.setFlag(state: .running, owner: nil)
         
         XCTAssertEqual(sinchChat.getChatState(), .running)
     }
     func testSetStateChannel1() {
-        sinchChat.state = .running
+        sinchChat.setFlag(state: .running, owner: nil)
         
         XCTAssertEqual(sinchChat.getChatState(), .running)
     }

@@ -6,6 +6,9 @@ protocol InboxRootCoordinator: AnyObject {
 
     func getRootViewController(apiClient: APIClient, options: GetChatViewControllerOptions?) -> InboxViewController
 
+    /// Wraps the list in the adaptive inbox: sidebar and chat on regular width, list pushing the chat on compact.
+    func getAdaptiveRootViewController(inbox: InboxViewController) -> InboxContainerViewController
+
 }
 
 @MainActor
@@ -43,5 +46,9 @@ final class DefaultInboxRootCoordinator: InboxRootCoordinator {
         }
 
         return inboxViewController
+    }
+
+    func getAdaptiveRootViewController(inbox: InboxViewController) -> InboxContainerViewController {
+        InboxContainerViewController(splitController: InboxSplitViewController(inbox: inbox))
     }
 }

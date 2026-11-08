@@ -1,4 +1,5 @@
 import UIKit
+import Synchronization
 @_spi(SinchChat) import SinchPushSDK
 
 public protocol SinchChat {
@@ -57,7 +58,7 @@ public enum SinchChatSDKError: Error {
     case error(String)
 }
 
-public enum SinchChatState {
+public enum SinchChatState: Sendable {
     case running
     case idle
 }
@@ -69,8 +70,76 @@ final class DefaultSinchChat: SinchChat, @unchecked Sendable {
 
     lazy var _inbox = DefaultSinchInbox(pushPermissionHandler: pushPermissionHandler)
 
-    var state: SinchChatState = .idle
-    
+    /// The "a chat is running" flag and who holds it. One value behind one lock: `isChatAvailable()` and the push
+    /// handler read it from any thread while the main actor claims and releases it.
+    private struct ChatFlag: Sendable {
+        var state: SinchChatState = .idle
+        var owner: UUID?
+    }
+
+    private let flag = Mutex(ChatFlag())
+
+    var state: SinchChatState {
+        flag.withLock { $0.state }
+    }
+
+    /// Who set `state` to `.running`: a headless conversation or a chat screen (each with its own token), so only that
+    /// holder can release it. `nil` while idle, or when something wrote the state without a token.
+    var stateOwner: UUID? {
+        flag.withLock { $0.owner }
+    }
+
+    /// Writes state and owner in one step. Used by tests only; production code goes through the claim and release
+    /// methods below.
+    func setFlag(state: SinchChatState, owner: UUID?) {
+        flag.withLock { flag in
+            flag.state = state
+            flag.owner = owner
+        }
+    }
+
+    /// Takes the flag for `owner` unless somebody else holds it. Claiming again with the same token succeeds. State and
+    /// owner change in one step.
+    func claimChat(owner: UUID) -> Bool {
+        flag.withLock { flag in
+            if flag.state == .running, flag.owner != owner { return false }
+            flag.state = .running
+            flag.owner = owner
+            return true
+        }
+    }
+
+    /// Gives the flag back when `owner` holds it; does nothing otherwise, so a holder can never release a claim that
+    /// is not its own.
+    func releaseChat(owner: UUID) {
+        flag.withLock { flag in
+            guard flag.owner == owner else { return }
+            flag.owner = nil
+            flag.state = .idle
+        }
+    }
+
+    /// The chat screen takes the flag whether or not another chat holds it (it never asked before), and records itself
+    /// as the holder. A headless conversation that held it has lost it: its next claim fails.
+    func takeChat(owner: UUID) {
+        flag.withLock { flag in
+            flag.state = .running
+            flag.owner = owner
+        }
+    }
+
+    /// The chat screen gives the flag back. Applies when `owner` holds it, or when no token holds it (the flag was
+    /// written without one: the screen's state before it had tokens). It never applies when another token holds it,
+    /// so a screen that already lost the flag to a headless conversation or to another screen leaves that claim
+    /// alone.
+    func releaseChatFromScreen(owner: UUID) {
+        flag.withLock { flag in
+            guard flag.owner == owner || flag.owner == nil else { return }
+            flag.owner = nil
+            flag.state = .idle
+        }
+    }
+
     var lastChatOptions: GetChatViewControllerOptions?
     
     var advanced: SinchChatAdvanced = .init()

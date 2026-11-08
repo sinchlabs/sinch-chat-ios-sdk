@@ -3,11 +3,11 @@ import UIKit
 @MainActor
 class MessageSizeCalculator: ChatCellSizeCalculator {
     
-    public var dateLabelFont = UIFont.preferredFont(forTextStyle: .caption2)
+    public lazy var dateLabelFont = preferredFont(.caption2)
     public var dateLabelInsets = UIEdgeInsets(top: 5, left: 8, bottom: 8, right: 8)
     public var dateLabelTextInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
     public var buttonHeight = 36.0
-    public var statusLabelFont = UIFont.preferredFont(forTextStyle: .caption2)
+    public lazy var statusLabelFont = preferredFont(.caption2)
     public var statusImageWidth = 16.0
     public var statusSpacing = 4.0
     
@@ -33,7 +33,7 @@ class MessageSizeCalculator: ChatCellSizeCalculator {
         let message = dataSource.messageForItem(at: indexPath, in: messagesLayout.messagesCollectionView)
         
         attributes.avatarSize = avatarSize(for: message)
-        attributes.avatarLeadingTrailingPadding = avatarLeadingTrailingPadding
+        attributes.avatarLeadingTrailingPadding = avatarPadding(for: message)
         attributes.avatarPosition = avatarPosition(for: message)
         attributes.messageContainerPadding = messageContainerPadding(for: message)
         attributes.messageContainerSize = messageContainerSize(for: message)
@@ -98,28 +98,54 @@ class MessageSizeCalculator: ChatCellSizeCalculator {
     func avatarSize(for message: Message) -> CGSize {
         let dataSource = messagesLayout.chatDataSource
         let isFromCurrentSender = dataSource.isFromCurrentSender(message: message)
-        return isFromCurrentSender ? outgoingAvatarSize : incomingAvatarSize
+        if isFromCurrentSender { return outgoingAvatarSize }
+        // Phone landscape (compact height): drop the avatar to win horizontal space.
+        return metrics.showsIncomingAvatar ? incomingAvatarSize : .zero
     }
-    
+
+    /// Leading gap in front of the avatar. Without an avatar only a small gutter remains.
+    func avatarPadding(for message: Message) -> CGFloat {
+        let isFromCurrentSender = messagesLayout.chatDataSource.isFromCurrentSender(message: message)
+        if !isFromCurrentSender && !metrics.showsIncomingAvatar {
+            return Self.avatarlessLeadingGutter
+        }
+        return avatarLeadingTrailingPadding
+    }
+
     // MARK: - MessageContainer
-    
+
     func messageContainerPadding(for message: Message) -> UIEdgeInsets {
         let dataSource = messagesLayout.chatDataSource
         let isFromCurrentSender = dataSource.isFromCurrentSender(message: message)
-        return isFromCurrentSender ? outgoingMessagePadding : incomingMessagePadding
+        var padding = isFromCurrentSender ? outgoingMessagePadding : incomingMessagePadding
+        if metrics.isRegularWidth {
+            // The column is already capped, so the phone-sized reserve on the opposite side is not needed.
+            padding.left = min(padding.left, ChatLayoutMetrics.regularSideReserve)
+            padding.right = min(padding.right, ChatLayoutMetrics.regularSideReserve)
+        }
+        return padding
     }
-    
+
     func messageContainerSize(for message: Message) -> CGSize {
         // Returns .zero by default
         return .zero
     }
-    
+
     func messageContainerMaxWidth(for message: Message) -> CGFloat {
         let avatarWidth = avatarSize(for: message).width
         let messagePadding = messageContainerPadding(for: message)
-        
-        return messagesLayout.itemWidth - avatarWidth - messagePadding.left - messagePadding.right  - avatarLeadingTrailingPadding
+        let itemWidth = messagesLayout.itemWidth
+
+        let available = itemWidth - avatarWidth - messagePadding.left - messagePadding.right - avatarPadding(for: message)
+        return min(available, metrics.bubbleMaxWidth(inColumnOfWidth: itemWidth))
     }
+
+    /// Width used by cards, choices, images, locations, media-text and voice messages.
+    var richContentMaxWidth: CGFloat { metrics.richCardWidth }
+
+    var metrics: ChatLayoutMetrics { messagesLayout.metrics }
+
+    private static let avatarlessLeadingGutter: CGFloat = 8
     func dateLabelSize(for message: Message) -> CGSize {
         
         let maxWidth = messageContainerMaxWidth(for: message)

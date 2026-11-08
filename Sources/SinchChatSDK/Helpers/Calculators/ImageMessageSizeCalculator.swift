@@ -2,7 +2,6 @@ import UIKit
 
 final class ImageMessageSizeCalculator: MessageSizeCalculator {
     public var mediaHeight = 187.0
-    public var maxWidth = 300.0
 
     override init(layout: ChatFlowLayout? = nil) {
         super.init(layout: layout)
@@ -11,7 +10,7 @@ final class ImageMessageSizeCalculator: MessageSizeCalculator {
     }
     
     override func messageContainerSize(for message: Message) -> CGSize {
-        let maxWidth = min(messageContainerMaxWidth(for: message), maxWidth)
+        let maxWidth = min(messageContainerMaxWidth(for: message), richContentMaxWidth)
        
         return CGSize(width: maxWidth, height:
                         mediaHeight)

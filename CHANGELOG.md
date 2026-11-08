@@ -3,6 +3,69 @@
 SDK changes that affect host developers. The newest section is synced to the public mirror
 ([sinch-chat-ios-sdk](https://github.com/sinchlabs/sinch-chat-ios-sdk)) at release time.
 
+## 2.2.0
+
+iPad and foldable iPhone (iPhone Duo) layouts, and a headless API for building your own chat UI on the SDK's
+logic. Existing integrations keep working; the one behaviour change is the inbox layout (see **Changed**).
+
+### Added
+
+- **Adaptive chat screen.** The chat lays out by size class and window width, never by device model, so it adapts
+  on iPad (including Split View, Slide Over and Stage Manager), on iPhone Duo folded and unfolded, and in phone
+  landscape. On regular width the message column is centred and capped (680 pt, or 760 pt when the chat area is
+  wider than 900 pt; inside the inbox split the chat area is the detail column, not the window), text bubbles are
+  capped at 520 pt and rich cards grow to 360 pt. iPhone portrait is unchanged.
+- **Adaptive inbox.** On regular width the inbox list is a sidebar with the selected chat beside it
+  (`UISplitViewController`); on compact width it stays a list that pushes the chat. On iPhone Duo (iOS 27.1+) the
+  sidebar ends at the hinge; the hinge code is compiled with Xcode 27.2 or later (the CocoaPods binary includes
+  it), and older Xcode versions build the SDK without it. New `SinchInboxLayout` (`.automatic`, `.stack`),
+  `getInboxViewController(uiConfig:localizationConfig:options:layout:)`, and `layout:` / `onClose:` on
+  `SinchInboxView`. New localization key `inbox_empty_detail` ("Select a conversation").
+- **Headless API.** `SinchChatSDK.shared.chat.makeConversation(options:)` and
+  `inbox.makeConversation(inboxChat:)` return `SinchConversation`, an `@Observable @MainActor` model with messages,
+  pending sends, phase, history paging, typing and reachability, and `send(text:)`, `send(_: SinchMedia)`,
+  `sendLocation`, `sendChoice`, `retry`, `discard`, `stop()` and an `updates` stream for UIKit diffing.
+  `inbox.makeInboxModel(options:)` returns `SinchInboxModel`. `Message.content` exposes every body type, including
+  choices, cards and carousels, as the public `SinchMessageContent` enum. Failures are thrown as
+  `SinchHeadlessError`, shared by `SinchConversation` and `SinchInboxModel`. The public headless enums
+  (`SinchHeadlessError`, `SinchMessageContent`, `SinchConversationUpdate`, `SinchChoice`, `SinchMedia`,
+  `SinchConversation.Phase`, `SinchPendingMessage.Status`) may gain cases in minor releases, so switch over them with
+  a `default:`. `SinchPendingMessage` is `Equatable`/`Hashable`, `SinchMessageContent` is `Equatable`. See
+  "Headless (no UI)" in the README for the lifecycle: `phase` is `.connecting` while offline or in the background,
+  sends throw `.offline` then, and a `start()` cut short by going offline throws `.offline` and retries on its own.
+- **`WindowHelper.visibleController()`**, a `@MainActor` variant of `getVisibleController()`. The existing method
+  is documented as main-thread only.
+
+### Changed
+
+- **`getInboxViewController` returns the adaptive inbox by default.** It is now a container that embeds the split
+  view; it can still be pushed, presented or embedded. When pushed it hides the host navigation bar while visible.
+  Pass `layout: .stack` for the previous list-only controller.
+  **Migration:** with the default `.automatic`, the returned controller is a container, not the inbox list itself.
+  A `title`, `navigationItem` bar buttons or a cast that you apply to the returned controller no longer reach the
+  inbox list, and the host navigation bar is hidden while the container is visible. If your integration relies on any
+  of that, pass `layout: .stack`: it returns the same list controller as 2.1, with 2.1 behaviour.
+- **Source-breaking for code that names it:** `SinchInboxView`'s `UIViewControllerType` is now `UIViewController`
+  (it was `UINavigationController`). Code that spells `SinchInboxView.UIViewControllerType`, or the old type in a
+  `UIViewControllerRepresentable` signature that involves it, no longer compiles. The view is a
+  `UINavigationController` only with `layout: .stack`. Code that only uses `SinchInboxView` in a view body is
+  unaffected.
+- **Action sheets, the photo library picker, the document picker and share sheets are popovers on regular width,**
+  anchored to the tapped control. This fixes a crash when opening the attachment menu on iPad. On compact width
+  (iPhone) they are presented as in 2.1.
+- Keyboard handling and foreground/background observers follow the chat's own window scene, so multiple windows on
+  iPad no longer affect each other. The document picker uses `UTType` and copies the picked file.
+- **Version**: `SinchChatSDK.version` reports `2.2.0`; the podspec is `2.2.0` and keeps the 2.1.1 dependencies
+  (`SinchPushSDK` `~> 1.1, >= 1.1.1`, `SinchSwiftProtobuf` 1.39.0).
+
+### Fixed
+
+- Text size changes (Dynamic Type) re-measure message bubbles without reopening the chat.
+- SDK presentations (`presentViewController`, `startChatWithCurrentConfig`) use the app's own window in the
+  foreground scene instead of whichever window is key, hop to the main thread when a plugin calls from another
+  thread, and honour the `animated` argument.
+- `isChatAvailable()` reads the "chat is running" flag thread-safely, and a chat screen only clears the flag it set.
+
 ## 2.1.1
 
 Packaging only: the code and the prebuilt binary are identical to 2.1.0. For Swift

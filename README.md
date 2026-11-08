@@ -30,7 +30,9 @@ itself; do not add it separately.
 ### CocoaPods
 
 SinchChatSDK 2.0.0 and later are a **binary** pod (`vendored_frameworks`) published in our own spec
-repo, not on trunk. Add both sources:
+repo, not on trunk. 2.2.0 reaches that spec repo a few days after the GitHub release: from then on
+`pod 'SinchChatSDK'` resolves 2.2.0, and before it resolves 2.1.1. Swift Package Manager has had 2.2.0 since its GitHub release.
+Add both sources:
 
 ```ruby
 source 'https://github.com/sinchlabs/sinch-ios-specs.git'
@@ -334,6 +336,223 @@ sinchState.subscribeToSDKEvents()
 sinchState.subscribeToInboxUpdates(options: GetChatViewControllerOptions(metadata: [], shouldInitializeConversation: true))
 ```
 
+## iPad and foldable iPhone
+
+The chat and inbox screens adapt to the window, not the device model, so the same code covers iPhone, iPhone Duo
+(folded and unfolded), iPad, Split View, Slide Over and Stage Manager. No configuration is needed.
+
+| Window | Inbox | Chat |
+|---|---|---|
+| Compact width (iPhone, iPhone Duo folded, narrow iPad split) | list; tapping a row pushes the chat | full width |
+| Regular width (iPad, iPhone Duo unfolded, wide windows) | sidebar with the chat beside it | centred column, max 680 pt (760 pt when the chat area is wider than 900 pt) |
+
+- The chat area is the width of the chat itself, not of the window: next to the inbox sidebar it is the detail
+  column. Text bubbles are capped at 520 pt on regular width and rich cards grow to 360 pt; iPhone portrait is
+  unchanged.
+- The attachment menu, photo library, document picker and share sheet open as popovers anchored to the tapped
+  control on regular width.
+- On iPhone Duo with iOS 27.1 or later the inbox sidebar ends at the hinge when the device is unfolded. The hinge
+  code is compiled with Xcode 27.2 or later (the CocoaPods binary includes it); older Xcode versions build without it.
+- `getInboxViewController(layout: .stack)` and `SinchInboxView(layout: .stack)` keep the list-only inbox. When you
+  host `SinchInboxView` in a `NavigationStack`, hide the stack's bar with `.toolbar(.hidden, for: .navigationBar)`
+  and pass `onClose:` so the sidebar shows a back button. See [Documentation/SinchInbox.md](Documentation/SinchInbox.md).
+
+## Headless (no UI)
+
+To build your own chat UI, use the logic without the SDK screens. `makeConversation` returns a
+`SinchConversation`: an `@Observable` `@MainActor` model that owns history paging, the subscription and its
+reconnects, optimistic sends (de-duplicated against the server echo), the typing indicator, network reachability
+and app foreground/background handling. The new headless types (`SinchConversation`, `SinchInboxModel`,
+`SinchPendingMessage`, `SinchMedia`, `SinchMessageContent`, ...) use Foundation types only. `Message.body` and
+`MessageMedia` still carry UIKit types (images, for one), as they do for the SDK screens.
+
+It throws `SinchChatSDKError.unavailable` in the cases where `getChatViewController` does, including while another
+chat is running: only one chat can run at a time, so call `stop()` before creating the next one. `start()` checks
+again and throws `SinchHeadlessError.unavailable`, because another chat can open between `makeConversation` and
+`start()`. A conversation holds the "chat is running" flag only while it is connected: it gives it back when loading
+fails, when the device goes offline and when the app moves to the background, and takes it again when it reloads.
+A chat screen that opens, or returns to the foreground, takes the "chat is running" flag from a running headless
+conversation: the conversation keeps its live subscription until its next reconnect, and then becomes
+`.failed(.unavailable)`. Both models throw `SinchHeadlessError`.
+
+```swift
+let conversation = try SinchChatSDK.shared.chat.makeConversation(options: nil)
+try await conversation.start()          // first history page + live subscription; idempotent
+                                        // cancelling while start() is still loading abandons it;
+                                        // call stop() when the view goes away
+
+conversation.messages                   // [Message], chronological, no date separators
+conversation.pending                    // [SinchPendingMessage]: .sending / .failed, render after messages
+conversation.phase                      // .idle, .connecting, .ready, .failed(SinchHeadlessError)
+conversation.isLoadingHistory, conversation.hasMoreHistory
+conversation.isAgentTyping, conversation.isOnline
+
+try await conversation.loadMore()       // older page
+try await conversation.send(text: "Hello")
+try await conversation.send(.file(url)) // .image(Data), .video(URL), .audio(URL), .file(URL)
+try await conversation.sendLocation(latitude: 52.52, longitude: 13.40)
+try await conversation.sendChoice(postback: "yes", messageID: "…")
+try await conversation.retry(tempID)    // a message whose status is .failed
+conversation.sendTyping(true)
+conversation.stop()                     // closes the channel, posts .didCloseChat, ends the `updates` streams
+```
+
+`phase`, `isAgentTyping`, `isOnline`, `isLoadingHistory` and `hasMoreHistory` are observable properties only. They are
+not events on `updates`; read them when an update arrives or observe them with `withObservationTracking`.
+
+`phase` also covers the connection after `.ready`: while the device is offline or the app is in the background the
+model has given the connection up and is `.connecting` again, sends throw `SinchHeadlessError.offline`, and it reloads
+by itself. `start()` interrupted by going offline throws `.offline` and leaves `.failed(.offline)`, which retries by
+itself too.
+
+`message.content` turns a `Message` into an enum (`.text`, `.media`, `.location`, `.choices`, `.card`, `.carousel`,
+`.event`, ...) so you do not have to cast `message.body` to the concrete body types (`MessageText` and the others are
+public).
+
+**Include `default:` in every `switch` over these enums.** Built from source (SPM), a new case breaks an exhaustive
+switch; with the binary pod it is a warning. Use `default:` either way. These enums may gain cases in minor releases:
+`SinchMessageContent` (a new kind of message), `SinchConversationUpdate`, `SinchHeadlessError`,
+`SinchConversation.Phase`, `SinchPendingMessage.Status`, `SinchChoice` and `SinchMedia`.
+
+```swift
+switch message.content {
+case .text(let text): show(text)
+case .media(let url, _): showAttachment(url)
+default: showPlaceholder()              // unsupported, custom, and kinds added later
+}
+```
+
+Two things to know about `sendChoice(_:)` and `sendLocation`: `sendChoice(_:)` answers `.reply` choices only and does
+nothing for the other kinds (URL, call, location are actions for your app); `sendLocation` uses the SDK's default
+localization for the title and button label unless you pass `title:` and `label:`.
+
+### SwiftUI
+
+Observe the model directly; nothing else is needed.
+
+```swift
+struct ChatScreen: View {
+    @State private var conversation: SinchConversation?
+    @State private var draft = ""
+
+    var body: some View {
+        VStack {
+            if let conversation {
+                ScrollView {
+                    LazyVStack(alignment: .leading) {
+                        if conversation.hasMoreHistory {
+                            Button("Load earlier") { Task { try? await conversation.loadMore() } }
+                        }
+                        ForEach(conversation.messages, id: \.entryId) { message in
+                            if case .text(let text) = message.content { Text(text) }
+                        }
+                        ForEach(conversation.pending) { item in
+                            HStack {
+                                Text((item.body as? MessageText)?.text ?? "")
+                                if item.status == .failed {
+                                    Button("Retry") { Task { _ = try? await conversation.retry(item.tempID) } }
+                                }
+                            }
+                        }
+                        if conversation.isAgentTyping { Text("…") }
+                    }
+                }
+                TextField("Message", text: $draft)
+                    .onSubmit {
+                        let text = draft
+                        draft = ""
+                        Task { _ = try? await conversation.send(text: text) }
+                    }
+            }
+        }
+        .task {
+            let conversation = try? SinchChatSDK.shared.chat.makeConversation()
+            self.conversation = conversation
+            try? await conversation?.start()
+        }
+        .onDisappear { conversation?.stop() }
+    }
+}
+```
+
+### UIKit
+
+`updates` yields what changed, for diffable data sources. Every access returns a new stream, so several screens can
+listen at once. `messages` and `pending` are already up to date when an update arrives.
+
+```swift
+final class ChatViewController: UIViewController {
+    private let conversation: SinchConversation
+    private var updatesTask: Task<Void, Never>?
+
+    init() throws {
+        conversation = try SinchChatSDK.shared.chat.makeConversation()
+        super.init(nibName: nil, bundle: nil)
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        let updates = conversation.updates   // take the stream before start(), so the first reset is not missed
+        updatesTask = Task { [weak self] in
+            for await update in updates {
+                guard let self else { return }
+                switch update {
+                case .appended, .pendingAdded:
+                    self.applySnapshot(animated: true)
+                default: // every other update, and any case a later SDK release adds: rebuild from messages + pending
+                    self.applySnapshot(animated: false)
+                }
+            }
+        }
+        Task { try? await conversation.start() }
+    }
+
+    override func viewDidDisappear(_ animated: Bool) {
+        super.viewDidDisappear(animated)
+        if isBeingDismissed || isMovingFromParent {
+            updatesTask?.cancel()   // stop() ends the stream too; cancelling also covers a screen that is simply dropped
+            conversation.stop()
+        }
+    }
+
+    deinit { updatesTask?.cancel() }
+
+    private func applySnapshot(animated: Bool) {
+        // Build a diffable snapshot from conversation.messages + conversation.pending.
+    }
+}
+```
+
+### Inbox
+
+```swift
+let inbox = try SinchChatSDK.shared.chat.inbox.makeInboxModel()
+try await inbox.start()                  // inbox.chats, inbox.isLoading, inbox.hasMore
+try await inbox.loadMore()               // next page
+try await inbox.refresh()                // first page again
+
+let conversation = try SinchChatSDK.shared.chat.inbox.makeConversation(inboxChat: inbox.chats[0])
+inbox.stop()
+```
+
+Notes:
+
+- A conversation that is dropped without `stop()` still closes its subscription and channel, but call `stop()`: it
+  also releases the "chat is running" flag at a defined time and posts `.didCloseChat`.
+- `stop()` ends every open `updates` stream. A message that was still being sent becomes `.failed` in `pending`
+  (so it can be retried after a restart); one the server had already accepted leaves the list and comes back with
+  the history.
+- Foreground and background are app-wide (`UIApplication` notifications), not per scene. With several scenes (iPad
+  multi-window), backgrounding one window suspends the models of all windows until the app enters the foreground
+  again.
+- `send` returns once the server accepted the message. The message stays in `pending` until the server echo
+  arrives (or, if it does not within a few seconds, until the send answer is trusted), then it moves to `messages`.
+- A conversation asks for the notification permission on send when it is not granted, like the chat screen. Set
+  `conversation.requestsPushPermissionOnSend = false` to opt out.
+- The headless models do not run plugin message handlers (`customMessageTypeHandlers`), which transform messages
+  for the SDK screens.
+
 ## Push Notifications
 
 Push is included: `SinchChatSDK.shared.push` is the push facade of `SinchPushSDK`, and
@@ -416,6 +635,15 @@ README. The old `SinchChatSDK.shared.push` API keeps working in both cases.
 
 ## Migration Notes
 
+- **2.2.0** (iPad, iPhone Duo and headless):
+  - `getInboxViewController` now returns an adaptive inbox by default (`layout: .automatic`): sidebar + chat on
+    regular width, pushed list on compact width. A pushed inbox hides the host navigation bar while visible.
+  - Use `getInboxViewController(layout: .stack)` (or `SinchInboxView(layout: .stack)`) for the previous list-only
+    behaviour. In SwiftUI, hide the NavigationStack's bar and pass `onClose:`.
+  - `SinchInboxView`'s `UIViewControllerType` is now `UIViewController`. See `Documentation/SinchInbox.md`.
+  - The chat screen lays out by size class and window width (centred, capped column on regular width), and its
+    action sheets and pickers are anchored popovers on iPad. No code change is needed.
+  - New headless API: `makeConversation` / `makeInboxModel`, see [Headless (no UI)](#headless-no-ui).
 - **2.1.0** adds `async` forms next to every completion-handler call; nothing was removed or renamed. The new
   forms carry distinct labels or names (`setIdentity(config:identity:)`, `requestNotificationPermission()`), so
   every 2.0.0 spelling keeps resolving to the same function — including a `setIdentity(with:identity:)` call with

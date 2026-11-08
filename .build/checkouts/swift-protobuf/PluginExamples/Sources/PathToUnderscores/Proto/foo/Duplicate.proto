@@ -1,5 +1,0 @@
-syntax = "proto3";
-
-message FooDuplicate {
-  string name = 1;
-}

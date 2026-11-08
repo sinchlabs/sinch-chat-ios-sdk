@@ -40,12 +40,22 @@ extension SinchChatSDK: SinchPluginAvailablePluginMethods {
     }
     
     public func presentViewController(_ viewController: UIViewController, _ animated: Bool, completion: (@Sendable () -> Void)?) {
-        getTopViewController()?.present(viewController, animated: true, completion: {
+        // Plugins may call from a background queue; presenting must happen on main.
+        guard Thread.isMainThread else {
+            nonisolated(unsafe) let viewController = viewController
+            DispatchQueue.main.async { self.presentViewController(viewController, animated, completion: completion) }
+            return
+        }
+        getTopViewController()?.present(viewController, animated: animated, completion: {
             completion?()
         })
     }
     
     public func startChatWithCurrentConfig() {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { self.startChatWithCurrentConfig() }
+            return
+        }
         guard config != nil,
               let chatVC = try? _chat.getChatViewController() else {
             return
@@ -56,16 +66,9 @@ extension SinchChatSDK: SinchPluginAvailablePluginMethods {
         getTopViewController()?.present(navigationController, animated: true)
     }
     
+    /// Callers have checked `Thread.isMainThread`.
     private func getTopViewController() -> UIViewController? {
-        let keyWindow = UIApplication.shared.windows.filter {$0.isKeyWindow}.first
-
-        if var topController = keyWindow?.rootViewController {
-            while let presentedViewController = topController.presentedViewController {
-                topController = presentedViewController
-            }
-
-            return topController
-        }
-        return nil
+        // Scene-aware, so it finds the right window on iPad with several windows or scenes.
+        MainActor.assumeIsolated { WindowHelper.visibleController() }
     }
 }

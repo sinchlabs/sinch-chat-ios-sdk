@@ -3,9 +3,8 @@ import UIKit
 class ChoiceMessageSizeCalculator: MessageSizeCalculator {
     
     public var messageLabelInsets = UIEdgeInsets(top: 8, left: 8, bottom: 0, right: 8)
-    public var messageLabelFont = UIFont.preferredFont(forTextStyle: .body)
+    public lazy var messageLabelFont = preferredFont(.body)
     public var buttonInsets = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
-    public var maxWidth = 300.0
 
     override init(layout: ChatFlowLayout? = nil) {
         super.init(layout: layout)
@@ -15,7 +14,7 @@ class ChoiceMessageSizeCalculator: MessageSizeCalculator {
     override func messageContainerMaxWidth(for message: Message) -> CGFloat {
         let calculatedMaxWidth = super.messageContainerMaxWidth(for: message)
          
-        return  min(calculatedMaxWidth, maxWidth)
+        return min(calculatedMaxWidth, richContentMaxWidth)
     }
     
     func messageLabelSize(for message: Message) -> CGSize {

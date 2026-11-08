@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-import "google/protobuf/empty.proto";
-
-package noop;
-
-service NoOpService {
-  rpc NoOp(google.protobuf.Empty) returns (google.protobuf.Empty);
-}

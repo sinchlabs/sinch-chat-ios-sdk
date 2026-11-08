@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'SinchChatSDK'
-  s.version          = '2.1.1'
+  s.version          = '2.2.0'
   s.summary          = 'Sinch Chat SDK which supports In App Chat and Push Notifications'
   s.homepage         = 'https://github.com/sinchlabs/sinch-chat-ios-sdk'
   s.license          = { :type => 'MIT', :file => 'LICENSE.md' }
@@ -9,7 +9,8 @@ Pod::Spec.new do |s|
   # GitHub release. It is a DYNAMIC framework: it links SinchPushSDK and SwiftProtobuf
   # dynamically, so the app provides them (one protobuf runtime in the process), and
   # gRPC Swift 2 and Kingfisher statically inside the binary. It is built with library
-  # evolution, and SinchPushSDK must be too: see the README's post_install hook.
+  # evolution, and so are SinchPushSDK and SinchSwiftProtobuf (library evolution
+  # in their podspecs), so no post_install hook is needed.
   s.source           = { :http => "https://github.com/sinchlabs/sinch-chat-ios-sdk/releases/download/#{s.version}/SinchChatSDK.xcframework.zip" }
   s.platform         = :ios, '18.0'
   s.swift_version    = '6.0'

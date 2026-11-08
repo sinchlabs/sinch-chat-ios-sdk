@@ -125,6 +125,9 @@ class MessageDataTests: XCTestCase {
     
     override func setUp() {
         super.setUp()
+        // The flag is a process-wide singleton and a screen gives it back only when it holds it: start every test with a
+        // free flag, not with what an earlier test's screen left running.
+        SinchChatSDK.shared._chat.setFlag(state: .idle, owner: nil)
         dataSource = MessageDataSourceStub()
         viewModel = .init(messageDataSource: dataSource, notificationPermission: pushNotificationHandler)
     }

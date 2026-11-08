@@ -3,7 +3,7 @@ import UIKit
 class TextMessageSizeCalculator: MessageSizeCalculator {
     
     public var messageLabelInsets = UIEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
-    public var messageLabelFont = UIFont.preferredFont(forTextStyle: .body)
+    public lazy var messageLabelFont = preferredFont(.body)
    
     override init(layout: ChatFlowLayout? = nil) {
         super.init(layout: layout)

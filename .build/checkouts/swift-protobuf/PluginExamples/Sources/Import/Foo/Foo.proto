@@ -1,7 +1,0 @@
-syntax = "proto3";
-
-import "Bar/Bar.proto";
-
-message Foo {
-  Bar bar = 1;
-}

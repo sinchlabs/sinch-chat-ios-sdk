@@ -145,7 +145,7 @@ public final class SinchChatSDK: @unchecked Sendable {
 
     /// The version chat reports in the metadata of its RPCs. Push reports its own.
     static var version: String {
-        "2.1.0"
+        "2.2.0"
     }
 }
 

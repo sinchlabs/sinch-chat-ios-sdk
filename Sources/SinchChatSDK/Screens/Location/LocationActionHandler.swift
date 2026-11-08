@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 
+@MainActor
 internal class LocationActionHandler {
     private let localization: SinchSDKConfig.LocalizationConfig
     
@@ -8,7 +9,13 @@ internal class LocationActionHandler {
         self.localization = localization
     }
     
-    func handleOpenLocationAction(_ viewController: UIViewController, title: String?, latitude: Double, longitude: Double) {
+    /// Builds the "open in maps" action sheet. `source` is the control or cell the user tapped; on regular
+    /// width the sheet is a popover pointing at it.
+    func makeOpenLocationAlert(source: (any UIPopoverPresentationControllerSourceItem)?,
+                               fallbackView: UIView?,
+                               title: String?,
+                               latitude: Double,
+                               longitude: Double) -> UIAlertController {
 
         let alert = UIAlertController(title: localization.locationOpenActionSheetTitle, message: "", preferredStyle: .actionSheet)
                 
@@ -26,8 +33,20 @@ internal class LocationActionHandler {
         alert.addAction(UIAlertAction(title: localization.menuCancel, style: .cancel, handler: { _ in
             debugPrint("User click cancel button")
         }))
-        alert.popoverPresentationController?.sourceView = viewController.view
-        
+        PopoverPresentation.anchor(alert, to: source, fallbackView: fallbackView)
+        return alert
+    }
+
+    func handleOpenLocationAction(_ viewController: UIViewController,
+                                  source: (any UIPopoverPresentationControllerSourceItem)? = nil,
+                                  title: String?,
+                                  latitude: Double,
+                                  longitude: Double) {
+        let alert = makeOpenLocationAlert(source: source,
+                                          fallbackView: viewController.view,
+                                          title: title,
+                                          latitude: latitude,
+                                          longitude: longitude)
         viewController.present(alert, animated: true)
     }
     

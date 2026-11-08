@@ -7,8 +7,8 @@ protocol ComposeViewDelegate: AnyObject {
     func sendMessage(_ messageType: MessageType)
     func sendVoiceMessage(url: URL)
     func sendChoiceResponseMessage(postbackData: String, entryID: String)
-    func choosePhoto()
-    func chooseAction()
+    func choosePhoto(from sender: UIView)
+    func chooseAction(from sender: UIView)
     func startPlayingRecordedMessage(url: URL)
     func stopAudioPlayerIfPlaying(isRecording:Bool)
     func disabledMicrophoneAccess()
@@ -152,6 +152,24 @@ final class ComposeView: SinchView {
     private var sendButtonBottomConstraint: NSLayoutConstraint!
     private var textContainerBottomAnchor: NSLayoutConstraint!
     private var windowAnchor: NSLayoutConstraint?
+
+    /// Column the controls live in. It spans the safe area on compact width and is capped and centred on regular
+    /// width, so it lines up with the message column. In a split view it follows the chat's own column instead.
+    let contentGuide = UILayoutGuide()
+    private var contentLeftConstraint: NSLayoutConstraint!
+    private var contentRightConstraint: NSLayoutConstraint!
+    private var backgroundLeftConstraint: NSLayoutConstraint!
+    private var backgroundRightConstraint: NSLayoutConstraint!
+    /// The part of the background inside the safe areas, for content that spans the bar (the voice recorder).
+    private let safeBackgroundGuide = UILayoutGuide()
+    private var safeBackgroundLeftConstraint: NSLayoutConstraint!
+    private var safeBackgroundRightConstraint: NSLayoutConstraint!
+    /// True when the background does not span the whole bar (the chat is a split view's detail column).
+    private var isBackgroundLimited = false
+    private(set) var chatPlacement: ComposeChatPlacement?
+    private var environmentHorizontalSizeClass: UIUserInterfaceSizeClass?
+    private var environmentVerticalSizeClass: UIUserInterfaceSizeClass?
+    private(set) var layoutMetrics = ChatLayoutMetrics(containerWidth: 0, horizontalSizeClass: .unspecified, verticalSizeClass: .unspecified)
     
     private var backgroundViewBottomAnchor: NSLayoutConstraint!
     private var textViewMaxHeight: NSLayoutConstraint!
@@ -187,6 +205,10 @@ final class ComposeView: SinchView {
         if scrollToBottomButton.point(inside: convert(point, to: scrollToBottomButton), with: event) {
             return true
         }
+        // In a split view the bar is as wide as the window; the part over the sidebar belongs to the sidebar.
+        if isBackgroundLimited, point.x < backgroundView.frame.minX || point.x > backgroundView.frame.maxX {
+            return false
+        }
         
         return super.point(inside: point, with: event)
     }
@@ -197,8 +219,19 @@ final class ComposeView: SinchView {
             leftWidth = 38.0
         }
         
-        leftStackViewConstraint = leftStackView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 18)
-        rightStackViewConstraint = rightStackView.trailingAnchor.constraint(equalTo: backgroundView.trailingAnchor, constant: -18)
+        addLayoutGuide(contentGuide)
+        addLayoutGuide(safeBackgroundGuide)
+        // The offsets are computed in `layoutSubviews` (absolute left / right, so right-to-left needs no special case).
+        // The background reaches the bar's edges, under the notch; the controls stay inside the safe area.
+        contentLeftConstraint = contentGuide.leftAnchor.constraint(equalTo: leftAnchor)
+        contentRightConstraint = contentGuide.rightAnchor.constraint(equalTo: rightAnchor)
+        safeBackgroundLeftConstraint = safeBackgroundGuide.leftAnchor.constraint(equalTo: leftAnchor)
+        safeBackgroundRightConstraint = safeBackgroundGuide.rightAnchor.constraint(equalTo: rightAnchor)
+        backgroundLeftConstraint = backgroundView.leftAnchor.constraint(equalTo: leftAnchor)
+        backgroundRightConstraint = backgroundView.rightAnchor.constraint(equalTo: rightAnchor)
+
+        leftStackViewConstraint = leftStackView.leadingAnchor.constraint(equalTo: contentGuide.leadingAnchor, constant: 18)
+        rightStackViewConstraint = rightStackView.trailingAnchor.constraint(equalTo: contentGuide.trailingAnchor, constant: -18)
         sendButtonBottomConstraint = sendButton.bottomAnchor.constraint(equalTo: textButtonContainer.bottomAnchor)
         backgroundViewBottomAnchor =  backgroundView.bottomAnchor.constraint(equalTo: bottomAnchor)
         textContainerBottomAnchor =  textButtonContainer.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.bottomAnchor, constant: -10)
@@ -210,7 +243,11 @@ final class ComposeView: SinchView {
         voiceRecordingButton.setContentHuggingPriority(.required, for: .horizontal)
         
         NSLayoutConstraint.activate([
-            
+            contentLeftConstraint,
+            contentRightConstraint,
+            safeBackgroundLeftConstraint,
+            safeBackgroundRightConstraint,
+
             leftStackViewConstraint,
             leftStackView.trailingAnchor.constraint(equalTo: textButtonContainer.leadingAnchor, constant: -spacingBetweenButtonsAndText),
             leftStackView.centerYAnchor.constraint(equalTo: sendButton.centerYAnchor, constant: 0),
@@ -220,7 +257,7 @@ final class ComposeView: SinchView {
             rightStackView.centerYAnchor.constraint(equalTo: sendButton.centerYAnchor, constant: 0),
             
             scrollToBottomButton.bottomAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: -10),
-            scrollToBottomButton.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: 10),
+            scrollToBottomButton.trailingAnchor.constraint(equalTo: contentGuide.trailingAnchor, constant: 10),
             scrollToBottomButton.widthAnchor.constraint(equalToConstant: 48),
             scrollToBottomButton.heightAnchor.constraint(equalToConstant: 48),
             
@@ -243,8 +280,8 @@ final class ComposeView: SinchView {
             
             backgroundView.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor),
             backgroundViewBottomAnchor,
-            backgroundView.leftAnchor.constraint(equalTo: safeAreaLayoutGuide.leftAnchor),
-            backgroundView.rightAnchor.constraint(equalTo: safeAreaLayoutGuide.rightAnchor),
+            backgroundLeftConstraint,
+            backgroundRightConstraint,
             
             textButtonContainer.topAnchor.constraint(equalTo: backgroundView.topAnchor, constant: 10),
             textContainerBottomAnchor,
@@ -290,6 +327,72 @@ final class ComposeView: SinchView {
         backgroundViewBottomAnchor.constant = window.safeAreaInsets.bottom
     }
     
+    // MARK: - Adaptive layout
+
+    /// Size classes and placement of the chat screen. An input accessory view is hosted outside the view controller's
+    /// hierarchy, so the controller pushes them in instead of relying on this view's own trait collection and bounds.
+    /// Without a `placement` the bar assumes the chat owns the whole window width.
+    func updateLayoutEnvironment(horizontalSizeClass: UIUserInterfaceSizeClass,
+                                 verticalSizeClass: UIUserInterfaceSizeClass,
+                                 placement: ComposeChatPlacement? = nil) {
+        guard environmentHorizontalSizeClass != horizontalSizeClass
+                || environmentVerticalSizeClass != verticalSizeClass
+                || chatPlacement != placement else { return }
+        environmentHorizontalSizeClass = horizontalSizeClass
+        environmentVerticalSizeClass = verticalSizeClass
+        chatPlacement = placement
+        setNeedsLayout()
+    }
+
+    override func layoutSubviews() {
+        applyContentColumns()
+        super.layoutSubviews()
+    }
+
+    private func applyContentColumns() {
+        guard contentLeftConstraint != nil else { return }
+        let bounds = self.bounds.minX...Swift.max(self.bounds.minX, self.bounds.maxX)
+        let safeLower = Swift.max(bounds.lowerBound, self.bounds.minX + safeAreaInsets.left)
+        let safe = safeLower...Swift.max(safeLower, self.bounds.maxX - safeAreaInsets.right)
+
+        var detail: ClosedRange<CGFloat>?
+        var area: ClosedRange<CGFloat>?
+        var column: ClosedRange<CGFloat>?
+        // Frames can only be converted between views that are on screen.
+        if let placement = chatPlacement, let space = placement.space, window != nil, space.window != nil {
+            let detailRect = convert(placement.detailFrame, from: space)
+            let areaRect = convert(placement.areaFrame ?? placement.detailFrame, from: space)
+            let columnRect = convert(placement.columnFrame, from: space)
+            detail = detailRect.minX...detailRect.maxX
+            area = areaRect.minX...areaRect.maxX
+            column = columnRect.minX...columnRect.maxX
+        }
+
+        let horizontal = environmentHorizontalSizeClass ?? traitCollection.horizontalSizeClass
+        let vertical = environmentVerticalSizeClass ?? traitCollection.verticalSizeClass
+        let resolved = ComposeBarColumns.resolve(safe: safe, detail: detail, column: column, bounds: bounds, area: area) {
+            ChatLayoutMetrics(containerWidth: $0, horizontalSizeClass: horizontal, verticalSizeClass: vertical)
+        }
+        layoutMetrics = resolved.metrics
+        let background = resolved.columns.background
+        let safeBackground = resolved.columns.safeBackground
+        let content = resolved.columns.content
+        isBackgroundLimited = !background.isApproximatelyEqual(to: bounds)
+
+        setConstant(backgroundLeftConstraint, background.lowerBound - bounds.lowerBound)
+        setConstant(backgroundRightConstraint, background.upperBound - bounds.upperBound)
+        setConstant(safeBackgroundLeftConstraint, safeBackground.lowerBound - bounds.lowerBound)
+        setConstant(safeBackgroundRightConstraint, safeBackground.upperBound - bounds.upperBound)
+        setConstant(contentLeftConstraint, content.lowerBound - bounds.lowerBound)
+        setConstant(contentRightConstraint, content.upperBound - bounds.upperBound)
+    }
+
+    private func setConstant(_ constraint: NSLayoutConstraint, _ value: CGFloat) {
+        if constraint.constant != value {
+            constraint.constant = value
+        }
+    }
+
     override func resignFirstResponder() -> Bool {
         composeTextView.resignFirstResponder()
         return super.resignFirstResponder()
@@ -444,11 +547,11 @@ final class ComposeView: SinchView {
     }
     @objc private func photoAction(_ sender: UIButton) {
         
-        delegate?.choosePhoto()
+        delegate?.choosePhoto(from: sender)
         
     }
     @objc private func plusButtonAction(_ sender: UIButton) {
-        delegate?.chooseAction()
+        delegate?.chooseAction(from: sender)
     }
     
     @objc func handleLongPress(gestureReconizer: UILongPressGestureRecognizer) {
@@ -497,7 +600,7 @@ final class ComposeView: SinchView {
         duration = 0.0
         leftStackViewConstraint?.constant = -(leftStackView.frame.maxX + spacingBetweenButtonsAndText + textButtonContainer.frame.width)
         
-        rightStackViewLeadingConstraint = rightStackView.leadingAnchor.constraint(equalTo: backgroundView.leadingAnchor, constant: 9)
+        rightStackViewLeadingConstraint = rightStackView.leadingAnchor.constraint(equalTo: contentGuide.leadingAnchor, constant: 9)
         rightStackViewLeadingConstraint.isActive = true
         
         UIView.animate(withDuration: recordingAnimationDuration, animations: {
@@ -521,8 +624,8 @@ final class ComposeView: SinchView {
         backgroundView.addSubview(audioBackgroundView)
         NSLayoutConstraint.activate([
             audioBackgroundView.topAnchor.constraint(equalTo: backgroundView.topAnchor),
-            audioBackgroundView.leftAnchor.constraint(equalTo: backgroundView.leftAnchor),
-            audioBackgroundView.rightAnchor.constraint(equalTo: backgroundView.rightAnchor),
+            audioBackgroundView.leftAnchor.constraint(equalTo: safeBackgroundGuide.leftAnchor),
+            audioBackgroundView.rightAnchor.constraint(equalTo: safeBackgroundGuide.rightAnchor),
             audioBackgroundView.heightAnchor.constraint(equalToConstant: 120.0)
             
         ])

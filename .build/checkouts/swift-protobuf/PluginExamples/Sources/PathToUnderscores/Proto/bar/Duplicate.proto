@@ -1,5 +1,0 @@
-syntax = "proto3";
-
-message BarDuplicate {
-  string name = 1;
-}

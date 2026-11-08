@@ -17,17 +17,21 @@ class FileViewController: SinchViewController <FileViewerViewModel, FileViewerVi
         addCloseButton()
         addShareButton()
     }
+    private(set) var shareBarButtonItem: UIBarButtonItem?
+
     func addShareButton() {
         let shareButton = UIBarButtonItem(barButtonSystemItem: .action, target: self, action: #selector(shareButtonPressed))
 
+        shareBarButtonItem = shareButton
         navigationItem.leftBarButtonItem = shareButton
     }
     
     @objc func shareButtonPressed() {
         
         let vc = UIActivityViewController(activityItems: [viewModel.url], applicationActivities: [])
-            vc.popoverPresentationController?.barButtonItem = navigationItem.rightBarButtonItem
-            present(vc, animated: true)
+        // The share button is the left bar button item; anchoring to the right one left the popover without a source.
+        PopoverPresentation.anchor(vc, to: shareBarButtonItem ?? navigationItem.leftBarButtonItem, fallbackView: view)
+        present(vc, animated: true)
         
     }
 }

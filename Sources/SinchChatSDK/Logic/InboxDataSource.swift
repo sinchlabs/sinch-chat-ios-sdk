@@ -33,6 +33,25 @@ protocol InboxDataSource: AnyObject, Sendable {
     func isSubscribed() -> Bool
     func isFirstPage() -> Bool
     func resetPagination()
+
+    /// Fetches the page that follows `token` (`nil` for the first page) without reading or writing the paging state
+    /// shared with ``getChannels()``. The headless inbox model owns its token, so an in-flight page cannot overwrite
+    /// the token of a reload that started after it.
+    /// - Throws: ``InboxDataSourceError/noMoreChannels`` when `token` is empty.
+    func getChannelsPage(after token: String?) async throws -> ChannelsPage
+}
+
+/// One page of channels and the token of the page after it. An empty token means this was the last page.
+struct ChannelsPage: Sendable {
+    var channels: [Sinch_Chat_Sdk_V1alpha2_Channel]
+    var nextPageToken: String
+}
+
+extension InboxDataSource {
+    /// For conformers without token paging: pages through ``getChannels()`` and never reports the end by itself.
+    func getChannelsPage(after token: String?) async throws -> ChannelsPage {
+        ChannelsPage(channels: try await getChannels(), nextPageToken: "more")
+    }
 }
 
 private struct InboxState: Sendable {
@@ -86,7 +105,19 @@ final class DefaultInboxDataSource: InboxDataSource, @unchecked Sendable {
             throw InboxDataSourceError.noMoreChannels
         }
         let token = state.withLock { $0.nextPageToken }
+        let page = try await fetchChannels(token: token)
+        state.withLock { $0.nextPageToken = page.nextPageToken }
+        return page.channels
+    }
 
+    func getChannelsPage(after token: String?) async throws -> ChannelsPage {
+        if token?.isEmpty == true {
+            throw InboxDataSourceError.noMoreChannels
+        }
+        return try await fetchChannels(token: token)
+    }
+
+    private func fetchChannels(token: String?) async throws -> ChannelsPage {
         var request = Sinch_Chat_Sdk_V1alpha2_GetChannelsRequest()
         request.pageSize = self.pageSize
         if let token {
@@ -110,8 +141,7 @@ final class DefaultInboxDataSource: InboxDataSource, @unchecked Sendable {
                     options: .standardCallOptions
                 )
             }
-            state.withLock { $0.nextPageToken = response.nextPageToken }
-            return response.channels
+            return ChannelsPage(channels: response.channels, nextPageToken: response.nextPageToken)
         } catch {
             throw InboxDataSourceError.unknown(error)
         }
@@ -146,12 +176,15 @@ final class DefaultInboxDataSource: InboxDataSource, @unchecked Sendable {
             state.subscriptionTask = inner
             return inner
         }
-        if task == nil {
+        guard let task else {
             continuation.finish()
             return
         }
-        await task?.value
-        state.withLock { $0.subscriptionTask = nil }
+        await task.value
+        // Only clear the slot while it still holds this run (see DefaultMessageDataSource).
+        state.withLock { state in
+            if state.subscriptionTask == task { state.subscriptionTask = nil }
+        }
     }
 
     private func executeChannelsStream(
@@ -265,4 +298,5 @@ final class DefaultInboxDataSource: InboxDataSource, @unchecked Sendable {
             state.firstPage = true
         }
     }
+
 }

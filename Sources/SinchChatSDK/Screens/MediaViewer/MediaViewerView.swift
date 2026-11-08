@@ -19,7 +19,7 @@ final class MediaViewerView: SinchView {
     }()
     
     lazy var imageView: UIImageView = {
-        let view = UIImageView(frame: UIScreen.main.bounds)
+        let view = UIImageView(frame: .zero)
         view.backgroundColor = uiConfig.backgroundColor
         view.contentMode = .scaleAspectFit
         view.isUserInteractionEnabled = true

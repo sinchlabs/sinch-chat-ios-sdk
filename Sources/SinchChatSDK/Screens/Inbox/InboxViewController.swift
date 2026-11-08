@@ -1,10 +1,34 @@
 import UIKit
 import Network
+import os
+
+/// Why the chat of a conversation could not be opened from the inbox.
+enum InboxChatError: Error {
+    /// `getChatViewController` returned something that is not the chat screen.
+    case unexpectedController
+}
 
 final class InboxViewController: SinchViewController<InboxViewModel, InboxView>, SinchChatViewController, InboxViewModelDelegate {
     
     var customOptions: GetChatViewControllerOptions =  .init(metadata: [], shouldInitializeConversation: true)
-    
+
+    /// Set when the list is the sidebar of an adaptive inbox. `nil` keeps the stack behaviour (push on `navigationController`).
+    weak var detailHost: InboxDetailHost?
+    /// Set when the list is wrapped by `InboxContainerViewController`; decides what the button on the left does.
+    weak var host: InboxHost?
+    /// Channel whose chat is open in the detail. Drives the highlighted row on regular width.
+    private(set) var selectedChannelID: String?
+    /// Creates the chat for a channel (`nil` for a new conversation). Replaceable in tests.
+    var chatFactory: (@MainActor (_ channel: Sinch_Chat_Sdk_V1alpha2_Channel?) throws -> UIViewController)?
+
+    /// Replaces the topic ID a new conversation gets (otherwise a fresh UUID for a signed-in user). Replaceable in tests.
+    var newTopicIDProvider: (@MainActor () -> String?)?
+
+    /// Shows the "chat could not be opened" alert. `nil` presents it on this controller. Replaceable in tests.
+    var alertPresenter: (@MainActor (UIAlertController) -> Void)?
+
+    private static let logger = Logger(subsystem: "com.sinch.chat.sdk", category: "Inbox")
+
     lazy var activityIndicator = LoadMoreActivityIndicator(scrollView: mainView.tableView, spacingFromLastCell: 10, spacingFromLastCellOnActionStart: 60)
     let monitor = NWPathMonitor()
 
@@ -25,15 +49,69 @@ final class InboxViewController: SinchViewController<InboxViewModel, InboxView>,
         
         setNavigationBarStyle(uiConfig: mainView.uiConfig)
         addStartConversationButton()
-      
-        if isModal {
+        updateLeadingBarButton()
+    }
+
+    /// Installs, replaces or removes the sidebar's leading button for what the host offers right now. Runs on every
+    /// appearance and when the host's exit changes while the list is on screen (`SinchInboxView(onClose:)` updated).
+    func updateLeadingBarButton() {
+        if let host {
+            switch host.exitStyle {
+            case .back: addBackButton()
+            case .close: addCloseButton()
+            case .none: navigationItem.leftBarButtonItem = nil
+            }
+        } else if isModal {
             addCloseButton()
         } else {
             addBackButton()
         }
-        
     }
-    
+
+    override func closeAction() {
+        if let host { host.exitInbox() } else { super.closeAction() }
+    }
+
+    override func backAction() {
+        if let host { host.exitInbox() } else { super.backAction() }
+    }
+
+    /// Called when the split view collapses or expands: only regular width highlights the selected row.
+    func adaptiveStateDidChange() {
+        guard isViewLoaded else { return }
+        mainView.tableView.reloadData()
+        syncSelection()
+    }
+
+    /// Nothing is open any more (the chat left the primary stack): forget the selection so that a later expand
+    /// to regular width does not highlight a conversation that is not shown.
+    func clearSelection() {
+        selectedChannelID = nil
+        guard isViewLoaded else { return }
+        syncSelection()
+    }
+
+    private var showsPersistentSelection: Bool {
+        detailHost?.isShowingDetailBesideList ?? false
+    }
+
+    /// Highlights the row of the open chat on regular width, clears the highlight otherwise.
+    func syncSelection() {
+        let tableView = mainView.tableView
+        guard showsPersistentSelection,
+              let selectedChannelID,
+              let row = viewModel.channelsArray.firstIndex(where: { $0.channelID == selectedChannelID }) else {
+            if let selected = tableView.indexPathForSelectedRow {
+                tableView.deselectRow(at: selected, animated: false)
+            }
+            return
+        }
+        let indexPath = IndexPath(row: row, section: 0)
+        if tableView.indexPathForSelectedRow != indexPath {
+            tableView.selectRow(at: indexPath, animated: false, scrollPosition: .none)
+        }
+    }
+
     deinit {
         let viewModel = self.viewModel
         let monitor = self.monitor
@@ -97,15 +175,17 @@ final class InboxViewController: SinchViewController<InboxViewModel, InboxView>,
 
         debugPrint("didUpdateChannels")
         mainView.tableView.reloadData()
+        syncSelection()
         self.activityIndicator.stop()
 
     }
-    
+
     func didUpdateChannelAtIndex(_ index: Int) {
         debugPrint("didUpdateChannel")
        // if let row = viewModel.channelsArray.firstIndex(where: { $0.channelID == channel.channelID }) {
         mainView.tableView.reloadRows(at: [IndexPath(row: index, section: 0)], with: .none)
-        
+        syncSelection()
+
     }
     func moveChannelToTopFromIndex(_ index: Int) {
         debugPrint("moveChannelToTopFromIndex")
@@ -113,6 +193,7 @@ final class InboxViewController: SinchViewController<InboxViewModel, InboxView>,
         mainView.tableView.beginUpdates()
         mainView.tableView.moveRow(at: IndexPath(row: index, section: 0), to: IndexPath(row: 0, section: 0))
         mainView.tableView.endUpdates()
+        syncSelection()
 
     }
     func handleError(_ error: Error) {
@@ -133,7 +214,16 @@ extension InboxViewController: UITableViewDataSource {
         guard let cell = tableView.dequeueReusableCell(withIdentifier: "inboxCell", for: indexPath) as? InboxTableViewCell else {
             return UITableViewCell()
         }
-        cell.selectionStyle = .none
+        if showsPersistentSelection {
+            // Sidebar: the row of the open chat stays highlighted, with a semantic system fill.
+            cell.selectionStyle = .default
+            let selectedBackground = UIView()
+            selectedBackground.backgroundColor = .tertiarySystemFill
+            cell.selectedBackgroundView = selectedBackground
+        } else {
+            cell.selectionStyle = .none
+            cell.selectedBackgroundView = nil
+        }
         cell.updateWithChannel(viewModel.channelsArray[indexPath.row],
                                uiConfig: mainView.uiConfig,
                                localizationConfig: mainView.localizationConfiguration)
@@ -164,43 +254,88 @@ extension InboxViewController: UITableViewDelegate {
         }
     }
     func showChatForChannel(_ channel: Sinch_Chat_Sdk_V1alpha2_Channel) {
-        
+
+        // Same conversation as the one already open beside the list: nothing to do.
+        if let detailHost, detailHost.isShowingDetailBesideList,
+           detailHost.hasDetailChat, selectedChannelID == channel.channelID {
+            return
+        }
+
         customOptions = .init(
             topicID: channel.channelID,
             metadata: customOptions.metadata,
             shouldInitializeConversation: customOptions.shouldInitializeConversation,
             sendDocumentAsTextMessage: customOptions.sendDocumentAsTextMessage
         )
+        present(chatFor: channel)
+    }
 
-        guard let chatViewController = (try? SinchChatSDK.shared.chat.getChatViewController(
-            uiConfig: mainView.uiConfig,
-            localizationConfig: mainView.localizationConfiguration,
-            options: customOptions)
-        ) as? StartViewController else {
-            return
-        }
-        chatViewController.viewModel.isStartedFromInbox = true
-        
-        self.navigationController?.pushViewController(chatViewController, animated: true)
-    }
-    
     func showChat() {
-        
-        if let userID = viewModel.tokenProvider.currentAuthorization?.getUserID() {
-            customOptions.topicID = "\(UUID().uuidString)"
+
+        // Only a topic ID made here names the new row. `customOptions.topicID` may still hold the one of the row that
+        // was opened before, which is not this conversation.
+        var newTopicID = newTopicIDProvider?()
+        if newTopicID == nil, viewModel.tokenProvider.currentAuthorization?.getUserID() != nil {
+            newTopicID = "\(UUID().uuidString)"
         }
-        
-        guard let chatViewController = (try? SinchChatSDK.shared.chat.getChatViewController(
+        if let newTopicID { customOptions.topicID = newTopicID }
+        // A new conversation has no row yet. When its topic ID is known (signed-in user) it becomes the channel ID,
+        // so the row is highlighted as soon as it shows up in the list (`syncSelection` runs on every list update).
+        present(chatFor: nil, selecting: newTopicID)
+        customOptions.topicID = nil
+    }
+
+    /// Creates the chat with the existing code path (`SinchChat.getChatViewController`, started from the inbox).
+    private func makeChatViewController(for channel: Sinch_Chat_Sdk_V1alpha2_Channel?) throws -> UIViewController {
+        if let chatFactory { return try chatFactory(channel) }
+        let chat = try SinchChatSDK.shared.chat.getChatViewController(
             uiConfig: mainView.uiConfig,
             localizationConfig: mainView.localizationConfiguration,
             options: customOptions)
-        ) as? StartViewController else {
+        guard let chatViewController = chat as? StartViewController else { throw InboxChatError.unexpectedController }
+        chatViewController.viewModel.isStartedFromInbox = true
+        return chatViewController
+    }
+
+    /// The one path every switch goes through: beside the list (regular), pushed on the list (collapsed), or pushed
+    /// on the navigation stack when the inbox has no detail (`SinchInboxLayout.stack`).
+    ///
+    /// Only one chat can run at a time and `getChatViewController` is refused while the old one runs, so the open
+    /// chat is torn down synchronously (`clearChat`) before the next one is created. Nothing is deferred, so a quick
+    /// second tap cannot interleave with a half-finished switch. The row stays selected only when the new chat opened.
+    private func present(chatFor channel: Sinch_Chat_Sdk_V1alpha2_Channel?, selecting newChannelID: String? = nil) {
+        guard let detailHost else {
+            do {
+                navigationController?.pushViewController(try makeChatViewController(for: channel), animated: true)
+            } catch {
+                reportChatFailure(error)
+            }
             return
         }
-        chatViewController.viewModel.isStartedFromInbox = true
-        customOptions.topicID = nil
-        
-        self.navigationController?.pushViewController(chatViewController, animated: true)
+
+        detailHost.clearChat()
+        do {
+            detailHost.showChat(try makeChatViewController(for: channel))
+            selectedChannelID = channel?.channelID ?? newChannelID
+        } catch {
+            selectedChannelID = nil
+            reportChatFailure(error)
+        }
+        syncSelection()
     }
-    
+
+    private func reportChatFailure(_ error: Error) {
+        Self.logger.error("Could not open the chat: \(String(describing: error), privacy: .public)")
+        guard viewIfLoaded?.window != nil else { return }
+        let alert = UIAlertController(title: mainView.localizationConfiguration.alertTitleError,
+                                      message: nil,
+                                      preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: mainView.localizationConfiguration.locationAlertButtonTitleOk, style: .default))
+        if let alertPresenter {
+            alertPresenter(alert)
+        } else if presentedViewController == nil {
+            present(alert, animated: true)
+        }
+    }
+
 }

@@ -1,4 +1,0 @@
-version: 1
-builder:
-  configs:
-    - documentation_targets: [Collections, BasicContainers, BitCollections, ContainersPreview, DequeModule, HashTreeCollections, HeapModule, OrderedCollections, TrailingElementsModule]

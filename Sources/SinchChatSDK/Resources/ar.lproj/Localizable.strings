@@ -55,3 +55,4 @@
 "inbox_status" = "Status:";
 "inbox_status_open" = "Open";
 "inbox_status_closed" = "Closed";
+"inbox_empty_detail" = "Select a conversation";

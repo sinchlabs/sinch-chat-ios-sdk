@@ -22,6 +22,8 @@ internal extension StartViewController {
     }
 
     func addKeyboardObservers() {
+        // Idempotent: this runs on appearance, after pickers and after the compose bar comes back.
+        removeKeyboardObservers()
         NotificationCenter.default.addObserver(self, selector: #selector(StartViewController.handleKeyboardDidChangeState(_:)),
                                                name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(StartViewController.handleTextViewDidBeginEditing(_:)),
@@ -53,11 +55,20 @@ internal extension StartViewController {
     private func handleKeyboardDidChangeState(_ notification: Notification) {
         guard !isMessagesControllerBeingDismissed else { return }
         
+        // The notification is posted to every scene. Keyboards that belong to another app or window
+        // (Split View, Slide Over, Stage Manager) say so here.
+        if let isLocal = notification.userInfo?[UIResponder.keyboardIsLocalUserInfoKey] as? Bool, !isLocal { return }
+        guard view.window != nil else { return }
+
         guard let keyboardStartFrameInScreenCoords = notification.userInfo?[UIResponder.keyboardFrameBeginUserInfoKey] as? CGRect else { return }
-        guard !keyboardStartFrameInScreenCoords.isEmpty || UIDevice.current.userInterfaceIdiom != .pad else {
-            // WORKAROUND for what seems to be a bug in iPad's keyboard handling in iOS 11: we receive an extra spurious frame change
-            // notification when undocking the keyboard, with a zero starting frame and an incorrect end frame. The workaround is to
-            // ignore this notification.
+        guard let keyboardEndFrameInScreenCoords = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
+        if traitCollection.userInterfaceIdiom == .pad,
+           keyboardStartFrameInScreenCoords.isEmpty,
+           isSpuriousKeyboardFrame(endFrameInScreen: keyboardEndFrameInScreenCoords) {
+            // WORKAROUND for a spurious frame change notification when undocking the iPad keyboard: it has a zero starting
+            // frame and an incorrect end frame. Ignore it. iPad only, as the original workaround was. A zero starting
+            // frame alone is not enough (it also happens when the keyboard first appears), so the end frame has to be
+            // wrong or unchanged as well.
             return
         }
         
@@ -81,8 +92,8 @@ internal extension StartViewController {
         // to simply check whether the current keyboard frame, whatever it is (even when undocked), covers the bottom of the collection
         // view.
         
-        guard let keyboardEndFrameInScreenCoords = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
-        let keyboardEndFrame = view.convert(keyboardEndFrameInScreenCoords, from: view.window)
+        lastKeyboardEndFrameInScreen = keyboardEndFrameInScreenCoords
+        let keyboardEndFrame = keyboardFrameInView(keyboardEndFrameInScreenCoords)
         
         let newBottomInset = requiredScrollViewBottomInset(forKeyboardFrame: keyboardEndFrame)
         let differenceOfBottomInset = newBottomInset - messageCollectionViewBottomInset
@@ -109,8 +120,25 @@ internal extension StartViewController {
     }
     
     // MARK: - Inset Computation
-    
-    private func requiredScrollViewBottomInset(forKeyboardFrame keyboardFrame: CGRect) -> CGFloat {
+
+    /// The frame is in screen coordinates. Converting from the screen's coordinate space (not the window's) keeps this
+    /// correct for windows that do not fill the screen: Stage Manager, Slide Over, Split View, floating keyboards.
+    func keyboardFrameInView(_ frameInScreen: CGRect) -> CGRect {
+        if let screen = view.window?.screen {
+            return view.convert(frameInScreen, from: screen.coordinateSpace)
+        }
+        return view.convert(frameInScreen, from: nil)
+    }
+
+    /// A frame change with a zero starting frame is only the undocking glitch when it also lies outside of this
+    /// screen's view or repeats the last frame we acted on.
+    private func isSpuriousKeyboardFrame(endFrameInScreen: CGRect) -> Bool {
+        guard let screen = view.window?.screen else { return true }
+        let viewFrameInScreen = view.convert(view.bounds, to: screen.coordinateSpace)
+        return !endFrameInScreen.intersects(viewFrameInScreen) || endFrameInScreen == lastKeyboardEndFrameInScreen
+    }
+
+    func requiredScrollViewBottomInset(forKeyboardFrame keyboardFrame: CGRect) -> CGFloat {
    
         let intersection = mainView.collectionView.frame.intersection(keyboardFrame)
         
