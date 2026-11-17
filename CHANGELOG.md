@@ -3,6 +3,17 @@
 SDK changes that affect host developers. The newest section is synced to the public mirror
 ([sinch-chat-ios-sdk](https://github.com/sinchlabs/sinch-chat-ios-sdk)) at release time.
 
+## 2.2.1
+
+### Fixed
+
+- CocoaPods binary includes real resource bundles in both XCFramework slices. This fixes
+  the launch crash in `SinchSDKConfig.UIConfig.defaultValue` caused by dangling build-machine links.
+- Release validation rejects missing resource bundles and symlinked bundles in the uploaded zip.
+- Inbox chats retain their channel ID in chat options, including when no options were supplied,
+  so opening a selected inbox chat opens that conversation instead of the default one.
+- Inbox chat status exposes `open` or `closed` from the channel status.
+
 ## 2.2.0
 
 iPad and foldable iPhone (iPhone Duo) layouts, and a headless API for building your own chat UI on the SDK's

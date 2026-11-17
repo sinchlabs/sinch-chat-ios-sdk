@@ -82,9 +82,14 @@ public struct InboxChat: Codable, Sendable {
         self.text = channel.hasLastEntry ? handleIncomingMessage(channel.lastEntry)?.convertToText ?? "" : ""
         self.sendDate = Date(timeIntervalSince1970: TimeInterval(channel.updatedAt.seconds))
         self.avatarImage = nil
-        self.chatOptions = options
-        // TODO add status
-        self.status = ""
+        var chatOptions = options ?? GetChatViewControllerOptions(metadata: [])
+        chatOptions.topicID = channel.channelID
+        self.chatOptions = chatOptions
+        switch channel.status {
+        case .open: self.status = "open"
+        case .closed: self.status = "closed"
+        case .UNRECOGNIZED: self.status = ""
+        }
     }
 }
 
